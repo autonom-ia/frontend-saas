@@ -1,0 +1,47 @@
+@import "tailwindcss";
+
+/* Custom select styling to normalize macOS look and match dark theme */
+.select-clean {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 36px 8px 12px;
+  min-height: 36px;
+  border-radius: 8px;
+
+  background-color: var(--surface-700, #1f2937);
+  color: var(--text-100, #f9fafb);
+  border: 1px solid var(--surface-500, #374151);
+
+  font-size: 14px;
+  line-height: 1.2;
+  box-shadow: none;
+  background-clip: padding-box;
+
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%23cbd5e1' viewBox='0 0 16 16'><path d='M4.646 6.646a.5.5 0 0 1 .708 0L8 9.293l2.646-2.647a.5.5 0 0 1 .708.708l-3 3a.5.5 0 0 1-.708 0l-3-3a.5.5 0 0 1 0-.708z'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 14px 14px;
+}
+
+.select-clean:focus {
+  outline: none;
+  border-color: var(--primary-500, #47B5FF);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--primary-500, #47B5FF) 30%, transparent);
+}
+
+.select-clean:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Hide legacy dropdown arrows in older engines */
+.select-clean::-ms-expand { display: none; }
+select.select-clean::-webkit-inner-spin-button,
+select.select-clean::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
