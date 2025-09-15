@@ -4,7 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
-import { Plus, Pencil, ClipboardList, LayoutDashboard, Settings as SettingsIcon, Megaphone } from "lucide-react";
+import { Plus, Pencil } from "lucide-react";
+import Sidebar from "../../components/Sidebar";
 
 // Types
 type UserData = {
@@ -77,10 +78,12 @@ export default function ProjectsPage() {
   // UI staged entrance
   const [showHeader, setShowHeader] = useState(false);
   const [showContent, setShowContent] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
   useEffect(() => {
     const t1 = setTimeout(() => setShowHeader(true), 160);
     const t2 = setTimeout(() => setShowContent(true), 340);
-    return () => { clearTimeout(t1); clearTimeout(t2); };
+    const t3 = setTimeout(() => setShowMenu(true), 420);
+    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
   }, []);
 
   // Toast
@@ -338,41 +341,9 @@ export default function ProjectsPage() {
   return (
     <div className="flex h-screen bg-background dark:bg-gray-900 text-neutral-200">
       {/* Sidebar */}
-      <div className="w-20 h-full bg-transparent dark:bg-gray-900">
-        <div className={`h-full flex items-center justify-center`}>
-          <div className="flex flex-col items-center gap-3 rounded-full bg-gray-800/60 dark:bg-gray-700/60 p-2">
-            <Button
-              className="h-10 w-10 p-0 rounded-full bg-transparent hover:bg-gray-700/60 text-white"
-              title="Monitoring"
-              onClick={() => { router.push('/monitoring'); }}
-            >
-              <LayoutDashboard className="h-5 w-5" />
-            </Button>
-            <Button
-              className="h-10 w-10 p-0 rounded-full bg-transparent hover:bg-gray-700/60 text-white"
-              title="Settings"
-              onClick={() => { router.push('/settings'); }}
-            >
-              <SettingsIcon className="h-5 w-5" />
-            </Button>
-            <Button
-              className="h-10 w-10 p-0 rounded-full bg-transparent hover:bg-gray-700/60 text-white"
-              title="Projects"
-              onClick={() => { router.push('/projects'); }}
-            >
-              <ClipboardList className="h-5 w-5" />
-            </Button>
-            <Button
-              className="h-10 w-10 p-0 rounded-full bg-transparent hover:bg-gray-700/60 text-white"
-              title="Campanhas"
-              onClick={() => { router.push('/campaigns'); }}
-            >
-              <Megaphone className="h-5 w-5" />
-            </Button>
-          </div>
-        </div>
+      <Sidebar show={showMenu} />
 
-        {/* Slide-over Timeline Details Panel */}
+      {/* Slide-over Timeline Details Panel */}
         {/* Overlay */}
         <div
           className={`fixed inset-0 bg-black/50 z-40 transition-opacity duration-300 ${isTimelinePanelOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
@@ -476,7 +447,6 @@ export default function ProjectsPage() {
             </button>
           </div>
         </div>
-      </div>
 
       {/* Content area */}
       <div className="flex-1 flex flex-col">
@@ -603,7 +573,7 @@ export default function ProjectsPage() {
         </header>
 
         {/* Content */}
-        <main className={`flex-1 overflow-y-auto p-6 pt-20 transition-all duration-400 ease-out ${showContent ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}>
+        <main className={`flex-1 overflow-y-auto p-6 pt-20 ml-20 transition-all duration-400 ease-out ${showContent ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}>
           
 
           {/* Timeline section (only when a project is selected) */}

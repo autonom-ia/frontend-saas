@@ -4,7 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, LayoutDashboard, Settings as SettingsIcon, ClipboardList, Megaphone, Plus } from "lucide-react";
+import { RefreshCw, Plus } from "lucide-react";
+import Sidebar from "../../components/Sidebar";
 
 // Types
 type UserData = {
@@ -43,6 +44,7 @@ export default function CampaignsPage() {
   const [authToken, setAuthToken] = useState<string | undefined>(undefined);
   const [userData, setUserData] = useState<UserData | null>(null);
   const [showHeader, setShowHeader] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
 
   const [products, setProducts] = useState<Product[]>([]);
   const [productsLoading, setProductsLoading] = useState(false);
@@ -112,10 +114,11 @@ export default function CampaignsPage() {
     setAuthToken((prev) => prev || getTokenFromLocal());
   }, [router]);
 
-  // staged header animation like Settings
+  // staged header/menu animation like Settings
   useEffect(() => {
     const t1 = setTimeout(() => setShowHeader(true), 160);
-    return () => clearTimeout(t1);
+    const t2 = setTimeout(() => setShowMenu(true), 420);
+    return () => { clearTimeout(t1); clearTimeout(t2); };
   }, []);
 
   // Load products once
@@ -293,25 +296,8 @@ export default function CampaignsPage() {
 
   return (
     <div className="flex h-screen bg-background dark:bg-gray-900 text-neutral-200">
-      {/* Ellipse sidebar menu */}
-      <div className="w-20 h-full bg-transparent dark:bg-gray-900">
-        <div className={`h-full flex items-center justify-center`}>
-          <div className="flex flex-col items-center gap-3 rounded-full bg-gray-800/60 dark:bg-gray-700/60 p-2">
-            <Button className="h-10 w-10 p-0 rounded-full bg-transparent hover:bg-gray-700/60 text-white" title="Monitoring" onClick={() => { router.push('/monitoring'); }}>
-              <LayoutDashboard className="h-5 w-5" />
-            </Button>
-            <Button className="h-10 w-10 p-0 rounded-full bg-transparent hover:bg-gray-700/60 text-white" title="Settings" onClick={() => { router.push('/settings'); }}>
-              <SettingsIcon className="h-5 w-5" />
-            </Button>
-            <Button className="h-10 w-10 p-0 rounded-full bg-transparent hover:bg-gray-700/60 text-white" title="Projects" onClick={() => { router.push('/projects'); }}>
-              <ClipboardList className="h-5 w-5" />
-            </Button>
-            <Button className="h-10 w-10 p-0 rounded-full bg-blue-600/20 hover:bg-blue-600/30 text-white" title="Campanhas" onClick={() => { router.push('/campaigns'); }}>
-              <Megaphone className="h-5 w-5" />
-            </Button>
-          </div>
-        </div>
-      </div>
+      {/* Sidebar */}
+      <Sidebar show={showMenu} />
 
       {/* Main area */}
       <div className="flex-1 flex flex-col">
@@ -351,7 +337,7 @@ export default function CampaignsPage() {
         </header>
 
         {/* Content */}
-        <main className="flex-1 overflow-auto p-6 pt-20">
+        <main className="flex-1 overflow-auto p-6 pt-20 ml-20">
           {selectedProductId && (
             <>
               <section className="mt-6">

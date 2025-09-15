@@ -2,10 +2,20 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Pencil, Settings, Plus, LayoutDashboard, Phone, RefreshCw, ClipboardList, Megaphone } from "lucide-react";
-import Image from 'next/image';
+import { Pencil, Settings, Plus, LayoutDashboard, Phone, ClipboardList, Megaphone } from "lucide-react";
+import AccountForm from './components/AccountForm';
+import ProductForm from './components/ProductForm';
+import InboxPanel from './components/InboxPanel';
+import Sidebar from '../../components/Sidebar';
+import AccountParametersPanel from './components/AccountParametersPanel';
+import ProductParametersPanel from './components/ProductParametersPanel';
+import StepForm from './components/StepForm';
+import StepMessagesPanel from './components/StepMessagesPanel';
+import type { StepMessage } from './components/StepMessagesPanel';
+import type { AccountParameter } from './components/AccountParametersPanel';
+import ProductHeader from '../../components/ProductHeader';
+import SelectedAccountBar from '../../components/SelectedAccountBar';
 
 type UserData = {
   user?: {
@@ -195,7 +205,7 @@ export default function DashboardPage() {
   // Debug logs to validate visibility of "Incluir etapa" button and funnel state
   useEffect(() => {
     try {
-      const acc = accounts.find(a => a.id === selectedAccountId);
+      const acc = accounts.find((a: Account) => a.id === selectedAccountId);
       const hasFunnel = !!acc?.conversation_funnel_id;
       const isAdmin = !!userData?.user?.isAdmin;
       const canShowInclude = isAdmin && !selectedAccountFunnelIsDefault && hasFunnel;
@@ -219,6 +229,30 @@ export default function DashboardPage() {
     const t2 = setTimeout(() => setShowMenu(true), 420);
     return () => { clearTimeout(t1); clearTimeout(t2); };
   }, []);
+
+  // Persist and restore selected product/account across sessions
+  useEffect(() => {
+    try {
+      const storedProduct = sessionStorage.getItem('settingsSelectedProductId');
+      if (storedProduct) setSelectedProductId(storedProduct);
+      const storedAccount = sessionStorage.getItem('settingsSelectedAccountId');
+      if (storedAccount) setSelectedAccountId(storedAccount);
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    try {
+      if (selectedProductId) sessionStorage.setItem('settingsSelectedProductId', selectedProductId);
+      else sessionStorage.removeItem('settingsSelectedProductId');
+    } catch {}
+  }, [selectedProductId]);
+
+  useEffect(() => {
+    try {
+      if (selectedAccountId) sessionStorage.setItem('settingsSelectedAccountId', selectedAccountId);
+      else sessionStorage.removeItem('settingsSelectedAccountId');
+    } catch {}
+  }, [selectedAccountId]);
   // Helper to truncate long texts with ellipsis
   const truncate = (text: string, max: number = 100): string => {
     if (!text) return '';
@@ -234,17 +268,16 @@ export default function DashboardPage() {
       setShowAccountsGrid(false);
     }
   }, [selectedProductId]);
-  // Animate Funnel grid when a selected account with funnel is present and steps loaded state changes
+  // Animate Funnel section whenever a new account is selected (regardless of having funnel)
   useEffect(() => {
-    const hasFunnel = !!(selectedAccountId && accounts.find(a => a.id === selectedAccountId)?.conversation_funnel_id);
-    if (hasFunnel) {
+    if (selectedAccountId) {
+      console.debug('[Settings] Animação Funil: conta selecionada mudou', { selectedAccountId });
       setShowFunnelGrid(false);
       const t = setTimeout(() => setShowFunnelGrid(true), 220);
       return () => clearTimeout(t);
-    } else {
-      setShowFunnelGrid(false);
     }
-  }, [selectedAccountId, accounts]);
+    setShowFunnelGrid(false);
+  }, [selectedAccountId]);
   // Carregar steps do funil quando a conta selecionada mudar
   useEffect(() => {
     const loadSteps = async () => {
@@ -254,7 +287,12 @@ export default function DashboardPage() {
         setSelectedAccountFunnelIsDefault(false);
         return;
       }
-      const acc = accounts.find(a => a.id === selectedAccountId);
+      const acc = accounts.find((a: Account) => a.id === selectedAccountId);
+      console.debug('[Settings] Conta encontrada:', {
+        selectedAccountId,
+        accountFound: !!acc,
+        accountHasFunnelId: !!acc?.conversation_funnel_id
+      });
       if (!acc || !acc.conversation_funnel_id) {
         setSteps([]);
         setSelectedAccountFunnelName('');
@@ -275,45 +313,38 @@ export default function DashboardPage() {
           } catch { return undefined; }
         })();
         // Buscar steps por accountId
-        const stepsResp = await fetch(`${saasApiUrl}/Autonomia/Saas/ConversationFunnelSteps?accountId=${encodeURIComponent(selectedAccountId)}`, {
+        const url = `${saasApiUrl}/Autonomia/Saas/ConversationFunnelSteps?accountId=${encodeURIComponent(selectedAccountId)}`;
+        console.debug('[Settings] Buscando steps do funil:', { url });
+        const stepsResp = await fetch(url, {
           headers: { 'Authorization': `Bearer ${tokenToUse}` },
           mode: 'cors'
         });
         if (stepsResp.ok) {
           const sj = await stepsResp.json();
           const list = Array.isArray(sj?.data) ? sj.data : [];
+          console.debug('[Settings] Steps carregados:', { count: list.length });
           setSteps(list);
-        } else {
-          const t = await stepsResp.text();
-          console.error('Falha ao buscar steps do funil:', stepsResp.status, stepsResp.statusText, t);
-          setSteps([]);
-        }
-        // Nome do funil para o título
-        try {
+          // Buscar informações do funil selecionado (nome e se é default)
           const funnelResp = await fetch(`${saasApiUrl}/Autonomia/Saas/ConversationFunnels/${encodeURIComponent(acc.conversation_funnel_id)}`, {
             headers: { 'Authorization': `Bearer ${tokenToUse}` },
             mode: 'cors'
           });
           if (funnelResp.ok) {
             const fj = await funnelResp.json();
-            const isDef = !!fj?.data?.is_default;
-            console.debug('Fetched funnel details', {
-              accountId: selectedAccountId,
-              funnelId: acc.conversation_funnel_id,
-              name: fj?.data?.name,
-              is_default: fj?.data?.is_default,
-            });
-            setSelectedAccountFunnelName(fj?.data?.name || '');
-            setSelectedAccountFunnelIsDefault(isDef);
+            const funnel = fj?.data;
+            setSelectedAccountFunnelName(funnel?.name || '');
+            setSelectedAccountFunnelIsDefault(!!funnel?.is_default);
+            console.debug('[Settings] Funnel meta carregada:', { name: funnel?.name, is_default: funnel?.is_default });
           } else {
-            console.debug('Funnel details request not ok', funnelResp.status, funnelResp.statusText);
+            const t = await funnelResp.text();
+            console.warn('[Settings] Falha ao buscar meta do funil:', funnelResp.status, funnelResp.statusText, t);
             setSelectedAccountFunnelName('');
             setSelectedAccountFunnelIsDefault(false);
           }
-        } catch (e) {
-          console.debug('Error parsing funnel details', e);
-          setSelectedAccountFunnelName('');
-          setSelectedAccountFunnelIsDefault(false);
+        } else {
+          const t = await stepsResp.text();
+          console.warn('[Settings] Falha ao buscar steps:', stepsResp.status, stepsResp.statusText, t);
+          setSteps([]);
         }
       } catch (e) {
         console.error('Erro ao carregar steps do funil:', e);
@@ -974,15 +1005,22 @@ export default function DashboardPage() {
         });
         if (!resp.ok) {
           const t = await resp.text();
-          console.error('Falha ao buscar contas:', resp.status, resp.statusText, t);
+          console.error('[Settings] Falha ao buscar contas:', resp.status, resp.statusText, t);
           setAccounts([]);
           return;
         }
         const json = await resp.json();
-        setAccounts(Array.isArray(json?.data) ? json.data : []);
+        const list = Array.isArray(json?.data) ? json.data : [];
+        console.debug('[Settings] Accounts carregadas:', {
+          productId: selectedProductId,
+          count: list.length,
+          first: list[0]?.id,
+          firstHasFunnel: !!list[0]?.conversation_funnel_id
+        });
+        setAccounts(list);
         setAccPage(1);
       } catch (e) {
-        console.error('Erro ao carregar contas:', e);
+        console.error('[Settings] Erro ao carregar contas:', e);
       } finally {
         setAccountsLoading(false);
       }
@@ -1305,767 +1343,169 @@ export default function DashboardPage() {
 
   return (
     <div className="flex h-screen bg-background dark:bg-gray-900">
-      {/* Menu Lateral */}
-      <div className="w-20 h-full bg-transparent dark:bg-gray-900">
-        {/* Barra vertical com bordas arredondadas e ícones */}
-        <div className={`h-full flex items-center justify-center transition-all duration-400 ease-out ${showMenu ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-5'}`}>
-          <div className="flex flex-col items-center gap-3 rounded-full bg-gray-800/60 dark:bg-gray-700/60 p-2">
-            <Button
-              className="h-10 w-10 p-0 rounded-full bg-transparent hover:bg-gray-700/60 text-white"
-              title="Monitoring"
-              onClick={() => { router.push('/monitoring'); }}
-            >
-              <LayoutDashboard className="h-5 w-5" />
-            </Button>
-            <Button
-              className="h-10 w-10 p-0 rounded-full bg-transparent hover:bg-gray-700/60 text-white"
-              title="Settings"
-              onClick={() => { router.push('/settings'); }}
-            >
-              <Settings className="h-5 w-5" />
-            </Button>
-            <Button
-              className="h-10 w-10 p-0 rounded-full bg-transparent hover:bg-gray-700/60 text-white"
-              title="Projects"
-              onClick={() => { router.push('/projects'); }}
-            >
-              <ClipboardList className="h-5 w-5" />
-            </Button>
-            <Button
-              className="h-10 w-10 p-0 rounded-full bg-transparent hover:bg-gray-700/60 text-white"
-              title="Campanhas"
-              onClick={() => { router.push('/campaigns'); }}
-            >
-              <Megaphone className="h-5 w-5" />
-            </Button>
-          </div>
-
-        </div>
-      </div>
+      {/* Sidebar */}
+      <Sidebar show={showMenu} />
       {/* Conteúdo principal (header + main) */}
       <div className="flex-1 flex flex-col">
 
       {/* Slide-over Formulário de Etapa do Funil */}
-      {/* Overlay com transição */}
-      <div
-        className={`fixed inset-0 bg-black/50 z-40 transition-opacity duration-300 ${isStepFormOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
-        onClick={() => setIsStepFormOpen(false)}
+      <StepForm
+        open={isStepFormOpen}
+        mode={stepFormMode}
+        name={stepFormName}
+        description={stepFormDescription}
+        saving={stepSaving}
+        onClose={() => setIsStepFormOpen(false)}
+        onChange={(f) => { if (f.name !== undefined) setStepFormName(f.name); if (f.description !== undefined) setStepFormDescription(f.description); }}
+        onSave={async () => {
+          setStepSaving(true);
+          try {
+            const saasApiUrl = process.env.NEXT_PUBLIC_SAAS_API_URL || 'https://api-saas.autonomia.site';
+            const tokenToUse = authToken || (() => { try { const stored = localStorage.getItem('userData'); if (!stored) return undefined; const parsed = JSON.parse(stored); return parsed.IdToken || parsed.token || parsed.AccessToken; } catch { return undefined; } })();
+            if (stepFormMode === 'create') {
+              if (!selectedAccountId) { showToast('Selecione uma conta', 'error'); return; }
+              const acc = accounts.find(a => a.id === selectedAccountId);
+              const funnelId = acc?.conversation_funnel_id;
+              if (!funnelId) { console.error('Sem conversation_funnel_id para a conta selecionada'); showToast('Conta sem funil vinculado', 'error'); return; }
+              const resp = await fetch(`${saasApiUrl}/Autonomia/Saas/ConversationFunnelSteps`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${tokenToUse}` }, body: JSON.stringify({ conversation_funnel_id: funnelId, name: stepFormName, description: stepFormDescription }) });
+              if (!resp.ok) { const t = await resp.text(); console.error('Falha ao criar etapa:', resp.status, resp.statusText, t); showToast('Falha ao criar etapa', 'error'); return; }
+              const json = await resp.json(); const created = json?.data; if (created?.id) { setSteps(prev => [created, ...prev]); }
+              setIsStepFormOpen(false); showToast('Etapa criada com sucesso', 'success');
+            } else {
+              if (!selectedStepId) return;
+              const resp = await fetch(`${saasApiUrl}/Autonomia/Saas/ConversationFunnelSteps/${selectedStepId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${tokenToUse}` }, body: JSON.stringify({ name: stepFormName, description: stepFormDescription }) });
+              if (!resp.ok) { const t = await resp.text(); console.error('Falha ao salvar etapa:', resp.status, resp.statusText, t); showToast('Falha ao salvar etapa', 'error'); return; }
+              const json = await resp.json(); const updated = json?.data; if (updated?.id) { setSteps(prev => prev.map(s => s.id === updated.id ? { ...s, ...updated } : s)); }
+              setIsStepFormOpen(false); showToast('Etapa salva com sucesso', 'success');
+            }
+          } catch (e) { console.error('Erro ao salvar etapa:', e); showToast('Erro ao salvar etapa', 'error'); }
+          finally { setStepSaving(false); }
+        }}
       />
-      <div
-        className={`fixed right-0 top-0 h-full w-full max-w-md bg-white dark:bg-gray-800 shadow-xl z-50 transform transition-transform duration-300 ease-out ${isStepFormOpen ? 'translate-x-0' : 'translate-x-full'}`}
-        aria-hidden={!isStepFormOpen}
-      >
-        <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-          <h2 className="text-lg font-semibold dark:text-white">{stepFormMode === 'create' ? 'Nova Etapa do Funil' : 'Editar Etapa do Funil'}</h2>
-          <button
-            className="text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-white"
-            onClick={() => setIsStepFormOpen(false)}
-            aria-label="Fechar"
-          >
-            ✕
-          </button>
-        </div>
-        <div className="p-4 space-y-4">
-          <div>
-            <label htmlFor="step-name" className="block text-sm mb-1 dark:text-gray-200">Nome</label>
-            <input id="step-name" type="text" className="w-full rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500" value={stepFormName} onChange={e => setStepFormName(e.target.value)} />
-          </div>
-          <div>
-            <label htmlFor="step-desc" className="block text-sm mb-1 dark:text-gray-200">Descrição</label>
-            <textarea id="step-desc" className="w-full rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y min-h-[100px]" value={stepFormDescription} onChange={e => setStepFormDescription(e.target.value)} />
-          </div>
-        </div>
-        <div className="p-4 border-t border-gray-200 dark:border-gray-700 flex items-center justify-end gap-2">
-          <Button variant="secondary" className="bg-gray-700 hover:bg-gray-600 text-white" onClick={() => { setIsStepFormOpen(false); }}>Fechar</Button>
-          <Button className="bg-blue-600 hover:bg-blue-500 text-white" disabled={stepSaving} onClick={async () => {
-            setStepSaving(true);
-            try {
-              const saasApiUrl = process.env.NEXT_PUBLIC_SAAS_API_URL || 'https://api-saas.autonomia.site';
-              const tokenToUse = authToken || (() => {
-                try {
-                  const stored = localStorage.getItem('userData');
-                  if (!stored) return undefined;
-                  const parsed = JSON.parse(stored);
-                  return parsed.IdToken || parsed.token || parsed.AccessToken;
-                } catch { return undefined; }
-              })();
+ 
 
-              if (stepFormMode === 'create') {
-                // Criar nova etapa vinculada ao funil da conta selecionada
-                if (!selectedAccountId) { showToast('Selecione uma conta', 'error'); return; }
-                const acc = accounts.find(a => a.id === selectedAccountId);
-                const funnelId = acc?.conversation_funnel_id;
-                if (!funnelId) { console.error('Sem conversation_funnel_id para a conta selecionada'); showToast('Conta sem funil vinculado', 'error'); return; }
-                const resp = await fetch(`${saasApiUrl}/Autonomia/Saas/ConversationFunnelSteps`, {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${tokenToUse}` },
-                  body: JSON.stringify({ conversation_funnel_id: funnelId, name: stepFormName, description: stepFormDescription })
-                });
-                if (!resp.ok) {
-                  const t = await resp.text();
-                  console.error('Falha ao criar etapa:', resp.status, resp.statusText, t);
-                  showToast('Falha ao criar etapa', 'error');
-                  return;
-                }
-                const json = await resp.json();
-                const created = json?.data;
-                if (created?.id) {
-                  setSteps(prev => [created, ...prev]);
-                }
-                setIsStepFormOpen(false);
-                showToast('Etapa criada com sucesso', 'success');
-              } else {
-                // Editar etapa existente
-                if (!selectedStepId) return;
-                const resp = await fetch(`${saasApiUrl}/Autonomia/Saas/ConversationFunnelSteps/${selectedStepId}`, {
-                  method: 'PUT',
-                  headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${tokenToUse}` },
-                  body: JSON.stringify({ name: stepFormName, description: stepFormDescription })
-                });
-                if (!resp.ok) {
-                  const t = await resp.text();
-                  console.error('Falha ao salvar etapa:', resp.status, resp.statusText, t);
-                  showToast('Falha ao salvar etapa', 'error');
-                  return;
-                }
-                const json = await resp.json();
-                const updated = json?.data;
-                if (updated?.id) {
-                  setSteps(prev => prev.map(s => s.id === updated.id ? { ...s, ...updated } : s));
-                }
-                setIsStepFormOpen(false);
-                showToast('Etapa salva com sucesso', 'success');
-              }
-            } catch (e) {
-              console.error('Erro ao salvar etapa:', e);
-              showToast('Erro ao salvar etapa', 'error');
-            } finally { setStepSaving(false); }
-          }}>Salvar</Button>
-        </div>
-      </div>
+      
 
       {/* Slide-over Settings de Mensagens da Etapa */}
-      {/* Overlay */}
-      <div
-        className={`fixed inset-0 bg-black/50 z-40 transition-opacity duration-300 ${isStepSettingsOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
-        onClick={() => setIsStepSettingsOpen(false)}
+      <StepMessagesPanel
+        open={isStepSettingsOpen}
+        isAdmin={!!userData?.user?.isAdmin}
+        loading={stepMessagesLoading}
+        isCreating={isCreatingStepMessage}
+        newShippingTime={newStepMessageShippingTime}
+        newShippingOrder={newStepMessageShippingOrder}
+        newInstruction={newStepMessageInstruction}
+        savingNew={savingNewStepMessage}
+        messages={stepMessages}
+        onClose={() => setIsStepSettingsOpen(false)}
+        onStartCreate={startCreateStepMessage}
+        onCancelCreate={cancelCreateStepMessage}
+        onSaveCreate={createStepMessage}
+        onChangeNew={(f) => {
+          if (f.shipping_time !== undefined) setNewStepMessageShippingTime(f.shipping_time);
+          if (f.shipping_order !== undefined) setNewStepMessageShippingOrder(f.shipping_order);
+          if (f.message_instruction !== undefined) setNewStepMessageInstruction(f.message_instruction);
+        }}
+        onChangeMessage={(id, fields) => {
+          setStepMessages(prev => prev.map(x => x.id === id ? { ...x, ...fields } : x));
+        }}
+        onBlurMessageField={async (id, fields) => {
+          try {
+            const saasApiUrl = process.env.NEXT_PUBLIC_SAAS_API_URL || 'https://api-saas.autonomia.site';
+            const tokenToUse = authToken || (() => { try { const stored = localStorage.getItem('userData'); if (!stored) return undefined; const parsed = JSON.parse(stored); return parsed.IdToken || parsed.token || parsed.AccessToken; } catch { return undefined; } })();
+            const body: Partial<Pick<StepMessage, 'shipping_time' | 'shipping_order' | 'message_instruction'>> = {};
+            if (fields.shipping_time !== undefined) body.shipping_time = fields.shipping_time;
+            if (fields.shipping_order !== undefined) body.shipping_order = fields.shipping_order;
+            if (fields.message_instruction !== undefined) body.message_instruction = fields.message_instruction;
+            const resp = await fetch(`${saasApiUrl}/Autonomia/Saas/ConversationFunnelStepMessages/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${tokenToUse}` }, body: JSON.stringify(body) });
+            if (resp.ok) showToast('Mensagem atualizada', 'success'); else showToast('Falha ao atualizar mensagem', 'error');
+          } catch (err) { console.error('Erro ao atualizar mensagem:', err); }
+        }}
       />
-      <div
-        className={`fixed right-0 top-0 h-full w-full max-w-2xl bg-white dark:bg-gray-800 shadow-xl z-50 transform transition-transform duration-300 ease-out ${isStepSettingsOpen ? 'translate-x-0' : 'translate-x-full'}`}
-        aria-hidden={!isStepSettingsOpen}
-      >
-        <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-          <h2 className="text-lg font-semibold dark:text-white">Mensagens da Etapa</h2>
-          <button
-            className="text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-white"
-            onClick={() => setIsStepSettingsOpen(false)}
-            aria-label="Fechar"
-          >
-            ✕
-          </button>
-        </div>
-        <div className="p-4">
-          <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded shadow-sm max-h-[75vh] overflow-auto">
-            <table className="min-w-full text-sm">
-              <thead className="bg-gray-50 dark:bg-gray-700 sticky top-0">
-                <tr>
-                  <th className="text-left px-4 py-2 dark:text-gray-100">Tempo de envio</th>
-                  <th className="text-left px-4 py-2 dark:text-gray-100">Ordem de envio</th>
-                  <th className="text-left px-4 py-2 dark:text-gray-100">Instruções da Mensagem</th>
-                </tr>
-              </thead>
-              <tbody>
-                {isCreatingStepMessage && (
-                  <tr className="border-t border-gray-100 dark:border-gray-700 bg-blue-50/40 dark:bg-gray-700/30 align-top">
-                    <td className="px-4 py-2 dark:text-gray-100 w-40">
-                      <input
-                        type="text"
-                        className="w-full rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-2 py-1 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="Ex: 10m, 2h, 1d"
-                        value={newStepMessageShippingTime}
-                        onChange={(e) => setNewStepMessageShippingTime(e.target.value)}
-                      />
-                    </td>
-                    <td className="px-4 py-2 dark:text-gray-100 w-40">
-                      <input
-                        type="number"
-                        className="w-full rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-2 py-1 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="Ex: 1, 2, 3"
-                        value={newStepMessageShippingOrder}
-                        onChange={(e) => setNewStepMessageShippingOrder(e.target.value === '' ? '' : Number(e.target.value))}
-                      />
-                    </td>
-                    <td className="px-4 py-2 dark:text-gray-100">
-                      <textarea
-                        className="w-full rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-2 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y min-h-[100px]"
-                        placeholder="Descreva as instruções da mensagem"
-                        value={newStepMessageInstruction}
-                        onChange={(e) => setNewStepMessageInstruction(e.target.value)}
-                      />
-                    </td>
-                  </tr>
-                )}
-                {stepMessagesLoading ? (
-                  <tr><td className="px-4 py-3 dark:text-gray-200" colSpan={3}>Carregando...</td></tr>
-                ) : stepMessages.length === 0 ? (
-                  <tr><td className="px-4 py-3 dark:text-gray-200" colSpan={3}>Nenhuma mensagem encontrada.</td></tr>
-                ) : (
-                  stepMessages.map((m) => (
-                    <tr key={m.id} className="border-t border-gray-100 dark:border-gray-700 align-top">
-                      <td className="px-4 py-2 dark:text-gray-100 w-40">
-                        <input
-                          type="text"
-                          className="w-full rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-2 py-1 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          value={m.shipping_time ?? ''}
-                          onChange={(e) => setStepMessages(prev => prev.map(x => x.id === m.id ? { ...x, shipping_time: e.target.value } : x))}
-                          onBlur={async (e) => {
-                            try {
-                              const saasApiUrl = process.env.NEXT_PUBLIC_SAAS_API_URL || 'https://api-saas.autonomia.site';
-                              const tokenToUse = authToken || (() => {
-                                try {
-                                  const stored = localStorage.getItem('userData');
-                                  if (!stored) return undefined;
-                                  const parsed = JSON.parse(stored);
-                                  return parsed.IdToken || parsed.token || parsed.AccessToken;
-                                } catch { return undefined; }
-                              })();
-                              const resp = await fetch(`${saasApiUrl}/Autonomia/Saas/ConversationFunnelStepMessages/${m.id}`, {
-                                method: 'PUT',
-                                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${tokenToUse}` },
-                                body: JSON.stringify({ shipping_time: e.target.value })
-                              });
-                              if (resp.ok) showToast('Tempo de envio atualizado', 'success'); else showToast('Falha ao atualizar tempo de envio', 'error');
-                            } catch (err) { console.error('Erro ao atualizar shipping_time:', err); }
-                          }}
-                          placeholder="Ex: 10m, 2h, 1d"
-                        />
-                      </td>
-                      <td className="px-4 py-2 dark:text-gray-100 w-40">
-                        <input
-                          type="number"
-                          className="w-full rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-2 py-1 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          value={m.shipping_order ?? ''}
-                          onChange={(e) => setStepMessages(prev => prev.map(x => x.id === m.id ? { ...x, shipping_order: Number(e.target.value) } : x))}
-                          onBlur={async (e) => {
-                            try {
-                              const saasApiUrl = process.env.NEXT_PUBLIC_SAAS_API_URL || 'https://api-saas.autonomia.site';
-                              const tokenToUse = authToken || (() => {
-                                try {
-                                  const stored = localStorage.getItem('userData');
-                                  if (!stored) return undefined;
-                                  const parsed = JSON.parse(stored);
-                                  return parsed.IdToken || parsed.token || parsed.AccessToken;
-                                } catch { return undefined; }
-                              })();
-                              const resp = await fetch(`${saasApiUrl}/Autonomia/Saas/ConversationFunnelStepMessages/${m.id}`, {
-                                method: 'PUT',
-                                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${tokenToUse}` },
-                                body: JSON.stringify({ shipping_order: Number(e.target.value) })
-                              });
-                              if (resp.ok) showToast('Ordem de envio atualizada', 'success'); else showToast('Falha ao atualizar ordem de envio', 'error');
-                            } catch (err) { console.error('Erro ao atualizar shipping_order:', err); }
-                          }}
-                          placeholder="Ex: 1, 2, 3"
-                        />
-                      </td>
-                      <td className="px-4 py-2 dark:text-gray-100">
-                        <textarea
-                          className="w-full rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-2 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y min-h-[100px]"
-                          value={m.message_instruction ?? ''}
-                          onChange={(e) => setStepMessages(prev => prev.map(x => x.id === m.id ? { ...x, message_instruction: e.target.value } : x))}
-                          onBlur={async (e) => {
-                            try {
-                              const saasApiUrl = process.env.NEXT_PUBLIC_SAAS_API_URL || 'https://api-saas.autonomia.site';
-                              const tokenToUse = authToken || (() => {
-                                try {
-                                  const stored = localStorage.getItem('userData');
-                                  if (!stored) return undefined;
-                                  const parsed = JSON.parse(stored);
-                                  return parsed.IdToken || parsed.token || parsed.AccessToken;
-                                } catch { return undefined; }
-                              })();
-                              const resp = await fetch(`${saasApiUrl}/Autonomia/Saas/ConversationFunnelStepMessages/${m.id}`, {
-                                method: 'PUT',
-                                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${tokenToUse}` },
-                                body: JSON.stringify({ message_instruction: e.target.value })
-                              });
-                              if (resp.ok) showToast('Instruções atualizadas', 'success'); else showToast('Falha ao atualizar instruções', 'error');
-                            } catch (err) { console.error('Erro ao atualizar instruções:', err); }
-                          }}
-                          placeholder="Descreva as instruções da mensagem"
-                        />
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-          {userData?.user?.isAdmin && !isCreatingStepMessage && (
-            <div className="mt-3 flex justify-end">
-              <Button
-                className="bg-blue-600 hover:bg-blue-500 text-white"
-                size="sm"
-                onClick={startCreateStepMessage}
-                title="Incluir mensagem"
-              >
-                <Plus className="h-4 w-4 mr-1" /> Incluir
-              </Button>
-            </div>
-          )}
-        </div>
-        <div className="p-4 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between gap-2">
-          {isCreatingStepMessage ? (
-            <div className="flex items-center gap-2">
-              <Button
-                className="bg-blue-600 hover:bg-blue-500 text-white"
-                onClick={createStepMessage}
-                disabled={savingNewStepMessage}
-                title="Salvar mensagem"
-              >
-                Salvar
-              </Button>
-              <Button
-                variant="secondary"
-                className="bg-gray-700 hover:bg-gray-600 text-white"
-                onClick={cancelCreateStepMessage}
-                disabled={savingNewStepMessage}
-              >
-                Cancelar
-              </Button>
-            </div>
-          ) : <span />}
-          <div className="flex items-center gap-2">
-            {!isCreatingStepMessage && userData?.user?.isAdmin && (
-              <Button
-                className="bg-blue-600 hover:bg-blue-500 text-white"
-                size="sm"
-                onClick={startCreateStepMessage}
-                title="Incluir mensagem"
-              >
-                Incluir mensagem
-              </Button>
-            )}
-            <Button variant="secondary" className="bg-gray-700 hover:bg-gray-600 text-white" onClick={() => { setIsStepSettingsOpen(false); }}>Fechar</Button>
-          </div>
-        </div>
-      </div>
 
-      {/* Painel à direita com animação de slide (Parâmetros da Conta) */}
-      <div
-        className={`fixed right-0 top-0 h-full w-full max-w-md bg-white dark:bg-gray-800 shadow-xl z-50 transform transition-transform duration-300 ease-out ${isAccountParamPanelOpen ? 'translate-x-0' : 'translate-x-full'}`}
-        aria-hidden={!isAccountParamPanelOpen}
-      >
-        <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-          <h2 className="text-lg font-semibold dark:text-white">Parâmetros da Conta</h2>
-          <button
-            className="text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-white"
-            onClick={() => setIsAccountParamPanelOpen(false)}
-            aria-label="Fechar"
-          >
-            ✕
-          </button>
-        </div>
-        <div className="p-4">
-          <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded shadow-sm max-h-[75vh] overflow-auto">
-            <table className="min-w-full text-sm">
-              <thead className="bg-gray-50 dark:bg-gray-700 sticky top-0">
-                <tr>
-                  <th className="text-left px-4 py-2 dark:text-gray-100">Nome</th>
-                  <th className="text-left px-4 py-2 dark:text-gray-100">Valor</th>
-                </tr>
-              </thead>
-              <tbody>
-                {isCreatingAccountParam && (
-                  <tr className="border-t border-gray-100 dark:border-gray-700 bg-blue-50/40 dark:bg-gray-700/30">
-                    <td className="px-4 py-2">
-                      <input
-                        type="text"
-                        className="w-full rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-2 py-1 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="Nome do parâmetro"
-                        value={newAccountParamName}
-                        onChange={(e) => setNewAccountParamName(e.target.value)}
-                      />
-                    </td>
-                    <td className="px-4 py-2">
-                      <input
-                        type="text"
-                        className="w-full rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-2 py-1 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="Valor"
-                        value={newAccountParamValue}
-                        onChange={(e) => setNewAccountParamValue(e.target.value)}
-                        onKeyDown={(e) => { if (e.key === 'Enter') createAccountParameter(); }}
-                      />
-                    </td>
-                  </tr>
-                )}
-                {accountParamsLoading ? (
-                  <tr><td className="px-4 py-3 dark:text-gray-200" colSpan={2}>Carregando...</td></tr>
-                ) : accountParams.length === 0 ? (
-                  <tr><td className="px-4 py-3 dark:text-gray-200" colSpan={2}>Nenhum parâmetro encontrado.</td></tr>
-                ) : (
-                  accountParams.map(item => (
-                    <tr key={item.id} className="border-t border-gray-100 dark:border-gray-700">
-                      <td className="px-4 py-2 dark:text-gray-100">{item.name}</td>
-                      <td className="px-4 py-2 dark:text-gray-100">
-                        {((item.value ?? '').length > 60) ? (
-                          <textarea
-                            className="w-full rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-2 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y min-h-[80px]"
-                            rows={Math.min(8, Math.max(3, Math.ceil(((item.value ?? '').length) / 60)))}
-                            value={item.value ?? ''}
-                            onChange={(e) => setAccountParams(prev => prev.map(p => p.id === item.id ? { ...p, value: e.target.value } : p))}
-                            onBlur={(e) => updateAccountParameterValue(item.id, e.target.value)}
-                            placeholder="Defina o valor"
-                          />
-                        ) : (
-                          <input
-                            type="text"
-                            className="w-full rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-2 py-1 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            value={item.value ?? ''}
-                            onChange={(e) => setAccountParams(prev => prev.map(p => p.id === item.id ? { ...p, value: e.target.value } : p))}
-                            onBlur={(e) => updateAccountParameterValue(item.id, e.target.value)}
-                            placeholder="Defina o valor"
-                          />
-                        )}
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-          {userData?.user?.isAdmin && !isCreatingAccountParam && (
-            <div className="mt-3 flex justify-end">
-              <Button
-                className="bg-blue-600 hover:bg-blue-500 text-white"
-                size="sm"
-                onClick={startCreateAccountParam}
-                title="Incluir parâmetro"
-              >
-                <Plus className="h-4 w-4 mr-1" /> Incluir
-              </Button>
-            </div>
-          )}
-        </div>
-        <div className="p-4 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between gap-2">
-          {isCreatingAccountParam ? (
-            <div className="flex items-center gap-2">
-              <Button
-                className="bg-blue-600 hover:bg-blue-500 text-white"
-                onClick={createAccountParameter}
-                disabled={savingNewAccountParam}
-                title="Salvar parâmetro"
-              >
-                Salvar
-              </Button>
-              <Button
-                variant="secondary"
-                className="bg-gray-700 hover:bg-gray-600 text-white"
-                onClick={cancelCreateAccountParam}
-                disabled={savingNewAccountParam}
-              >
-                Cancelar
-              </Button>
-            </div>
-          ) : <span />}
-          <div className="flex items-center gap-2">
-            {!isCreatingAccountParam && userData?.user?.isAdmin && (
-              <Button
-                className="bg-blue-600 hover:bg-blue-500 text-white"
-                size="sm"
-                onClick={startCreateAccountParam}
-                title="Incluir parâmetro"
-              >
-                Incluir nos parâmetros
-              </Button>
-            )}
-            <Button variant="secondary" className="bg-gray-700 hover:bg-gray-600 text-white" onClick={() => { setIsAccountParamPanelOpen(false); }}>Fechar</Button>
-          </div>
-        </div>
-      </div>
+      <ProductParametersPanel
+        open={isParamPanelOpen}
+        isAdmin={!!userData?.user?.isAdmin}
+        loading={productParamsLoading}
+        items={productParams}
+        isCreating={isCreatingProductParam}
+        newName={newProductParamName}
+        newValue={newProductParamValue}
+        savingNew={savingNewProductParam}
+        onClose={() => setIsParamPanelOpen(false)}
+        onStartCreate={startCreateProductParam}
+        onCancelCreate={cancelCreateProductParam}
+        onSaveCreate={createProductParameter}
+        onChangeNewName={(v) => setNewProductParamName(v)}
+        onChangeNewValue={(v) => setNewProductParamValue(v)}
+        onChangeItemValue={(id, v) => setProductParams(prev => prev.map(p => p.id === id ? { ...p, value: v } : p))}
+        onBlurItemSave={(id, v) => updateProductParameterValue(id, v)}
+      />
 
-      {/* Painel à direita com animação de slide (Parâmetros do Produto) */}
-      <div
-        className={`fixed right-0 top-0 h-full w-full max-w-md bg-white dark:bg-gray-800 shadow-xl z-50 transform transition-transform duration-300 ease-out ${isParamPanelOpen ? 'translate-x-0' : 'translate-x-full'}`}
-        aria-hidden={!isParamPanelOpen}
-      >
-        <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-          <h2 className="text-lg font-semibold dark:text-white">Parâmetros do Produto</h2>
-          <button
-            className="text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-white"
-            onClick={() => setIsParamPanelOpen(false)}
-            aria-label="Fechar"
-          >
-            ✕
-          </button>
-        </div>
-        <div className="p-4">
-          <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded shadow-sm max-h-[75vh] overflow-auto">
-            <table className="min-w-full text-sm">
-              <thead className="bg-gray-50 dark:bg-gray-700 sticky top-0">
-                <tr>
-                  <th className="text-left px-4 py-2 dark:text-gray-100">Nome</th>
-                  <th className="text-left px-4 py-2 dark:text-gray-100">Valor</th>
-                </tr>
-              </thead>
-              <tbody>
-                {isCreatingProductParam && (
-                  <tr className="border-t border-gray-100 dark:border-gray-700 bg-blue-50/40 dark:bg-gray-700/30">
-                    <td className="px-4 py-2">
-                      <input
-                        type="text"
-                        className="w-full rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-2 py-1 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="Nome do parâmetro"
-                        value={newProductParamName}
-                        onChange={(e) => setNewProductParamName(e.target.value)}
-                      />
-                    </td>
-                    <td className="px-4 py-2">
-                      <input
-                        type="text"
-                        className="w-full rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-2 py-1 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="Valor"
-                        value={newProductParamValue}
-                        onChange={(e) => setNewProductParamValue(e.target.value)}
-                        onKeyDown={(e) => { if (e.key === 'Enter') createProductParameter(); }}
-                      />
-                    </td>
-                  </tr>
-                )}
-                {productParamsLoading ? (
-                  <tr><td className="px-4 py-3 dark:text-gray-200" colSpan={2}>Carregando...</td></tr>
-                ) : productParams.length === 0 ? (
-                  <tr><td className="px-4 py-3 dark:text-gray-200" colSpan={2}>Nenhum parâmetro encontrado.</td></tr>
-                ) : (
-                  productParams.map(item => (
-                    <tr key={item.id} className="border-t border-gray-100 dark:border-gray-700">
-                      <td className="px-4 py-2 dark:text-gray-100">{item.name}</td>
-                      <td className="px-4 py-2 dark:text-gray-100">
-                        {((item.value ?? '').length > 60) ? (
-                          <textarea
-                            className="w-full rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-2 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y min-h-[80px]"
-                            rows={Math.min(8, Math.max(3, Math.ceil(((item.value ?? '').length) / 60)))}
-                            value={item.value ?? ''}
-                            onChange={(e) => userData?.user?.isAdmin && setProductParams(prev => prev.map(p => p.id === item.id ? { ...p, value: e.target.value } : p))}
-                            onBlur={(e) => userData?.user?.isAdmin && updateProductParameterValue(item.id, e.target.value)}
-                            disabled={!userData?.user?.isAdmin}
-                            placeholder="Defina o valor"
-                          />
-                        ) : (
-                          <input
-                            type="text"
-                            className="w-full rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-2 py-1 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            value={item.value ?? ''}
-                            onChange={(e) => userData?.user?.isAdmin && setProductParams(prev => prev.map(p => p.id === item.id ? { ...p, value: e.target.value } : p))}
-                            onBlur={(e) => userData?.user?.isAdmin && updateProductParameterValue(item.id, e.target.value)}
-                            disabled={!userData?.user?.isAdmin}
-                            placeholder="Defina o valor"
-                          />
-                        )}
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-        <div className="p-4 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between gap-2">
-          {isCreatingProductParam ? (
-            <div className="flex items-center gap-2">
-              <Button
-                className="bg-blue-600 hover:bg-blue-500 text-white"
-                onClick={createProductParameter}
-                disabled={savingNewProductParam}
-                title="Salvar parâmetro"
-              >
-                Salvar
-              </Button>
-              <Button
-                variant="secondary"
-                className="bg-gray-700 hover:bg-gray-600 text-white"
-                onClick={cancelCreateProductParam}
-                disabled={savingNewProductParam}
-              >
-                Cancelar
-              </Button>
-            </div>
-          ) : <span />}
-          <div className="flex items-center gap-2">
-            {!isCreatingProductParam && userData?.user?.isAdmin && (
-              <Button
-                className="bg-blue-600 hover:bg-blue-500 text-white"
-                size="sm"
-                onClick={startCreateProductParam}
-                title="Incluir parâmetro"
-              >
-                Incluir nos parâmetros
-              </Button>
-            )}
-            <Button variant="secondary" className="bg-gray-700 hover:bg-gray-600 text-white" onClick={() => { setIsParamPanelOpen(false); }}>Fechar</Button>
-          </div>
-        </div>
-      </div>
+      <AccountParametersPanel
+        open={isAccountParamPanelOpen}
+        isAdmin={!!userData?.user?.isAdmin}
+        loading={accountParamsLoading}
+        items={accountParams as AccountParameter[]}
+        isCreating={isCreatingAccountParam}
+        newName={newAccountParamName}
+        newValue={newAccountParamValue}
+        savingNew={savingNewAccountParam}
+        onClose={() => setIsAccountParamPanelOpen(false)}
+        onStartCreate={startCreateAccountParam}
+        onCancelCreate={cancelCreateAccountParam}
+        onSaveCreate={createAccountParameter}
+        onChangeNewName={(v) => setNewAccountParamName(v)}
+        onChangeNewValue={(v) => setNewAccountParamValue(v)}
+        onChangeItemValue={(id, v) => setAccountParams(prev => prev.map(p => p.id === id ? { ...p, value: v } : p))}
+        onBlurItemSave={(id, v) => updateAccountParameterValue(id, v)}
+      />
 
-      {/* Painel à direita com animação de slide (Parâmetros da Conta) */}
-      <div
-        className={`fixed right-0 top-0 h-full w-full max-w-md bg-white dark:bg-gray-800 shadow-xl z-50 transform transition-transform duration-300 ease-out ${isAccountParamPanelOpen ? 'translate-x-0' : 'translate-x-full'}`}
-        aria-hidden={!isAccountParamPanelOpen}
-      >
-        <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-          <h2 className="text-lg font-semibold dark:text-white">Parâmetros da Conta</h2>
-          <button
-            className="text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-white"
-            onClick={() => setIsAccountParamPanelOpen(false)}
-            aria-label="Fechar"
-          >
-            ✕
-          </button>
-        </div>
-        <div className="p-4">
-          <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded shadow-sm max-h-[75vh] overflow-auto">
-            <table className="min-w-full text-sm">
-              <thead className="bg-gray-50 dark:bg-gray-700 sticky top-0">
-                <tr>
-                  <th className="text-left px-4 py-2 dark:text-gray-100">Nome</th>
-                  <th className="text-left px-4 py-2 dark:text-gray-100">Valor</th>
-                </tr>
-              </thead>
-              <tbody>
-                {accountParamsLoading ? (
-                  <tr><td className="px-4 py-3 dark:text-gray-200" colSpan={2}>Carregando...</td></tr>
-                ) : accountParams.length === 0 ? (
-                  <tr><td className="px-4 py-3 dark:text-gray-200" colSpan={2}>Nenhum parâmetro encontrado.</td></tr>
-                ) : (
-                  accountParams.map(item => (
-                    <tr key={item.id} className="border-t border-gray-100 dark:border-gray-700">
-                      <td className="px-4 py-2 dark:text-gray-100">{item.name}</td>
-                      <td className="px-4 py-2 dark:text-gray-100">
-                        {((item.value ?? '').length > 60) ? (
-                          <textarea
-                            className="w-full rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-2 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y min-h-[80px]"
-                            rows={Math.min(8, Math.max(3, Math.ceil(((item.value ?? '').length) / 60)))}
-                            value={item.value ?? ''}
-                            onChange={(e) => setAccountParams(prev => prev.map(p => p.id === item.id ? { ...p, value: e.target.value } : p))}
-                            onBlur={(e) => updateAccountParameterValue(item.id, e.target.value)}
-                            placeholder="Defina o valor"
-                          />
-                        ) : (
-                          <input
-                            type="text"
-                            className="w-full rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-2 py-1 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            value={item.value ?? ''}
-                            onChange={(e) => setAccountParams(prev => prev.map(p => p.id === item.id ? { ...p, value: e.target.value } : p))}
-                            onBlur={(e) => updateAccountParameterValue(item.id, e.target.value)}
-                            placeholder="Defina o valor"
-                          />
-                        )}
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-        <div className="p-4 border-t border-gray-200 dark:border-gray-700 flex items-center justify-end gap-2">
-          {userData?.user?.isAdmin && (
-            <Button
-              className="bg-blue-600 hover:bg-blue-500 text-white"
-              size="sm"
-              onClick={startCreateAccountParam}
-              title="Incluir parâmetro"
-            >
-              Incluir nos parâmetros
-            </Button>
-          )}
-          <Button variant="secondary" className="bg-gray-700 hover:bg-gray-600 text-white" onClick={() => { setIsAccountParamPanelOpen(false); }}>Fechar</Button>
-        </div>
-      </div>
-
-      {/* Cabeçalho */}
-        <header className={`fixed top-0 left-0 right-0 z-[60] flex items-center h-16 bg-gray-800 text-white px-4 transition-all duration-400 ease-out ${showHeader ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-5'}`}>
-          {/* Logo no header */}
-          <div className="px-2 flex items-center">
-            <Image src="/images/logo.png" alt="Autonom.ia Logo" width={28} height={28} />
-          </div>
-          {/* Seletor de produtos */}
-          <div className="flex-1 px-2">
-            <div className="max-w-xl flex items-center gap-2">
-              <label htmlFor="products-select" className="sr-only">Produtos</label>
-              <select
-                id="products-select"
-                className="select-clean w-full"
-                disabled={productsLoading}
-                value={selectedProductId || ''}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  setSelectedProductId(val);
-                }}
-              >
-                <option value="" disabled>
-                  {productsLoading ? 'Carregando produtos...' : 'Selecione um produto'}
-                </option>
-                {products.map((p) => (
-                  <option key={p.id} value={p.id}>{p.name}</option>
-                ))}
-              </select>
-              {userData.user?.isAdmin && (
-                <Button
-                  type="button"
-                  variant="secondary"
-                  className="bg-blue-600 hover:bg-blue-500 text-white"
-                  onClick={() => { setSelectedProductId(''); openCreateForm(); }}
-                  title="Incluir produto"
-                >
-                  <Plus className="h-4 w-4 mr-1" /> Incluir
-                </Button>
-              )}
-              {userData.user?.isAdmin && (
-                <>
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    className="bg-gray-700 hover:bg-gray-600 text-white"
-                    onClick={openEditForm}
-                    disabled={!selectedProductId}
-                    title="Editar produto selecionado"
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    className="bg-gray-700 hover:bg-gray-600 text-white"
-                    onClick={openSettingsPanel}
-                    disabled={!selectedProductId}
-                    title="Settings do produto (parâmetros)"
-                  >
-                    <Settings className="h-4 w-4" />
-                  </Button>
-                </>
-              )}
-            </div>
-          </div>
-          
-          <div className="flex items-center gap-2 cursor-pointer">
-            <span className="text-sm">{userData.user?.name || 'Usuário'}</span>
-            <Avatar>
-              {userData.user?.photoUrl ? (
-                <AvatarImage src={userData.user.photoUrl} alt={userData.user?.name || 'Avatar'} />
-              ) : null}
-              <AvatarFallback>{userInitials}</AvatarFallback>
-            </Avatar>
-          </div>
-      </header>
+      {/* Cabeçalho (componente reutilizável) */}
+      <ProductHeader
+        products={products}
+        productsLoading={productsLoading}
+        selectedProductId={selectedProductId}
+        isAdmin={!!userData?.user?.isAdmin}
+        userName={userData?.user?.name}
+        userPhotoUrl={userData?.user?.photoUrl}
+        userInitials={userInitials}
+        onChangeProduct={(val) => {
+          // Troca de produto: limpar seleção de conta e estado do funil
+          setSelectedProductId(val);
+          setSelectedAccountId('');
+          setSteps([]);
+          setSelectedAccountFunnelName('');
+          setSelectedAccountFunnelIsDefault(false);
+        }}
+        onCreateProduct={() => { setSelectedProductId(''); openCreateForm(); }}
+        onEditProduct={openEditForm}
+        onOpenProductSettings={openSettingsPanel}
+      />
 
       {/* Conteúdo do Dashboard */}
-      <main className="flex-1 overflow-y-auto p-6 pt-20">
+      <main className="flex-1 overflow-y-auto p-6 pt-16 ml-20">
           {/* Removed welcome and select product messages when no product is selected */}
 
-          {/* Grid: Configuração de Contas (visível apenas com produto selecionado) */}
+          {/* Selected Account bar (sticky) */}
+          {selectedProductId && selectedAccountId && (
+            <SelectedAccountBar
+              name={accounts.find(a => a.id === selectedAccountId)?.name || 'Conta'}
+              isAdmin={!!userData?.user?.isAdmin}
+              onEdit={() => { const acc = accounts.find(a => a.id === selectedAccountId); if (acc) openAccountEditForm(acc); }}
+              onInbox={() => { const acc = accounts.find(a => a.id === selectedAccountId); if (acc) openAccountInboxPanel(acc); }}
+              onSettings={() => { const acc = accounts.find(a => a.id === selectedAccountId); if (acc) openAccountSettingsPanel(acc.id); }}
+              onChangeAccount={() => { setSelectedAccountId(''); setShowAccountsGrid(false); setTimeout(() => setShowAccountsGrid(true), 120); }}
+            />
+          )}
+
+          {/* Spacer to avoid content sitting under the sticky bar */}
+          {selectedProductId && selectedAccountId && (<div className="h-8" />)}
+
+          {/* Grid: Configuração de Contas (visível apenas sem conta selecionada) */}
           {selectedProductId && (
             <>
+            {!selectedAccountId && (
             <section className={`mt-6 transition-all duration-400 ease-out ${showAccountsGrid ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}>
               <div className="flex items-center justify-between mb-3">
                 <h2 className="text-xl font-semibold dark:text-white">Configuração de Contas</h2>
@@ -2088,14 +1528,13 @@ export default function DashboardPage() {
                       <th className="text-left px-4 py-2 dark:text-gray-100">Email</th>
                       <th className="text-left px-4 py-2 dark:text-gray-100">Telefone</th>
                       <th className="text-left px-4 py-2 dark:text-gray-100">Domínio</th>
-                      <th className="text-right px-4 py-2 dark:text-gray-100">Ações</th>
                     </tr>
                   </thead>
                   <tbody>
                     {accountsLoading ? (
-                      <tr><td className="px-4 py-3 dark:text-gray-200" colSpan={5}>Carregando...</td></tr>
+                      <tr><td className="px-4 py-3 dark:text-gray-200" colSpan={4}>Carregando...</td></tr>
                     ) : accounts.length === 0 ? (
-                      <tr><td className="px-4 py-3 dark:text-gray-200" colSpan={5}>Nenhuma conta encontrada.</td></tr>
+                      <tr><td className="px-4 py-3 dark:text-gray-200" colSpan={4}>Nenhuma conta encontrada.</td></tr>
                     ) : (
                       accounts.slice((accPage-1)*accPageSize, (accPage-1)*accPageSize + accPageSize).map(acc => (
                         <tr
@@ -2107,39 +1546,6 @@ export default function DashboardPage() {
                           <td className="px-4 py-2 dark:text-gray-100">{acc.email || '-'}</td>
                           <td className="px-4 py-2 dark:text-gray-100">{acc.phone || '-'}</td>
                           <td className="px-4 py-2 dark:text-gray-100">{acc.domain || '-'}</td>
-                          <td className="px-4 py-2 text-right">
-                            {userData.user?.isAdmin && (
-                              <>
-                                <Button
-                                  size="sm"
-                                  variant="secondary"
-                                  className="bg-gray-700 hover:bg-gray-600 text-white"
-                                  onClick={(e) => { e.stopPropagation(); openAccountEditForm(acc); }}
-                                  title="Editar conta"
-                                >
-                                  <Pencil className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="secondary"
-                                  className="ml-2 bg-gray-700 hover:bg-gray-600 text-white"
-                                  onClick={(e) => { e.stopPropagation(); openAccountInboxPanel(acc); }}
-                                  title="Inboxes e WhatsApp"
-                                >
-                                  <Phone className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="secondary"
-                                  className="ml-2 bg-gray-700 hover:bg-gray-600 text-white"
-                                  onClick={(e) => { e.stopPropagation(); openAccountSettingsPanel(acc.id); }}
-                                  title="Parâmetros da conta (settings)"
-                                >
-                                  <Settings className="h-4 w-4" />
-                                </Button>
-                              </>
-                            )}
-                          </td>
                         </tr>
                       ))
                     )}
@@ -2168,10 +1574,11 @@ export default function DashboardPage() {
                 )}
               </div>
             </section>
+            )}
 
-            {/* Cabeçalho Funil: quando conta não possui funil, mostrar ação para criar */}
-            {selectedAccountId && !(accounts.find(a => a.id === selectedAccountId)?.conversation_funnel_id) && (
-              <section className={`mt-6 transition-all duration-400 ease-out ${showFunnelGrid ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}>
+            {/* Cabeçalho Funil: quando conta não possui funil (sem steps), mostrar ação para criar */}
+            {selectedAccountId && !stepsLoading && steps.length === 0 && (
+              <section key={`no-funnel-${selectedAccountId}`} className={`mt-6 transition-all duration-400 ease-out opacity-100 translate-y-0`}>
                 <div className="flex items-center justify-between">
                   <div>
                     <h2 className="text-xl font-semibold dark:text-white">Configuração Funil Conversacional</h2>
@@ -2191,9 +1598,9 @@ export default function DashboardPage() {
               </section>
             )}
 
-            {/* Grid: Configuração Funil Conversacional (aparece apenas se conta selecionada tem funil) */}
-            {selectedAccountId && (accounts.find(a => a.id === selectedAccountId)?.conversation_funnel_id) && (
-              <section className={`mt-6 transition-all duration-400 ease-out ${showFunnelGrid ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}>
+            {/* Grid: Configuração Funil Conversacional (forçar render quando há conta selecionada) */}
+            {selectedAccountId && (
+              <section key={`funnel-grid-${selectedAccountId}`} className={`mt-6 transition-all duration-400 ease-out opacity-100 translate-y-0`}>
                 <div className="flex items-center justify-between">
                   <div>
                     <h2 className="text-xl font-semibold dark:text-white">Configuração Funil Conversacional</h2>
@@ -2282,8 +1689,8 @@ export default function DashboardPage() {
                                         setStepMessages([]);
                                       } else {
                                         const j = await resp.json();
-                                        const all = Array.isArray(j?.data) ? j.data : [];
-                                        const filtered = (all as StepMessage[]).filter(m => String(m?.conversation_funnel_step_id ?? '') === String(step.id ?? ''));
+                                        const all = Array.isArray(j?.data) ? (j.data as StepMessage[]) : [];
+                                        const filtered = all.filter(m => String(m?.conversation_funnel_step_id ?? '') === String(step.id ?? ''));
                                         setStepMessages(filtered);
                                       }
                                     } catch (e) {
@@ -2340,109 +1747,29 @@ export default function DashboardPage() {
         onClick={() => setIsAccountFormOpen(false)}
       />
       {/* Painel à direita com animação de slide (Conta) */}
-      <div
-        className={`fixed right-0 top-0 h-full w-full max-w-md bg-white dark:bg-gray-800 shadow-xl z-50 transform transition-transform duration-300 ease-out ${isAccountFormOpen ? 'translate-x-0' : 'translate-x-full'}`}
-        aria-hidden={!isAccountFormOpen}
-      >
-        <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-          <h2 className="text-lg font-semibold dark:text-white">
-            {accountFormMode === 'create' ? 'Adicionar Conta' : 'Editar Conta'}
-          </h2>
-          <button
-            className="text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-white"
-            onClick={() => setIsAccountFormOpen(false)}
-            aria-label="Fechar"
-          >
-            ✕
-          </button>
-        </div>
-        <div className="p-4 space-y-4">
-          <div>
-            <label htmlFor="acc-name" className="block text-sm mb-1 dark:text-gray-200">Nome</label>
-            <input
-              id="acc-name"
-              type="text"
-              className="w-full rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              value={accountFormName}
-              onChange={(e) => setAccountFormName(e.target.value)}
-            />
-          </div>
-          <div>
-            <label htmlFor="acc-email" className="block text-sm mb-1 dark:text-gray-200">Email</label>
-            <input
-              id="acc-email"
-              type="email"
-              className="w-full rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              value={accountFormEmail}
-              onChange={(e) => setAccountFormEmail(e.target.value)}
-            />
-          </div>
-          <div>
-            <label htmlFor="acc-phone" className="block text-sm mb-1 dark:text-gray-200">Telefone</label>
-            <input
-              id="acc-phone"
-              type="text"
-              className="w-full rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              value={accountFormPhone}
-              onChange={(e) => setAccountFormPhone(e.target.value)}
-            />
-          </div>
-          <div>
-            <label htmlFor="acc-domain" className="block text-sm mb-1 dark:text-gray-200">Domínio</label>
-            <input
-              id="acc-domain"
-              type="text"
-              className="w-full rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              value={accountFormDomain}
-              onChange={(e) => setAccountFormDomain(e.target.value)}
-            />
-          </div>
-          <div>
-            <label htmlFor="acc-funnel" className="block text-sm mb-1 dark:text-gray-200">Funil Conversacional</label>
-            <div className="flex items-center gap-2">
-              <select
-                id="acc-funnel"
-                className="select-clean w-full"
-                value={accountFormFunnelId}
-                onChange={(e) => setAccountFormFunnelId(e.target.value)}
-              >
-                <option value="">Selecione um funil</option>
-                {funnelsLoading ? (
-                  <option value="" disabled>Carregando...</option>
-                ) : (
-                  funnels.map((f) => (
-                    <option key={f.id} value={f.id}>{f.name}</option>
-                  ))
-                )}
-              </select>
-              {userData?.user?.isAdmin && (
-                <Button
-                  type="button"
-                  onClick={openFunnelCreateForm}
-                  title="Incluir novo funil"
-                  className="bg-blue-600 hover:bg-blue-500 text-white"
-                  size="sm"
-                >
-                  <Plus className="w-4 h-4" />
-                </Button>
-              )}
-            </div>
-          </div>
-        </div>
-        <div className="p-4 border-t border-gray-200 dark:border-gray-700 flex items-center justify-end gap-2">
-          <Button
-            variant="secondary"
-            className="bg-gray-700 hover:bg-gray-600 text-white"
-            onClick={() => { setIsAccountFormOpen(false); }}
-            disabled={accountSaving}
-          >Cancelar</Button>
-          <Button
-            className="bg-blue-600 hover:bg-blue-500 text-white"
-            onClick={handleSaveAccount}
-            disabled={accountSaving || !accountFormName.trim()}
-          >{accountSaving ? 'Salvando...' : 'Salvar'}</Button>
-        </div>
-      </div>
+      <AccountForm
+        open={isAccountFormOpen}
+        mode={accountFormMode}
+        name={accountFormName}
+        email={accountFormEmail}
+        phone={accountFormPhone}
+        domain={accountFormDomain}
+        funnelId={accountFormFunnelId}
+        funnels={funnels}
+        funnelsLoading={funnelsLoading}
+        isAdmin={!!userData?.user?.isAdmin}
+        saving={accountSaving}
+        onChange={(f) => {
+          if (f.name !== undefined) setAccountFormName(f.name);
+          if (f.email !== undefined) setAccountFormEmail(f.email);
+          if (f.phone !== undefined) setAccountFormPhone(f.phone);
+          if (f.domain !== undefined) setAccountFormDomain(f.domain);
+          if (f.funnelId !== undefined) setAccountFormFunnelId(f.funnelId);
+        }}
+        onSave={handleSaveAccount}
+        onClose={() => setIsAccountFormOpen(false)}
+        onOpenCreateFunnel={openFunnelCreateForm}
+      />
 
       {/* Slide-over Formulário de Produto (abre da direita para a esquerda com animação) */}
       {/* Overlay com transição */}
@@ -2451,214 +1778,32 @@ export default function DashboardPage() {
         onClick={() => setIsFormOpen(false)}
       />
       {/* Painel à direita com animação de slide (Produto) */}
-      <div
-        className={`fixed right-0 top-0 h-full w-full max-w-md bg-white dark:bg-gray-800 shadow-xl z-50 transform transition-transform duration-300 ease-out ${isFormOpen ? 'translate-x-0' : 'translate-x-full'}`}
-        aria-hidden={!isFormOpen}
-      >
-        <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-          <h2 className="text-lg font-semibold dark:text-white">
-            {formMode === 'create' ? 'Adicionar Produto' : 'Editar Produto'}
-          </h2>
-          <button
-            className="text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-white"
-            onClick={() => setIsFormOpen(false)}
-            aria-label="Fechar"
-          >
-            ✕
-          </button>
-        </div>
-        <div className="p-4 space-y-4">
-          <div>
-            <label htmlFor="prod-name" className="block text-sm mb-1 dark:text-gray-200">Nome</label>
-            <input
-              id="prod-name"
-              type="text"
-              className="w-full rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              value={formName}
-              onChange={(e) => setFormName(e.target.value)}
-            />
-          </div>
-          <div>
-            <label htmlFor="prod-desc" className="block text-sm mb-1 dark:text-gray-200">Descrição</label>
-            <textarea
-              id="prod-desc"
-              rows={5}
-              className="w-full rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              value={formDescription}
-              onChange={(e) => setFormDescription(e.target.value)}
-            />
-          </div>
-        </div>
-        <div className="p-4 border-t border-gray-200 dark:border-gray-700 flex items-center justify-end gap-2">
-          {/* Botões evidenciados para tema dark */}
-          <Button
-            variant="secondary"
-            className="bg-gray-700 hover:bg-gray-600 text-white"
-            onClick={() => { setIsFormOpen(false); }}
-            disabled={saving}
-          >Cancelar</Button>
-          <Button
-            className="bg-blue-600 hover:bg-blue-500 text-white"
-            onClick={handleSaveProduct}
-            disabled={saving || !formName.trim()}
-          >{saving ? 'Salvando...' : 'Salvar'}</Button>
-        </div>
-      </div>
+      <ProductForm
+        open={isFormOpen}
+        mode={formMode}
+        name={formName}
+        description={formDescription}
+        saving={saving}
+        onChange={(f) => {
+          if (f.name !== undefined) setFormName(f.name);
+          if (f.description !== undefined) setFormDescription(f.description);
+        }}
+        onSave={handleSaveProduct}
+        onClose={() => setIsFormOpen(false)}
+      />
 
       {/* Painel de Inboxes e WhatsApp (condicional, abre da direita) */}
-      {isInboxPanelOpen && (
-        <>
-          <div
-            className={`fixed inset-0 bg-black/50 z-40 transition-opacity duration-300 ${isInboxPanelOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
-            onClick={() => setIsInboxPanelOpen(false)}
-          />
-          <div
-            className={`fixed right-0 top-0 h-full w-full max-w-lg bg-white dark:bg-gray-800 shadow-xl z-50 transform transition-transform duration-300 ease-out ${isInboxPanelOpen ? 'translate-x-0' : 'translate-x-full'}`}
-            aria-hidden={!isInboxPanelOpen}
-          >
-            <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-              <h2 className="text-lg font-semibold dark:text-white">Inboxes e WhatsApp</h2>
-              <button
-                className="text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-white"
-                onClick={() => setIsInboxPanelOpen(false)}
-                aria-label="Fechar"
-              >
-                ✕
-              </button>
-            </div>
-            <div className="p-4">
-              <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded shadow-sm max-h-[75vh] overflow-auto">
-                <table className="min-w-full text-sm">
-                  <thead className="bg-gray-50 dark:bg-gray-700 sticky top-0">
-                    <tr>
-                      <th className="text-left px-4 py-2 dark:text-gray-100">Instância</th>
-                      <th className="text-left px-4 py-2 dark:text-gray-100">Status</th>
-                      <th className="text-right px-4 py-2 dark:text-gray-100">Ações</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {inboxesLoading ? (
-                      <tr><td className="px-4 py-3 dark:text-gray-200" colSpan={3}>Carregando...</td></tr>
-                    ) : inboxes.length === 0 ? (
-                      <tr><td className="px-4 py-3 dark:text-gray-200" colSpan={3}>Nenhum inbox encontrado.</td></tr>
-                    ) : (
-                      inboxes.map(it => (
-                        <tr key={it.name}>
-                          <td className="px-4 py-2 dark:text-gray-100">{it.name}</td>
-                          <td className="px-4 py-2 dark:text-gray-100">
-                            {it.status === 'open' && <span className="text-green-600">Conectado</span>}
-                            {it.status === 'close' && <span className="text-red-500">Desconectado</span>}
-                            {it.status === 'connecting' && <span className="text-yellow-600">Conectando</span>}
-                            {(it.status === 'unknown' || !it.status) && <span className="text-gray-400">Não Encontrada</span>}
-                          </td>
-                          <td className="px-4 py-2 text-right">
-                            {it.status !== 'open' ? (
-                              <Button
-                                size="sm"
-                                variant="secondary"
-                                className="bg-gray-700 hover:bg-gray-600 text-white"
-                                onClick={() => syncInboxInstance(it.name)}
-                                disabled={syncingInstance === it.name}
-                              >
-                                <RefreshCw className={syncingInstance === it.name ? 'animate-spin' : ''} />
-                              </Button>
-                            ) : (
-                              <span className="text-gray-400 text-xs">—</span>
-                            )}
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-              {/* Instruções de conexão / Sucesso */}
-              {connectionSuccess ? (
-                <div className="mt-4">
-                  <div className="rounded-lg p-6 max-w-xl mx-auto border border-sky-600 bg-black text-white text-center">
-                    <div className="text-sky-500 text-5xl mb-4">✓</div>
-                    <h3 className="text-2xl font-semibold mb-2">Conexão Realizada com Sucesso!</h3>
-                    <p className="text-sm text-gray-200 mb-6">Parabéns! Seu WhatsApp foi conectado com sucesso ao serviço.</p>
-                  </div>
-                </div>
-              ) : (!inboxesLoading && inboxes.some(it => it.status !== 'open')) && (
-                <div className="mt-4">
-                  <div className="rounded-lg p-6 max-w-xl mx-auto border border-gray-200 dark:border-gray-700 bg-black text-white">
-                    {/* Tabs */}
-                    <div className="flex border-b border-white/10 mb-6">
-                      <button
-                        className={`px-4 py-2 transition ${connectMethod === 'qrcode' ? 'border-b-2 border-sky-500 text-white' : 'opacity-60'}`}
-                        onClick={() => setConnectMethod('qrcode')}
-                      >QR Code</button>
-                      <button
-                        className={`px-4 py-2 transition ${connectMethod === 'pairing' ? 'border-b-2 border-sky-500 text-white' : 'opacity-60'}`}
-                        onClick={() => setConnectMethod('pairing')}
-                      >Código de Pareamento</button>
-                    </div>
-
-                    {/* Método QR Code */}
-                    {connectMethod === 'qrcode' && (
-                      <div>
-                        <h3 className="text-sky-400 font-semibold mb-3">Como conectar usando QR Code</h3>
-                        <ul className="text-sm space-y-3">
-                          <li className="flex"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-sky-500 text-black font-bold mr-3">1</span><span>Abra o WhatsApp no seu celular</span></li>
-                          <li className="flex"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-sky-500 text-black font-bold mr-3">2</span><span>Toque em Mais opções ⋮ ou Configurações ⚙️</span></li>
-                          <li className="flex"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-sky-500 text-black font-bold mr-3">3</span><span>Selecione &quot;Aparelhos conectados&quot;</span></li>
-                          <li className="flex"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-sky-500 text-black font-bold mr-3">4</span><span>Toque em &quot;Conectar um aparelho&quot;</span></li>
-                          <li className="flex"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-sky-500 text-black font-bold mr-3">5</span><span>Aponte a câmera para o QR Code abaixo</span></li>
-                        </ul>
-                        <div className="mt-4 flex items-center justify-center">
-                          {connectInfo?.base64 ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img src={connectInfo.base64} alt="QR Code" className="w-64 h-64 object-contain rounded bg-white p-2" />
-                          ) : (
-                            <div className="text-center text-gray-300 text-sm">
-                              Gere o QR Code clicando no botão de sincronizar da instância desejada.
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Método Código de Pareamento */}
-                    {connectMethod === 'pairing' && (
-                      <div>
-                        <h3 className="text-sky-400 font-semibold mb-3">Como conectar usando Código de Pareamento</h3>
-                        <ul className="text-sm space-y-3">
-                          <li className="flex"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-sky-500 text-black font-bold mr-3">1</span><span>Abra o WhatsApp no seu celular</span></li>
-                          <li className="flex"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-sky-500 text-black font-bold mr-3">2</span><span>Toque em Mais opções ⋮ ou Configurações ⚙️</span></li>
-                          <li className="flex"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-sky-500 text-black font-bold mr-3">3</span><span>Selecione &quot;Aparelhos conectados&quot;</span></li>
-                          <li className="flex"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-sky-500 text-black font-bold mr-3">4</span><span>Toque em &quot;Conectar um aparelho&quot;</span></li>
-                          <li className="flex"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-sky-500 text-black font-bold mr-3">5</span><span>Toque em &quot;Conectar com código&quot;</span></li>
-                          <li className="flex"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-sky-500 text-black font-bold mr-3">6</span><span>Digite o código de 8 dígitos abaixo</span></li>
-                        </ul>
-                        <div className="mt-6 text-center">
-                          {connectInfo?.pairingCode ? (
-                            <div className="inline-block text-3xl tracking-widest bg-white text-black rounded px-4 py-3 font-mono">
-                              {connectInfo.pairingCode}
-                            </div>
-                          ) : (
-                            <div className="text-center text-gray-300 text-sm">
-                              Gere o código clicando no botão de sincronizar da instância desejada.
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )}
-
-                    <div className="mt-6 text-xs text-gray-300 text-center">
-                      {connectInfo?.instance ? `Instância: ${connectInfo.instance}` : 'Instância ainda não sincronizada'}
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-            <div className="p-4 border-t border-gray-200 dark:border-gray-700 flex items-center justify-end gap-2">
-              <Button variant="secondary" className="bg-gray-700 hover:bg-gray-600 text-white" onClick={() => { setIsInboxPanelOpen(false); }}>Fechar</Button>
-            </div>
-          </div>
-        </>
-      )}
+      <InboxPanel
+        open={isInboxPanelOpen}
+        inboxes={inboxes}
+        loading={inboxesLoading}
+        syncingInstance={syncingInstance}
+        connectionSuccess={connectionSuccess}
+        connectInfo={connectInfo}
+        connectMethod={connectMethod}
+        onClose={() => setIsInboxPanelOpen(false)}
+        onSyncInstance={syncInboxInstance}
+      />
 
       {/* Slide-over Formulário de Funil (abre da direita, padrão do produto) */}
       {/* Overlay com transição */}
