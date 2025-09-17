@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import Image from "next/image";
-import { LayoutDashboard, Settings as SettingsIcon, ClipboardList, Megaphone } from "lucide-react";
+import Sidebar from "../../components/Sidebar";
 
 // Simple inputs to avoid new deps; using native date inputs
 function toISODate(date: Date) {
@@ -110,6 +110,7 @@ export default function MonitoringPage() {
   const [data, setData] = useState<Conversation[]>([]);
   // UI staged entrance: show header with fade/slide like Settings
   const [showHeader, setShowHeader] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
   // Logged users state
   const [loggedUsers, setLoggedUsers] = useState<Array<{id:number; name:string; email:string; open_conversations:number}>>([]);
   const [loggedError, setLoggedError] = useState<string>("");
@@ -407,10 +408,11 @@ export default function MonitoringPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // staged header animation (match Settings)
+  // staged header/menu animation (match Settings)
   useEffect(() => {
     const t1 = setTimeout(() => setShowHeader(true), 180);
-    return () => clearTimeout(t1);
+    const t2 = setTimeout(() => setShowMenu(true), 420);
+    return () => { clearTimeout(t1); clearTimeout(t2); };
   }, []);
 
   // Ensure custom range has pre-filled dates to avoid native placeholders in header
@@ -428,41 +430,8 @@ export default function MonitoringPage() {
 
   return (
     <div className="flex h-screen bg-background dark:bg-gray-900">
-      {/* Sidebar with two icons, same as dashboard */}
-      <div className="w-20 h-full bg-transparent dark:bg-gray-900">
-        <div className={`h-full flex items-center justify-center`}>
-          <div className="flex flex-col items-center gap-3 rounded-full bg-gray-800/60 dark:bg-gray-700/60 p-2">
-            <Button
-              className="h-10 w-10 p-0 rounded-full bg-transparent hover:bg-gray-700/60 text-white"
-              title="Monitoring"
-              onClick={() => { router.push('/monitoring'); }}
-            >
-              <LayoutDashboard className="h-5 w-5" />
-            </Button>
-            <Button
-              className="h-10 w-10 p-0 rounded-full bg-transparent hover:bg-gray-700/60 text-white"
-              title="Settings"
-              onClick={() => { router.push('/settings'); }}
-            >
-              <SettingsIcon className="h-5 w-5" />
-            </Button>
-            <Button
-              className="h-10 w-10 p-0 rounded-full bg-transparent hover:bg-gray-700/60 text-white"
-              title="Projects"
-              onClick={() => { router.push('/projects'); }}
-            >
-              <ClipboardList className="h-5 w-5" />
-            </Button>
-            <Button
-              className="h-10 w-10 p-0 rounded-full bg-transparent hover:bg-gray-700/60 text-white"
-              title="Campanhas"
-              onClick={() => { router.push('/campaigns'); }}
-            >
-              <Megaphone className="h-5 w-5" />
-            </Button>
-          </div>
-        </div>
-      </div>
+      {/* Sidebar */}
+      <Sidebar show={showMenu} />
 
       <div className="flex-1 flex flex-col">
         {/* Header (same visual pattern and animation as Settings) */}
@@ -564,7 +533,7 @@ export default function MonitoringPage() {
         </header>
 
         {/* Content */}
-        <main className="flex-1 overflow-auto p-6 pt-20">
+        <main className="flex-1 overflow-auto p-6 pt-20 ml-20">
           {/* Status */}
           {error && <div className="text-red-400">{error}</div>}
 

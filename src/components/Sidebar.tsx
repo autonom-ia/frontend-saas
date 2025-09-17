@@ -2,35 +2,41 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, ClipboardList, Settings, Megaphone } from "lucide-react";
+import { LayoutDashboard, ClipboardList, Settings, Megaphone, KanbanSquare } from "lucide-react";
+
+type SidebarProps = {
+  show?: boolean; // staged entrance animation; defaults to true
+};
 
 const navItems = [
-  { href: "/monitoring", label: "Monitoring", Icon: LayoutDashboard },
-  { href: "/projects", label: "Projects", Icon: ClipboardList },
-  { href: "/settings", label: "Settings", Icon: Settings },
+  { href: "/monitoring", label: "Monitoramento", Icon: LayoutDashboard },
+  { href: "/settings", label: "Configurações", Icon: Settings },
+  { href: "/projects", label: "Projetos", Icon: ClipboardList },
+  { href: "/kanban", label: "Kanban", Icon: KanbanSquare },
   { href: "/campaigns", label: "Campanhas", Icon: Megaphone },
 ];
 
-export default function Sidebar() {
+export default function Sidebar({ show = true }: SidebarProps) {
   const pathname = usePathname();
   return (
-    <aside className="fixed left-0 top-0 h-screen w-16 bg-zinc-900 border-r border-zinc-800 flex flex-col items-center py-4 gap-4 z-40">
-      <div className="text-xs text-zinc-400 font-semibold">AI</div>
-      <nav className="flex flex-col gap-3 mt-2">
-        {navItems.map(({ href, label, Icon }) => {
-          const active = pathname?.startsWith(href);
-          return (
-            <Link
-              key={href}
-              href={href}
-              title={label}
-              className={`p-2 rounded-md transition-colors ${active ? "bg-zinc-800 text-white" : "text-zinc-400 hover:bg-zinc-800 hover:text-white"}`}
-            >
-              <Icon size={22} />
-            </Link>
-          );
-        })}
-      </nav>
+    <aside className="fixed left-0 top-0 h-screen w-20 bg-transparent dark:bg-gray-900 z-40">
+      <div className={`h-full flex items-center justify-center transition-all duration-400 ease-out ${show ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-5'}`}>
+        <nav className="flex flex-col items-center gap-3 rounded-full bg-gray-800/60 dark:bg-gray-700/60 p-2">
+          {navItems.map(({ href, label, Icon }) => {
+            const active = pathname?.startsWith(href);
+            return (
+              <Link
+                key={href}
+                href={href}
+                title={label}
+                className={`h-10 w-10 p-0 rounded-full flex items-center justify-center transition-colors ${active ? 'bg-zinc-800 text-white' : 'text-zinc-300 hover:bg-gray-700/60 hover:text-white'}`}
+              >
+                <Icon className="h-5 w-5" />
+              </Link>
+            );
+          })}
+        </nav>
+      </div>
     </aside>
   );
 }
