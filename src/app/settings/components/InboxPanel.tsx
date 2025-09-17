@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { RefreshCw } from "lucide-react";
 
@@ -30,6 +30,13 @@ export default function InboxPanel(props: InboxPanelProps) {
     onClose,
     onSyncInstance,
   } = props;
+
+  // Tabs state: default to prop, keep in sync if it changes
+  const [method, setMethod] = useState<"qrcode" | "pairing">(connectMethod || "qrcode");
+  useEffect(() => {
+    if (connectMethod && connectMethod !== method) setMethod(connectMethod);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [connectMethod]);
 
   return (
     <>
@@ -110,14 +117,26 @@ export default function InboxPanel(props: InboxPanelProps) {
           ) : (!loading && inboxes.some(it => it.status !== 'open')) && (
             <div className="mt-4">
               <div className="rounded-lg p-6 max-w-xl mx-auto border border-gray-200 dark:border-gray-700 bg-black text-white">
-                {/* Tabs */}
-                <div className="flex gap-2 mb-4">
-                  <button className={`px-3 py-1 rounded ${connectMethod === 'qrcode' ? 'bg-sky-600 text-white' : 'bg-gray-700 text-gray-100'}`}>QR Code</button>
-                  <button className={`px-3 py-1 rounded ${connectMethod === 'pairing' ? 'bg-sky-600 text-white' : 'bg-gray-700 text-gray-100'}`}>Código</button>
+                {/* Tabs-style header */}
+                <div className="flex items-center gap-6 mb-4 border-b border-gray-700">
+                  <button
+                    type="button"
+                    onClick={() => setMethod('qrcode')}
+                    className={`-mb-px px-2 py-2 border-b-2 ${method === 'qrcode' ? 'border-sky-500 text-sky-400' : 'border-transparent text-gray-400 hover:text-gray-200'}`}
+                  >
+                    QR Code
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMethod('pairing')}
+                    className={`-mb-px px-2 py-2 border-b-2 ${method === 'pairing' ? 'border-sky-500 text-sky-400' : 'border-transparent text-gray-400 hover:text-gray-200'}`}
+                  >
+                    Código
+                  </button>
                 </div>
 
-                {connectMethod === 'qrcode' ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {method === 'qrcode' ? (
+                  <div className="space-y-6">
                     <div>
                       <h3 className="text-sky-400 font-semibold mb-3">Como conectar usando QR Code</h3>
                       <ul className="text-sm space-y-3">
@@ -132,12 +151,12 @@ export default function InboxPanel(props: InboxPanelProps) {
                       {connectInfo?.base64 ? (
                         <img src={`data:image/png;base64,${connectInfo.base64}`} alt="QR Code" className="rounded border border-gray-600" />
                       ) : (
-                        <div className="text-gray-400 text-sm">QR Code não disponível. Sincronize a instância.</div>
+                        <div className="text-gray-400 text-sm text-center">QR Code não disponível. Sincronize a instância.</div>
                       )}
                     </div>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-6">
                     <div>
                       <h3 className="text-sky-400 font-semibold mb-3">Como conectar usando Código de Pareamento</h3>
                       <ul className="text-sm space-y-3">
@@ -146,13 +165,14 @@ export default function InboxPanel(props: InboxPanelProps) {
                         <li className="flex"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-sky-500 text-black font-bold mr-3">3</span><span>Selecione &quot;Aparelhos conectados&quot;</span></li>
                         <li className="flex"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-sky-500 text-black font-bold mr-3">4</span><span>Toque em &quot;Conectar um aparelho&quot;</span></li>
                         <li className="flex"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-sky-500 text-black font-bold mr-3">5</span><span>Toque em &quot;Conectar com código&quot;</span></li>
+                        <li className="flex"><span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-sky-500 text-black font-bold mr-3">6</span><span>Digite o código de 8 dígitos que será exibido na próxima tela</span></li>
                       </ul>
                     </div>
                     <div className="flex items-center justify-center">
                       {connectInfo?.pairingCode ? (
                         <div className="text-4xl tracking-widest font-mono">{connectInfo.pairingCode}</div>
                       ) : (
-                        <div className="text-gray-400 text-sm">Código não disponível. Sincronize a instância.</div>
+                        <div className="text-gray-400 text-sm text-center">Código não disponível. Sincronize a instância.</div>
                       )}
                     </div>
                   </div>
