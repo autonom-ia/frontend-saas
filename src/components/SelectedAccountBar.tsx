@@ -16,7 +16,7 @@ export type SelectedAccountBarProps = {
 export default function SelectedAccountBar(props: SelectedAccountBarProps) {
   const { name, isAdmin, onEdit, onInbox, onSettings, onChangeAccount } = props;
   return (
-    <div className="sticky top-10 z-[30] bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm border-b border-gray-200 dark:border-gray-700 py-2 px-3 rounded">
+    <div className="sticky top-5 z-[30] w-full max-w-full bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm border-b border-gray-200 dark:border-gray-700 py-2 px-3 rounded">
       <div className="flex items-center justify-between">
         <div>
           <span className="text-sm text-gray-500 dark:text-gray-300">Conta selecionada</span>

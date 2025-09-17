@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import ItemDetailsPanel from "./components/ItemDetailsPanel";
 import Image from "next/image";
 import Sidebar from "../../components/Sidebar";
 import ProductHeader from "../../components/ProductHeader";
 import SelectedAccountBar from "../../components/SelectedAccountBar";
-import { Button } from "@/components/ui/button";
 
 // Types reused in a lightweight way
 type UserData = {
@@ -134,16 +134,13 @@ export default function KanbanPage() {
   const [kanbanLoading, setKanbanLoading] = useState(false);
   const [kanbanError, setKanbanError] = useState<string>("");
   const [kanbanItems, setKanbanItems] = useState<KanbanItem[]>([]);
-
-  // Discover base URL for funnel API
-  const funnelApiUrl = useMemo(() => {
-    return (
-      process.env.NEXT_PUBLIC_FUNNEL_API_URL ||
-      process.env.NEXT_PUBLIC_SAAS_API_URL ||
-      process.env.NEXT_PUBLIC_PROJECT_API_URL ||
-      "https://api-projects.autonomia.site"
-    );
-  }, []);
+  const [funnelId, setFunnelId] = useState<string>("");
+  const [funnelName, setFunnelName] = useState<string>("");
+  type Step = { id: string; name: string; shipping_order?: number };
+  const [steps, setSteps] = useState<Step[]>([]);
+  const [stepsLoading, setStepsLoading] = useState(false);
+  const lanesRef = useRef<HTMLDivElement | null>(null);
+  const [selectedItem, setSelectedItem] = useState<KanbanItem | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -153,7 +150,7 @@ export default function KanbanPage() {
         setKanbanError("");
         // Try common paths
         const candidates = [
-          `${funnelApiUrl}/Autonomia/Funnel/KanbanItems?accountId=${encodeURIComponent(selectedAccountId)}`,
+          `${saasApiUrl}/Autonomia/Saas/KanbanItems?accountId=${encodeURIComponent(selectedAccountId)}`,
         ];
         let lastError: string | null = null;
         for (const url of candidates) {
@@ -166,6 +163,9 @@ export default function KanbanPage() {
             const j = await resp.json();
             const data = Array.isArray(j?.data) ? j.data : Array.isArray(j) ? j : [];
             setKanbanItems(data as KanbanItem[]);
+            const first = (data as KanbanItem[])[0];
+            setFunnelId(String(first?.funnel_id || ""));
+            setFunnelName(String(first?.funnel_name || ""));
             lastError = null;
             break;
           } catch (err: unknown) {
@@ -185,29 +185,62 @@ export default function KanbanPage() {
         setKanbanLoading(false);
       }
     })();
-  }, [selectedAccountId, authToken, funnelApiUrl]);
+  }, [selectedAccountId, authToken, saasApiUrl]);
 
-  // Group items by column (step)
+  // Load steps when funnelId is known (fallback to accountId if needed)
+  useEffect(() => {
+    (async () => {
+      if (!selectedAccountId) { setSteps([]); return; }
+      try {
+        setStepsLoading(true);
+        const url = `${saasApiUrl}/Autonomia/Saas/ConversationFunnelSteps?accountId=${encodeURIComponent(selectedAccountId)}${funnelId ? `&funnelId=${encodeURIComponent(funnelId)}` : ''}`;
+        const resp = await fetch(url, {
+          headers: authToken ? { Authorization: `Bearer ${authToken}` } : undefined,
+          mode: 'cors',
+        });
+        if (resp.ok) {
+          const j = await resp.json();
+          const data = Array.isArray(j?.data) ? j.data : [];
+          // normalize (no-any)
+          const norm: Step[] = data.map((s: unknown) => {
+            const obj = (s ?? {}) as Record<string, unknown>;
+            const id = String(obj.id ?? "");
+            const name = String(obj.name ?? "");
+            const shipping_order = typeof obj.shipping_order === 'number' ? obj.shipping_order : undefined;
+            return { id, name, shipping_order };
+          });
+          setSteps(norm);
+        } else {
+          setSteps([]);
+        }
+      } catch {
+        setSteps([]);
+      } finally {
+        setStepsLoading(false);
+      }
+    })();
+  }, [selectedAccountId, funnelId, saasApiUrl, authToken]);
+
+  // Group items by step using steps list
   type Column = { key: string; title: string; items: KanbanItem[] };
   const columns: Column[] = useMemo(() => {
-    const groups = new Map<string, Column>();
+    const byStepId = new Map<string, KanbanItem[]>();
     for (const it of kanbanItems) {
-      const key = (it.step_key || it.step?.key || it.step_id || it.status || 'sem_etapa') as string;
-      const title = (it.step?.name || key) as string;
-      if (!groups.has(key)) groups.set(key, { key, title, items: [] });
-      groups.get(key)!.items.push(it);
+      const sid = String(it.funnel_stage_id || it.step_id || '');
+      if (!byStepId.has(sid)) byStepId.set(sid, []);
+      byStepId.get(sid)!.push(it);
     }
-    // Sort items by updated_at desc
-    for (const col of groups.values()) {
-      col.items.sort((a, b) => {
+    const cols: Column[] = steps.map((s) => ({ key: s.id, title: s.name, items: (byStepId.get(s.id) || []).slice() }));
+    // sort items inside each column by updated_at desc
+    for (const c of cols) {
+      c.items.sort((a, b) => {
         const da = new Date(a.updated_at || a.created_at || 0).getTime();
         const db = new Date(b.updated_at || b.created_at || 0).getTime();
         return db - da;
       });
     }
-    // Return alphabetical columns for now
-    return Array.from(groups.values()).sort((a, b) => a.title.localeCompare(b.title));
-  }, [kanbanItems]);
+    return cols;
+  }, [kanbanItems, steps]);
 
   const formatSince = (iso?: string) => {
     if (!iso) return '';
@@ -226,12 +259,12 @@ export default function KanbanPage() {
     : "??";
 
   return (
-    <div className="flex h-screen bg-background dark:bg-gray-900">
+    <div className="flex h-screen bg-background dark:bg-gray-900 overflow-x-hidden">
       {/* Sidebar */}
       <Sidebar show={showMenu} />
 
       {/* Main area */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col min-w-0 max-w-full">
         {/* Fixed header (match ProductHeader usage) */}
         <header className={`fixed top-0 left-0 right-0 z-[60] flex items-center h-16 bg-gray-800 text-white px-4 transition-all duration-400 ease-out ${showHeader ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-5'}`}>
           {/* Logo */}
@@ -262,19 +295,20 @@ export default function KanbanPage() {
         </header>
 
         {/* Content */}
-        <main className="flex-1 overflow-y-auto p-6 pt-20 ml-20">
+        <main className="flex-1 flex flex-col min-h-0 min-w-0 p-6 pt-16 ml-20 overflow-hidden">
           {/* Selected Account bar */}
           {selectedProductId && selectedAccountId && (
-            <SelectedAccountBar
-              name={accounts.find(a => a.id === selectedAccountId)?.name || 'Conta'}
-              isAdmin={!!userData?.user?.isAdmin}
-              onEdit={() => { /* future: open account edit */ }}
-              onInbox={() => { /* future: open inbox panel */ }}
-              onSettings={() => { /* future: open account settings */ }}
-              onChangeAccount={() => setSelectedAccountId("")}
-            />
+            <div className="sticky top-5 z-50 w-full max-w-full min-w-0 overflow-hidden">
+              <SelectedAccountBar
+                name={accounts.find(a => a.id === selectedAccountId)?.name || 'Conta'}
+                isAdmin={!!userData?.user?.isAdmin}
+                onEdit={() => { /* future: open account edit */ }}
+                onInbox={() => { /* future: open inbox panel */ }}
+                onSettings={() => { /* future: open account settings */ }}
+                onChangeAccount={() => setSelectedAccountId("")}
+              />
+            </div>
           )}
-          {selectedProductId && selectedAccountId && (<div className="h-6" />)}
 
           {/* Accounts picker grid (if no account selected) */}
           {selectedProductId && !selectedAccountId && (
@@ -317,75 +351,100 @@ export default function KanbanPage() {
 
           {/* Kanban board with API data */}
           {selectedProductId && selectedAccountId && (
-            <section className="mt-6">
-              <div className="flex items-center justify-between mb-3">
-                <h2 className="text-xl font-semibold dark:text-white">Kanban</h2>
-                <div className="text-sm text-neutral-400">
-                  {kanbanLoading ? 'Carregando…' : kanbanError ? kanbanError : `${kanbanItems.length} itens`}
-                </div>
-              </div>
-
-              {/* Empty state */}
-              {!kanbanLoading && !kanbanError && columns.length === 0 && (
-                <div className="text-sm text-neutral-400">Nenhum item encontrado para esta conta.</div>
+            <section className="mt-4 flex-1 min-h-0 min-w-0 overflow-hidden">
+              {/* Funnel title */}
+              {funnelName && (
+                <div className="relative top-5 mb-3 text-2xl font-semibold text-white dark:text-white">{funnelName}</div>
               )}
 
-              <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-4 gap-4">
-                {columns.map((col) => (
-                  <div key={col.key} className="rounded-lg border border-neutral-800/60 bg-neutral-900/40">
-                    <div className="px-4 py-3 border-b border-neutral-800/60 flex items-center justify-between">
-                      <div className="text-sm font-medium lowercase tracking-wide">{col.title}</div>
-                      <div className="text-xs text-neutral-400">{col.items.length}</div>
-                    </div>
-                    <div className="p-3 space-y-3">
-                      {col.items.map((it: KanbanItem) => {
-                        const id = String(it.id ?? it.ticket_number ?? Math.random());
-                        const title = it.title || it.name || it.contact_name || `Item ${id}`;
-                        const summary = it.summary || it.description || '';
-                        const status = it.status || 'Aberto';
-                        const priority = it.priority || '';
-                        const unread = typeof it.unread_count === 'number' ? it.unread_count : undefined;
-                        const tags = Array.isArray(it.tags) ? it.tags : [];
-                        const since = formatSince(it.updated_at || it.created_at);
-                        const safeTags = (tags as TagType[])
-                          .map((t) => typeof t === 'string' ? t : (t?.name || t?.key))
-                          .filter((v): v is string => Boolean(v));
-                        return (
-                          <div key={id} className="rounded-md border border-neutral-800/60 bg-neutral-900/60 p-3">
-                            <div className="flex items-start justify-between">
-                              <div className="text-sm font-semibold text-white truncate max-w-[70%]" title={title}>{title}</div>
-                              <span className="text-[11px] text-neutral-300 bg-neutral-800 rounded px-2 py-0.5">{status}</span>
-                            </div>
-                            {summary && (
-                              <div className="text-xs text-neutral-400 mt-1 line-clamp-3">
-                                {summary}
+              {!kanbanLoading && kanbanError && (
+                <div className="mb-3 text-sm text-neutral-400">{kanbanError}</div>
+              )}
+
+              {/* Empty state */}
+              {!kanbanLoading && !stepsLoading && columns.length === 0 && (
+                <div className="mt-2 text-sm text-neutral-400">Nenhum item encontrado para esta conta.</div>
+              )}
+
+              <div className="flex-1 min-h-0 min-w-0 relative">
+                <div
+                  ref={lanesRef}
+                  onWheel={(e) => {
+                    const el = lanesRef.current;
+                    if (!el) return;
+                    if (Math.abs(e.deltaX) < 2 && Math.abs(e.deltaY) > 0) {
+                      el.scrollLeft += e.deltaY;
+                      e.preventDefault();
+                    }
+                  }}
+                  className="relative top-5 h-full w-full max-w-full overflow-x-auto overflow-y-hidden whitespace-nowrap pr-8 pb-2 overscroll-x-contain"
+                  role="region"
+                  aria-label="Kanban lanes"
+                >
+                  <div className="min-w-max inline-flex gap-4">
+                    {columns.map((col) => (
+                      <div key={col.key} className="w-80 shrink-0 rounded-lg border border-neutral-800/60 bg-neutral-900/40">
+                        <div className="px-4 py-3 border-b border-neutral-800/60 flex items-center justify-between">
+                          <div className="text-sm font-medium lowercase tracking-wide text-neutral-100">{col.title}</div>
+                          <div className="text-xs text-neutral-400">{col.items.length}</div>
+                        </div>
+                        <div className="p-3 space-y-3">
+                          {col.items.map((it: KanbanItem) => {
+                            const id = String(it.id ?? it.ticket_number ?? Math.random());
+                            const title = it.title || it.name || it.contact_name || `Item ${id}`;
+                            const summary = it.summary || it.description || '';
+                            const status = it.status || 'Aberto';
+                            const priority = it.priority || '';
+                            const unread = typeof it.unread_count === 'number' ? it.unread_count : undefined;
+                            const tags = Array.isArray(it.tags) ? it.tags : [];
+                            const since = formatSince(it.updated_at || it.created_at);
+                            const safeTags = (tags as TagType[])
+                              .map((t) => (typeof t === 'string' ? { name: t } : t))
+                              .filter((t) => !!t && !!t.name)
+                              .slice(0, 4);
+                            return (
+                              <div
+                                key={id}
+                                className="rounded-md border border-neutral-800/60 bg-neutral-900/60 p-3 cursor-pointer hover:bg-neutral-900/80 transition-colors"
+                                role="button"
+                                tabIndex={0}
+                                onClick={() => setSelectedItem(it)}
+                                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedItem(it); } }}
+                              >
+                                <div className="flex items-start justify-between">
+                                  <div className="text-sm font-semibold text-white truncate max-w-[70%]" title={title}>{title}</div>
+                                  <span className="text-[11px] text-neutral-300 bg-neutral-800 rounded px-2 py-0.5">{status}</span>
+                                </div>
+                                <div className="text-xs text-neutral-400 mt-1 line-clamp-3">{summary}</div>
+                                <div className="flex flex-wrap gap-1 mt-2">
+                                  {safeTags.map((t, idx) => (
+                                    <span key={idx} className="text-[11px] text-blue-300 bg-blue-900/30 border border-blue-900/40 rounded px-1.5 py-0.5">{t.name}</span>
+                                  ))}
+                                </div>
+                                <div className="mt-3 flex items-center justify-between text-[11px] text-neutral-400">
+                                  <div className="flex items-center gap-2">
+                                    <span>Último Contato</span>
+                                    {typeof unread === 'number' && (
+                                      <span className="ml-1 text-[11px] text-rose-300 bg-rose-900/40 rounded px-1.5 py-0.5">{unread}</span>
+                                    )}
+                                  </div>
+                                  <div>{since}</div>
+                                </div>
                               </div>
-                            )}
-                            <div className="flex flex-wrap gap-1 mt-2">
-                              {safeTags.slice(0, 3).map(tag => (
-                                <span key={tag} className="text-[10px] text-neutral-200 bg-neutral-800 rounded px-2 py-0.5">{tag}</span>
-                              ))}
-                              {priority && (
-                                <span className="text-[10px] text-emerald-200 bg-emerald-900/40 rounded px-2 py-0.5">{priority}</span>
-                              )}
-                            </div>
-                            <div className="mt-3 flex items-center justify-between text-[11px] text-neutral-400">
-                              <div className="flex items-center gap-2">
-                                <span>#{id}</span>
-                                {typeof unread === 'number' && (
-                                  <span className="ml-1 text-[11px] text-rose-300 bg-rose-900/40 rounded px-1.5 py-0.5">{unread}</span>
-                                )}
-                              </div>
-                              <div>{since}</div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                ))}
+                </div>
               </div>
             </section>
+          )}
+
+          {/* Item details panel */}
+          {selectedItem && (
+            <ItemDetailsPanel item={selectedItem} onClose={() => setSelectedItem(null)} />
           )}
         </main>
       </div>
