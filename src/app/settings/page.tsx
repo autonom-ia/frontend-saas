@@ -15,6 +15,7 @@ import StepMessagesPanel from './components/StepMessagesPanel';
 import type { StepMessage } from './components/StepMessagesPanel';
 import type { AccountParameter } from './components/AccountParametersPanel';
 import ProductHeader from '../../components/ProductHeader';
+import FunnelConversationalTab from './components/FunnelConversationalTab';
 import SelectedAccountBar from '../../components/SelectedAccountBar';
 
 type UserData = {
@@ -198,6 +199,8 @@ export default function DashboardPage() {
   const [selectedAccountId, setSelectedAccountId] = useState<string | ''>('');
   const [selectedAccountFunnelName, setSelectedAccountFunnelName] = useState<string>('');
   const [selectedAccountFunnelIsDefault, setSelectedAccountFunnelIsDefault] = useState<boolean>(false);
+  // Tabs for funnel section
+  const [activeFunnelTab, setActiveFunnelTab] = useState<'funnel'>('funnel');
   // Animations for grids
   const [showAccountsGrid, setShowAccountsGrid] = useState(false);
   const [showFunnelGrid, setShowFunnelGrid] = useState(false);
@@ -277,6 +280,10 @@ export default function DashboardPage() {
       return () => clearTimeout(t);
     }
     setShowFunnelGrid(false);
+  }, [selectedAccountId]);
+  // Default select the first tab when an account is chosen
+  useEffect(() => {
+    if (selectedAccountId) setActiveFunnelTab('funnel');
   }, [selectedAccountId]);
   // Carregar steps do funil quando a conta selecionada mudar
   useEffect(() => {
@@ -1577,11 +1584,11 @@ export default function DashboardPage() {
             )}
 
             {/* Cabeçalho Funil: quando conta não possui funil (sem steps), mostrar ação para criar */}
-            {selectedAccountId && !stepsLoading && steps.length === 0 && (
+            {selectedAccountId && !stepsLoading && steps.length === 0 && !selectedAccountFunnelName && (
               <section key={`no-funnel-${selectedAccountId}`} className={`mt-6 transition-all duration-400 ease-out opacity-100 translate-y-0`}>
                 <div className="flex items-center justify-between">
                   <div>
-                    <h2 className="text-xl font-semibold dark:text-white">Configuração Funil Conversacional</h2>
+                    <h2 className="text-xl font-semibold dark:text-white">Funil Conversacional</h2>
                     <p className="text-sm text-gray-600 dark:text-gray-300">Nenhum funil vinculado à conta selecionada.</p>
                   </div>
                   {userData.user?.isAdmin && (
@@ -1598,141 +1605,35 @@ export default function DashboardPage() {
               </section>
             )}
 
-            {/* Grid: Configuração Funil Conversacional (forçar render quando há conta selecionada) */}
-            {selectedAccountId && (
+            {/* Tabs: Funil Conversacional (render only when a funnel exists) */}
+            {selectedAccountId && !!selectedAccountFunnelName && (
               <section key={`funnel-grid-${selectedAccountId}`} className={`mt-6 transition-all duration-400 ease-out opacity-100 translate-y-0`}>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h2 className="text-xl font-semibold dark:text-white">Configuração Funil Conversacional</h2>
-                    {selectedAccountFunnelName && (
-                      <p className="text-sm text-gray-600 dark:text-gray-300">{selectedAccountFunnelName}</p>
-                    )}
-                  </div>
-                  {userData?.user?.isAdmin && !selectedAccountFunnelIsDefault && (
-                    <Button
-                      className="bg-blue-600 hover:bg-blue-500 text-white"
-                      size="sm"
-                      onClick={openCreateStepForm}
-                      title="Incluir etapa"
-                    >
-                      <Plus className="h-4 w-4 mr-1" /> Incluir
-                    </Button>
-                  )}
+                {/* Tab headers */}
+                <div className="border-b border-gray-700 flex gap-6">
+                  <button
+                    className={`py-2 text-sm ${activeFunnelTab === 'funnel' ? 'text-white border-b-2 border-blue-500' : 'text-gray-400 hover:text-gray-200'}`}
+                    onClick={() => setActiveFunnelTab('funnel')}
+                    aria-selected={activeFunnelTab === 'funnel'}
+                    role="tab"
+                  >
+                    Funil Conversacional
+                  </button>
                 </div>
-                <div className="h-3" />
-                <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded shadow-sm max-h-[50vh] overflow-auto">
-                  <table className="min-w-full text-sm">
-                    <thead className="bg-gray-50 dark:bg-gray-700 sticky top-0">
-                      <tr>
-                        <th className="text-left px-4 py-2 dark:text-gray-100">Nome</th>
-                        <th className="text-left px-4 py-2 dark:text-gray-100">Descrição</th>
-                        <th className="text-right px-4 py-2 dark:text-gray-100">Ações</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {stepsLoading ? (
-                        <tr><td className="px-4 py-3 dark:text-gray-200" colSpan={3}>Carregando...</td></tr>
-                      ) : steps.length === 0 ? (
-                        <tr><td className="px-4 py-3 dark:text-gray-200" colSpan={3}>Nenhuma etapa encontrada.</td></tr>
-                      ) : (
-                      steps.slice((stepsPage-1)*stepsPageSize, (stepsPage-1)*stepsPageSize + stepsPageSize).map(step => (
-                        <tr key={step.id} className="border-t border-gray-100 dark:border-gray-700">
-                          <td className="px-4 py-2 dark:text-gray-100">{truncate(step.name || '', 100)}</td>
-                          <td className="px-4 py-2 dark:text-gray-100">{truncate(step.description || '-', 100)}</td>
-                          <td className="px-4 py-2 text-right">
-                            {userData.user?.isAdmin && (
-                              <div className="flex justify-end gap-2">
-                                {!selectedAccountFunnelIsDefault && (
-                                  <Button
-                                    size="sm"
-                                    variant="secondary"
-                                    className="bg-gray-700 hover:bg-gray-600 text-white"
-                                    title="Editar etapa"
-                                    onClick={() => {
-                                      setStepFormMode('edit');
-                                      setSelectedStepId(step.id);
-                                      setStepFormName(step.name || '');
-                                      setStepFormDescription(step.description || '');
-                                      setIsStepFormOpen(true);
-                                    }}
-                                  >
-                                    <Pencil className="h-4 w-4" />
-                                  </Button>
-                                )}
-                                <Button
-                                  size="sm"
-                                  variant="secondary"
-                                  className="bg-gray-700 hover:bg-gray-600 text-white"
-                                  title="Configurações da etapa"
-                                  onClick={async () => {
-                                    setSelectedStepId(step.id);
-                                    setIsStepSettingsOpen(true);
-                                    // Buscar mensagens por accountId e filtrar por step
-                                    try {
-                                      setStepMessagesLoading(true);
-                                      const saasApiUrl = process.env.NEXT_PUBLIC_SAAS_API_URL || 'https://api-saas.autonomia.site';
-                                      const tokenToUse = authToken || (() => {
-                                        try {
-                                          const stored = localStorage.getItem('userData');
-                                          if (!stored) return undefined;
-                                          const parsed = JSON.parse(stored);
-                                          return parsed.IdToken || parsed.token || parsed.AccessToken;
-                                        } catch { return undefined; }
-                                      })();
-                                      const resp = await fetch(`${saasApiUrl}/Autonomia/Saas/ConversationFunnelStepMessages?accountId=${selectedAccountId}`, {
-                                        headers: { 'Authorization': `Bearer ${tokenToUse}` },
-                                        mode: 'cors'
-                                      });
-                                      if (!resp.ok) {
-                                        const t = await resp.text();
-                                        console.error('Falha ao buscar mensagens da etapa:', resp.status, resp.statusText, t);
-                                        setStepMessages([]);
-                                      } else {
-                                        const j = await resp.json();
-                                        const all = Array.isArray(j?.data) ? (j.data as StepMessage[]) : [];
-                                        const filtered = all.filter(m => String(m?.conversation_funnel_step_id ?? '') === String(step.id ?? ''));
-                                        setStepMessages(filtered);
-                                      }
-                                    } catch (e) {
-                                      console.error('Erro ao carregar mensagens da etapa:', e);
-                                      setStepMessages([]);
-                                    } finally {
-                                      setStepMessagesLoading(false);
-                                    }
-                                  }}
-                                >
-                                  <Settings className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            )}
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                    </tbody>
-                  </table>
-                  {/* Paginação */}
-                  {steps.length > stepsPageSize && (
-                    <div className="flex items-center justify-between px-4 py-2 border-t border-gray-200 dark:border-gray-700">
-                      <span className="text-xs dark:text-gray-300">
-                        Página {stepsPage} de {Math.ceil(steps.length / stepsPageSize)}
-                      </span>
-                      <div className="flex gap-2">
-                        <Button
-                          variant="secondary"
-                          className="bg-gray-700 hover:bg-gray-600 text-white"
-                          onClick={() => setStepsPage(p => Math.max(1, p-1))}
-                          disabled={stepsPage === 1}
-                        >Anterior</Button>
-                        <Button
-                          className="bg-blue-600 hover:bg-blue-500 text-white"
-                          onClick={() => setStepsPage(p => Math.min(Math.ceil(steps.length / stepsPageSize), p+1))}
-                          disabled={stepsPage >= Math.ceil(steps.length / stepsPageSize)}
-                        >Próxima</Button>
-                      </div>
-                    </div>
-                  )}
-                </div>
+                {/* Tab content */}
+                {activeFunnelTab === 'funnel' && (
+                  <FunnelConversationalTab
+                    steps={steps}
+                    stepsLoading={stepsLoading}
+                    stepsPage={stepsPage}
+                    stepsPageSize={stepsPageSize}
+                    setStepsPage={setStepsPage}
+                    userIsAdmin={!!userData?.user?.isAdmin}
+                    selectedAccountFunnelIsDefault={selectedAccountFunnelIsDefault}
+                    selectedAccountFunnelName={selectedAccountFunnelName}
+                    onClickIncludeStep={openCreateStepForm}
+                    truncate={truncate}
+                  />
+                )}
               </section>
             )}
             </>

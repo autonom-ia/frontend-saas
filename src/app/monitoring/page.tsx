@@ -438,7 +438,7 @@ export default function MonitoringPage() {
         <header className={`fixed top-0 left-0 right-0 z-[60] flex items-center h-16 bg-gray-800 text-white px-4 transition-all duration-400 ease-out ${showHeader ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-5'}`}>
           {/* Logo */}
           <div className="px-2 flex items-center">
-            <Image src="/images/logo.png" alt="Autonom.ia Logo" width={28} height={28} />
+            <Image src="/images/logo.png" alt="Autonom.ia Logo" width={42} height={42} />
           </div>
           {/* Range controls in header */}
           <div className="flex-1 px-2 relative">
