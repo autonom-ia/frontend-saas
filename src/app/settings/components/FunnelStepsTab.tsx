@@ -62,7 +62,7 @@ export default function FunnelStepsTab(props: FunnelStepsTabProps) {
             onClick={onClickIncludeStep}
             title="Incluir etapa"
           >
-            Incluir
+            + Incluir
           </Button>
         )}
       </div>
