@@ -2,10 +2,10 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 import Sidebar from "../../components/Sidebar";
+import ProductHeader from "../../components/ProductHeader";
 
 // Types
 type UserData = {
@@ -13,6 +13,7 @@ type UserData = {
     id?: string;
     name: string;
     email: string;
+    photoUrl?: string;
     isAdmin?: boolean;
   };
   token?: string;
@@ -301,40 +302,20 @@ export default function CampaignsPage() {
 
       {/* Main area */}
       <div className="flex-1 flex flex-col">
-        {/* Fixed header like Settings */}
-        <header className={`fixed top-0 left-0 right-0 z-[60] flex items-center h-16 bg-gray-800 text-white px-4 transition-all duration-400 ease-out ${showHeader ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-5'}`}>
-          {/* Logo */}
-          <div className="px-2 flex items-center">
-            <Image src="/images/logo.png" alt="Autonom.ia Logo" width={28} height={28} />
-          </div>
-          {/* Product select */}
-          <div className="flex-1 px-2">
-            <div className="max-w-xl flex items-center gap-2">
-              <select
-                id="products-select"
-                className="select-clean w-full"
-                disabled={productsLoading}
-                value={selectedProductId || ""}
-                onChange={(e) => handleSelectProduct(e.target.value)}
-              >
-                <option value="" disabled>
-                  {productsLoading ? 'Carregando...' : 'Selecione um produto'}
-                </option>
-                {products.map((p) => (
-                  <option key={p.id} value={p.id}>{p.name}</option>
-                ))}
-              </select>
-              <Button variant="secondary" className="bg-gray-700 hover:bg-gray-600 text-white" onClick={() => loadProducts()} title="Atualizar produtos">
-                <RefreshCw className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-          {/* Right user info */}
-          <div className="flex items-center gap-2">
-            <span className="text-sm hidden sm:inline">{userData?.user?.name || 'Usuário'}</span>
-            <div className="h-8 w-8 rounded-full bg-white/20 text-white flex items-center justify-center text-xs">{userInitials}</div>
-          </div>
-        </header>
+        {/* Header */}
+        <ProductHeader
+          products={products}
+          productsLoading={productsLoading}
+          selectedProductId={selectedProductId || ''}
+          isAdmin={!!userData?.user?.isAdmin}
+          userName={userData?.user?.name}
+          userPhotoUrl={userData?.user?.photoUrl}
+          userInitials={userInitials}
+          onChangeProduct={handleSelectProduct}
+          onCreateProduct={() => {}}
+          onEditProduct={() => {}}
+          onOpenProductSettings={() => {}}
+        />
 
         {/* Content */}
         <main className="flex-1 overflow-auto p-6 pt-20 ml-20">

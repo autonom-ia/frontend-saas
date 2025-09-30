@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from "@/components/ui/button";
-import { Pencil, Settings, Plus, LayoutDashboard, Phone, ClipboardList, Megaphone } from "lucide-react";
+import { Plus } from "lucide-react";
 import AccountForm from './components/AccountForm';
 import ProductForm from './components/ProductForm';
 import InboxPanel from './components/InboxPanel';
@@ -15,6 +15,8 @@ import StepMessagesPanel from './components/StepMessagesPanel';
 import type { StepMessage } from './components/StepMessagesPanel';
 import type { AccountParameter } from './components/AccountParametersPanel';
 import ProductHeader from '../../components/ProductHeader';
+import FunnelStepsTab from './components/FunnelStepsTab';
+import { KnowledgeBaseGrid } from './components';
 import SelectedAccountBar from '../../components/SelectedAccountBar';
 
 type UserData = {
@@ -229,6 +231,25 @@ export default function DashboardPage() {
     const t2 = setTimeout(() => setShowMenu(true), 420);
     return () => { clearTimeout(t1); clearTimeout(t2); };
   }, []);
+
+  // Settings tabs (first tab is Funil Conversacional)
+  const [selectedSettingsTab, setSelectedSettingsTab] = useState<'funnel' | 'knowledge'>('funnel');
+  const [knowledgeRefreshKey, setKnowledgeRefreshKey] = useState(0);
+  // When user selects an account, ensure the first tab is selected by default
+  useEffect(() => {
+    if (selectedAccountId) setSelectedSettingsTab('funnel');
+  }, [selectedAccountId]);
+
+  // Debug logs for state changes related to Knowledge Base tab
+  useEffect(() => {
+    console.log('[SETTINGS] selectedAccountId =', selectedAccountId);
+  }, [selectedAccountId]);
+  useEffect(() => {
+    console.log('[SETTINGS] selectedSettingsTab =', selectedSettingsTab);
+  }, [selectedSettingsTab]);
+  useEffect(() => {
+    console.log('[SETTINGS] knowledgeRefreshKey =', knowledgeRefreshKey);
+  }, [knowledgeRefreshKey]);
 
   // Persist and restore selected product/account across sessions
   useEffect(() => {
@@ -893,30 +914,25 @@ export default function DashboardPage() {
   };
 
   useEffect(() => {
-    // Verificar autenticação do usuário
-    const storedData = localStorage.getItem('userData');
-    
-    if (!storedData) {
-      // Redirecionar para login se não houver dados armazenados
-      router.push('/login');
-      return;
-    }
-
+    // Verificar autenticação do usuário de forma resiliente
     try {
-      const parsedData = JSON.parse(storedData);
-      if (!parsedData.isAuthenticated) {
-        router.push('/login');
+      const raw = localStorage.getItem('userData') || sessionStorage.getItem('userData');
+      if (!raw) {
+        router.replace('/login?next=/settings');
         return;
       }
-      
+
+      const parsedData = JSON.parse(raw);
+      // Confiar na existência de token em vez do flag isAuthenticated (que pode não estar presente)
+      const tokenComputed: string | undefined = parsedData?.IdToken || parsedData?.token || parsedData?.AccessToken;
+      if (!tokenComputed) {
+        router.replace('/login?next=/settings');
+        return;
+      }
+
       // Já temos dados básicos de autenticação
       setUserData(parsedData);
-      
-      // Preparar token de autenticação (mesmo usado na busca por email)
-      const tokenComputed: string | undefined = parsedData.IdToken || parsedData.token || parsedData.AccessToken;
       setAuthToken(tokenComputed);
-
-      // Busca detalhada do usuário foi movida para Monitoring
 
       // Buscar lista de produtos do módulo SaaS (usa o MESMO token do login)
       const fetchProducts = async () => {
@@ -949,7 +965,7 @@ export default function DashboardPage() {
             console.error('Falha ao buscar produtos:', resp.status, resp.statusText, t);
             if (resp.status === 401) {
               showToast('Sessão expirada. Faça login novamente.', 'info');
-              router.push('/login');
+              router.replace('/login?next=/settings');
             } else if (resp.status === 404) {
               showToast('Usuário não encontrado.', 'error');
             } else {
@@ -977,7 +993,7 @@ export default function DashboardPage() {
       fetchProducts();
     } catch (error) {
       console.error('Erro ao analisar dados do usuário:', error);
-      router.push('/login');
+      router.replace('/login?next=/settings');
     }
   }, [router]);
 
@@ -1519,6 +1535,7 @@ export default function DashboardPage() {
                     <Plus className="h-4 w-4 mr-1" /> Incluir
                   </Button>
                 )}
+
               </div>
               <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded shadow-sm max-h-[50vh] overflow-auto">
                 <table className="min-w-full text-sm">
@@ -1576,164 +1593,97 @@ export default function DashboardPage() {
             </section>
             )}
 
-            {/* Cabeçalho Funil: quando conta não possui funil (sem steps), mostrar ação para criar */}
-            {selectedAccountId && !stepsLoading && steps.length === 0 && (
-              <section key={`no-funnel-${selectedAccountId}`} className={`mt-6 transition-all duration-400 ease-out opacity-100 translate-y-0`}>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h2 className="text-xl font-semibold dark:text-white">Configuração Funil Conversacional</h2>
-                    <p className="text-sm text-gray-600 dark:text-gray-300">Nenhum funil vinculado à conta selecionada.</p>
-                  </div>
-                  {userData.user?.isAdmin && (
-                    <Button
-                      className="bg-blue-600 hover:bg-blue-500 text-white"
-                      size="sm"
-                      onClick={openFunnelCreateForm}
-                      title="Incluir Funil"
-                    >
-                      <Plus className="h-4 w-4 mr-1" /> Incluir Funil
-                    </Button>
-                  )}
-                </div>
-              </section>
-            )}
-
-            {/* Grid: Configuração Funil Conversacional (forçar render quando há conta selecionada) */}
+            {/* Tabs header */}
             {selectedAccountId && (
-              <section key={`funnel-grid-${selectedAccountId}`} className={`mt-6 transition-all duration-400 ease-out opacity-100 translate-y-0`}>
-                <div className="flex items-center justify-between">
+              <div className="mt-6">
+                <div className="inline-flex items-center gap-6 border-b border-gray-200 dark:border-gray-700">
+                  <button
+                    type="button"
+                    className={`px-2 py-2 text-xl font-semibold ${selectedSettingsTab === 'funnel' ? 'text-white border-b-2 border-blue-500' : 'text-gray-400 hover:text-gray-200'}`}
+                    onClick={() => { console.log('[SETTINGS] Click tab = funnel'); setSelectedSettingsTab('funnel'); }}
+                  >
+                    Funil Conversacional
+                  </button>
+                  <button
+                    type="button"
+                    className={`px-2 py-2 text-xl font-semibold ${selectedSettingsTab === 'knowledge' ? 'text-white border-b-2 border-blue-500' : 'text-gray-400 hover:text-gray-200'}`}
+                    onClick={() => { console.log('[SETTINGS] Click tab = knowledge'); setSelectedSettingsTab('knowledge'); setKnowledgeRefreshKey((k) => k + 1); }}
+                  >
+                    Base de Conhecimento
+                  </button>
+                </div>
+                {selectedSettingsTab === 'knowledge' && (
                   <div>
-                    <h2 className="text-xl font-semibold dark:text-white">Configuração Funil Conversacional</h2>
-                    {selectedAccountFunnelName && (
-                      <p className="text-sm text-gray-600 dark:text-gray-300">{selectedAccountFunnelName}</p>
-                    )}
+                    {(() => { console.log('[SETTINGS] Rendering KnowledgeBaseGrid for account', selectedAccountId, 'refreshKey', knowledgeRefreshKey); return null; })()}
+                    <KnowledgeBaseGrid
+                      key={`kb-${selectedAccountId}-${knowledgeRefreshKey}`}
+                      accountId={selectedAccountId}
+                      authToken={authToken}
+                      isAdmin={!!userData?.user?.isAdmin}
+                      refreshKey={knowledgeRefreshKey}
+                    />
                   </div>
-                  {userData?.user?.isAdmin && !selectedAccountFunnelIsDefault && (
-                    <Button
-                      className="bg-blue-600 hover:bg-blue-500 text-white"
-                      size="sm"
-                      onClick={openCreateStepForm}
-                      title="Incluir etapa"
-                    >
-                      <Plus className="h-4 w-4 mr-1" /> Incluir
-                    </Button>
-                  )}
-                </div>
-                <div className="h-3" />
-                <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded shadow-sm max-h-[50vh] overflow-auto">
-                  <table className="min-w-full text-sm">
-                    <thead className="bg-gray-50 dark:bg-gray-700 sticky top-0">
-                      <tr>
-                        <th className="text-left px-4 py-2 dark:text-gray-100">Nome</th>
-                        <th className="text-left px-4 py-2 dark:text-gray-100">Descrição</th>
-                        <th className="text-right px-4 py-2 dark:text-gray-100">Ações</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {stepsLoading ? (
-                        <tr><td className="px-4 py-3 dark:text-gray-200" colSpan={3}>Carregando...</td></tr>
-                      ) : steps.length === 0 ? (
-                        <tr><td className="px-4 py-3 dark:text-gray-200" colSpan={3}>Nenhuma etapa encontrada.</td></tr>
-                      ) : (
-                      steps.slice((stepsPage-1)*stepsPageSize, (stepsPage-1)*stepsPageSize + stepsPageSize).map(step => (
-                        <tr key={step.id} className="border-t border-gray-100 dark:border-gray-700">
-                          <td className="px-4 py-2 dark:text-gray-100">{truncate(step.name || '', 100)}</td>
-                          <td className="px-4 py-2 dark:text-gray-100">{truncate(step.description || '-', 100)}</td>
-                          <td className="px-4 py-2 text-right">
-                            {userData.user?.isAdmin && (
-                              <div className="flex justify-end gap-2">
-                                {!selectedAccountFunnelIsDefault && (
-                                  <Button
-                                    size="sm"
-                                    variant="secondary"
-                                    className="bg-gray-700 hover:bg-gray-600 text-white"
-                                    title="Editar etapa"
-                                    onClick={() => {
-                                      setStepFormMode('edit');
-                                      setSelectedStepId(step.id);
-                                      setStepFormName(step.name || '');
-                                      setStepFormDescription(step.description || '');
-                                      setIsStepFormOpen(true);
-                                    }}
-                                  >
-                                    <Pencil className="h-4 w-4" />
-                                  </Button>
-                                )}
-                                <Button
-                                  size="sm"
-                                  variant="secondary"
-                                  className="bg-gray-700 hover:bg-gray-600 text-white"
-                                  title="Configurações da etapa"
-                                  onClick={async () => {
-                                    setSelectedStepId(step.id);
-                                    setIsStepSettingsOpen(true);
-                                    // Buscar mensagens por accountId e filtrar por step
-                                    try {
-                                      setStepMessagesLoading(true);
-                                      const saasApiUrl = process.env.NEXT_PUBLIC_SAAS_API_URL || 'https://api-saas.autonomia.site';
-                                      const tokenToUse = authToken || (() => {
-                                        try {
-                                          const stored = localStorage.getItem('userData');
-                                          if (!stored) return undefined;
-                                          const parsed = JSON.parse(stored);
-                                          return parsed.IdToken || parsed.token || parsed.AccessToken;
-                                        } catch { return undefined; }
-                                      })();
-                                      const resp = await fetch(`${saasApiUrl}/Autonomia/Saas/ConversationFunnelStepMessages?accountId=${selectedAccountId}`, {
-                                        headers: { 'Authorization': `Bearer ${tokenToUse}` },
-                                        mode: 'cors'
-                                      });
-                                      if (!resp.ok) {
-                                        const t = await resp.text();
-                                        console.error('Falha ao buscar mensagens da etapa:', resp.status, resp.statusText, t);
-                                        setStepMessages([]);
-                                      } else {
-                                        const j = await resp.json();
-                                        const all = Array.isArray(j?.data) ? (j.data as StepMessage[]) : [];
-                                        const filtered = all.filter(m => String(m?.conversation_funnel_step_id ?? '') === String(step.id ?? ''));
-                                        setStepMessages(filtered);
-                                      }
-                                    } catch (e) {
-                                      console.error('Erro ao carregar mensagens da etapa:', e);
-                                      setStepMessages([]);
-                                    } finally {
-                                      setStepMessagesLoading(false);
-                                    }
-                                  }}
-                                >
-                                  <Settings className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            )}
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                    </tbody>
-                  </table>
-                  {/* Paginação */}
-                  {steps.length > stepsPageSize && (
-                    <div className="flex items-center justify-between px-4 py-2 border-t border-gray-200 dark:border-gray-700">
-                      <span className="text-xs dark:text-gray-300">
-                        Página {stepsPage} de {Math.ceil(steps.length / stepsPageSize)}
-                      </span>
-                      <div className="flex gap-2">
-                        <Button
-                          variant="secondary"
-                          className="bg-gray-700 hover:bg-gray-600 text-white"
-                          onClick={() => setStepsPage(p => Math.max(1, p-1))}
-                          disabled={stepsPage === 1}
-                        >Anterior</Button>
-                        <Button
-                          className="bg-blue-600 hover:bg-blue-500 text-white"
-                          onClick={() => setStepsPage(p => Math.min(Math.ceil(steps.length / stepsPageSize), p+1))}
-                          disabled={stepsPage >= Math.ceil(steps.length / stepsPageSize)}
-                        >Próxima</Button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </section>
+                )}
+              </div>
+            )}
+            {selectedAccountId && selectedSettingsTab === 'funnel' && (
+              <FunnelStepsTab
+                funnelName={selectedAccountFunnelName}
+                isAdmin={!!userData?.user?.isAdmin}
+                isDefaultFunnel={!!selectedAccountFunnelIsDefault}
+                steps={steps}
+                stepsLoading={stepsLoading}
+                stepsPage={stepsPage}
+                stepsPageSize={stepsPageSize}
+                onPrevPage={() => setStepsPage(p => Math.max(1, p - 1))}
+                onNextPage={() => setStepsPage(p => Math.min(Math.ceil(steps.length / stepsPageSize), p + 1))}
+                canPrev={stepsPage > 1}
+                canNext={stepsPage < Math.ceil(steps.length / stepsPageSize)}
+                onClickIncludeStep={openCreateStepForm}
+                onClickEditStep={(step) => {
+                  setStepFormMode('edit');
+                  setSelectedStepId(step.id);
+                  setStepFormName(step.name || '');
+                  setStepFormDescription(step.description || '');
+                  setIsStepFormOpen(true);
+                }}
+                onOpenStepSettings={async (stepId: string) => {
+                  setSelectedStepId(stepId);
+                  setIsStepSettingsOpen(true);
+                  try {
+                    setStepMessagesLoading(true);
+                    const saasApiUrl = process.env.NEXT_PUBLIC_SAAS_API_URL || 'https://api-saas.autonomia.site';
+                    const tokenToUse = authToken || (() => {
+                      try {
+                        const stored = localStorage.getItem('userData');
+                        if (!stored) return undefined;
+                        const parsed = JSON.parse(stored);
+                        return parsed.IdToken || parsed.token || parsed.AccessToken;
+                      } catch { return undefined; }
+                    })();
+                    const resp = await fetch(`${saasApiUrl}/Autonomia/Saas/ConversationFunnelStepMessages?accountId=${selectedAccountId}`, {
+                      headers: { 'Authorization': `Bearer ${tokenToUse}` },
+                      mode: 'cors'
+                    });
+                    if (!resp.ok) {
+                      const t = await resp.text();
+                      console.error('Falha ao buscar mensagens da etapa:', resp.status, resp.statusText, t);
+                      setStepMessages([]);
+                    } else {
+                      const j = await resp.json();
+                      const all = Array.isArray(j?.data) ? (j.data as StepMessage[]) : [];
+                      const filtered = all.filter(m => String(m?.conversation_funnel_step_id ?? '') === String(stepId ?? ''));
+                      setStepMessages(filtered);
+                    }
+                  } catch (e) {
+                    console.error('Erro ao carregar mensagens da etapa:', e);
+                    setStepMessages([]);
+                  } finally {
+                    setStepMessagesLoading(false);
+                  }
+                }}
+                truncate={truncate}
+              />
             )}
             </>
           )}
