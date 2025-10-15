@@ -146,7 +146,7 @@ export default function DashboardPage() {
     const description = message_instruction;
     try {
       setSavingNewStepMessage(true);
-      const saasApiUrl = process.env.NEXT_PUBLIC_SAAS_API_URL || 'https://api-saas.autonomia.site';
+      const saasApiUrl = process.env.NEXT_PUBLIC_SAAS_API_URL;
       const tokenToUse = authToken || (() => {
         try {
           const stored = localStorage.getItem('userData');
@@ -303,7 +303,7 @@ export default function DashboardPage() {
         setStepsLoading(true);
         setSteps([]);
         setStepsPage(1);
-        const saasApiUrl = process.env.NEXT_PUBLIC_SAAS_API_URL || 'https://api-saas.autonomia.site';
+        const saasApiUrl = process.env.NEXT_PUBLIC_SAAS_API_URL;
         const tokenToUse = authToken || (() => {
           try {
             const stored = localStorage.getItem('userData');
@@ -460,7 +460,7 @@ export default function DashboardPage() {
         } catch { return undefined; }
       })();
       // Buscar inboxes por accountId
-      const saasApiUrl = process.env.NEXT_PUBLIC_SAAS_API_URL || 'https://api-saas.autonomia.site';
+      const saasApiUrl = process.env.NEXT_PUBLIC_SAAS_API_URL;
       const resp = await fetch(`${saasApiUrl}/Autonomia/Saas/Inboxes?accountId=${encodeURIComponent(acc.id)}`, { headers: { 'Authorization': `Bearer ${tokenToUse}` }, mode: 'cors' });
       let list: InboxItem[] = [];
       if (resp.ok) {
@@ -579,7 +579,7 @@ export default function DashboardPage() {
     setIsAccountParamPanelOpen(true);
     try {
       setAccountParamsLoading(true);
-      const saasApiUrl = process.env.NEXT_PUBLIC_SAAS_API_URL || 'https://api-saas.autonomia.site';
+      const saasApiUrl = process.env.NEXT_PUBLIC_SAAS_API_URL;
       const tokenToUse = authToken || (() => {
         try {
           const stored = localStorage.getItem('userData');
@@ -621,7 +621,7 @@ export default function DashboardPage() {
       (async () => {
         try {
           setFunnelsLoading(true);
-          const saasApiUrl = process.env.NEXT_PUBLIC_SAAS_API_URL || 'https://api-saas.autonomia.site';
+          const saasApiUrl = process.env.NEXT_PUBLIC_SAAS_API_URL;
           const tokenToUse = authToken || (() => {
             try {
               const stored = localStorage.getItem('userData');
@@ -657,7 +657,7 @@ export default function DashboardPage() {
     // Atualização otimista
     setAccountParams(prev => prev.map(p => p.id === parameterId ? { ...p, value: newValue } : p));
     try {
-      const saasApiUrl = process.env.NEXT_PUBLIC_SAAS_API_URL || 'https://api-saas.autonomia.site';
+      const saasApiUrl = process.env.NEXT_PUBLIC_SAAS_API_URL;
       const tokenToUse = authToken || (() => {
         try {
           const stored = localStorage.getItem('userData');
@@ -713,7 +713,7 @@ export default function DashboardPage() {
     }
     try {
       setSavingNewAccountParam(true);
-      const saasApiUrl = process.env.NEXT_PUBLIC_SAAS_API_URL || 'https://api-saas.autonomia.site';
+      const saasApiUrl = process.env.NEXT_PUBLIC_SAAS_API_URL;
       const tokenToUse = authToken || (() => {
         try {
           const stored = localStorage.getItem('userData');
@@ -800,7 +800,7 @@ export default function DashboardPage() {
     setIsParamPanelOpen(true);
     try {
       setProductParamsLoading(true);
-      const saasApiUrl = process.env.NEXT_PUBLIC_SAAS_API_URL || 'https://api-saas.autonomia.site';
+      const saasApiUrl = process.env.NEXT_PUBLIC_SAAS_API_URL;
       const tokenToUse = authToken || (() => {
         try {
           const stored = localStorage.getItem('userData');
@@ -850,7 +850,7 @@ export default function DashboardPage() {
     }
     try {
       setSavingNewProductParam(true);
-      const saasApiUrl = process.env.NEXT_PUBLIC_SAAS_API_URL || 'https://api-saas.autonomia.site';
+      const saasApiUrl = process.env.NEXT_PUBLIC_SAAS_API_URL;
       const tokenToUse = authToken || (() => {
         try {
           const stored = localStorage.getItem('userData');
@@ -923,10 +923,7 @@ export default function DashboardPage() {
         try {
           setProductsLoading(true);
           // Garantir que usamos SEMPRE o endpoint do SaaS (não o API de auth)
-          const saasApiUrl = process.env.NEXT_PUBLIC_SAAS_API_URL || 'https://api-saas.autonomia.site';
-          if (!process.env.NEXT_PUBLIC_SAAS_API_URL) {
-            console.warn('NEXT_PUBLIC_SAAS_API_URL não definido. Usando fallback https://api-saas.autonomia.site');
-          }
+          const saasApiUrl = process.env.NEXT_PUBLIC_SAAS_API_URL;
 
           if (!saasApiUrl) {
             console.warn('URL da API SaaS não configurada. Defina NEXT_PUBLIC_SAAS_API_URL ou NEXT_PUBLIC_API_URL.');
@@ -990,7 +987,7 @@ export default function DashboardPage() {
       }
       try {
         setAccountsLoading(true);
-        const saasApiUrl = process.env.NEXT_PUBLIC_SAAS_API_URL || 'https://api-saas.autonomia.site';
+        const saasApiUrl = process.env.NEXT_PUBLIC_SAAS_API_URL as string;
         const tokenToUse = authToken || (() => {
           try {
             const stored = localStorage.getItem('userData');
@@ -1044,7 +1041,7 @@ export default function DashboardPage() {
       (async () => {
         try {
           setFunnelsLoading(true);
-          const saasApiUrl = process.env.NEXT_PUBLIC_SAAS_API_URL || 'https://api-saas.autonomia.site';
+          const saasApiUrl = process.env.NEXT_PUBLIC_SAAS_API_URL;
           const tokenToUse = authToken || (() => {
             try {
               const stored = localStorage.getItem('userData');
@@ -1093,7 +1090,7 @@ export default function DashboardPage() {
     }
     try {
       setFunnelSaving(true);
-      const saasApiUrl = process.env.NEXT_PUBLIC_SAAS_API_URL || 'https://api-saas.autonomia.site';
+      const saasApiUrl = process.env.NEXT_PUBLIC_SAAS_API_URL;
       const tokenToUse = authToken || (() => {
         try {
           const stored = localStorage.getItem('userData');
@@ -1167,7 +1164,7 @@ export default function DashboardPage() {
     if (!userData?.user?.isAdmin) { showToast('Ação permitida apenas para administradores', 'error'); return; }
     try {
       setAccountSaving(true);
-      const saasApiUrl = process.env.NEXT_PUBLIC_SAAS_API_URL || 'https://api-saas.autonomia.site';
+      const saasApiUrl = process.env.NEXT_PUBLIC_SAAS_API_URL;
       const tokenToUse = authToken || (() => {
         try {
           const stored = localStorage.getItem('userData');
@@ -1257,7 +1254,7 @@ export default function DashboardPage() {
     if (!userData?.user?.isAdmin) { showToast('Ação permitida apenas para administradores', 'error'); return; }
     try {
       setSaving(true);
-      const saasApiUrl = process.env.NEXT_PUBLIC_SAAS_API_URL || 'https://api-saas.autonomia.site';
+      const saasApiUrl = process.env.NEXT_PUBLIC_SAAS_API_URL;
       const tokenToUse = authToken || (() => {
         try {
           const stored = localStorage.getItem('userData');
@@ -1360,7 +1357,7 @@ export default function DashboardPage() {
         onSave={async () => {
           setStepSaving(true);
           try {
-            const saasApiUrl = process.env.NEXT_PUBLIC_SAAS_API_URL || 'https://api-saas.autonomia.site';
+            const saasApiUrl = process.env.NEXT_PUBLIC_SAAS_API_URL;
             const tokenToUse = authToken || (() => { try { const stored = localStorage.getItem('userData'); if (!stored) return undefined; const parsed = JSON.parse(stored); return parsed.IdToken || parsed.token || parsed.AccessToken; } catch { return undefined; } })();
             if (stepFormMode === 'create') {
               if (!selectedAccountId) { showToast('Selecione uma conta', 'error'); return; }
@@ -1411,7 +1408,7 @@ export default function DashboardPage() {
         }}
         onBlurMessageField={async (id, fields) => {
           try {
-            const saasApiUrl = process.env.NEXT_PUBLIC_SAAS_API_URL || 'https://api-saas.autonomia.site';
+            const saasApiUrl = process.env.NEXT_PUBLIC_SAAS_API_URL;
             const tokenToUse = authToken || (() => { try { const stored = localStorage.getItem('userData'); if (!stored) return undefined; const parsed = JSON.parse(stored); return parsed.IdToken || parsed.token || parsed.AccessToken; } catch { return undefined; } })();
             const body: Partial<Pick<StepMessage, 'shipping_time' | 'shipping_order' | 'message_instruction'>> = {};
             if (fields.shipping_time !== undefined) body.shipping_time = fields.shipping_time;
@@ -1670,7 +1667,7 @@ export default function DashboardPage() {
                                     // Buscar mensagens por accountId e filtrar por step
                                     try {
                                       setStepMessagesLoading(true);
-                                      const saasApiUrl = process.env.NEXT_PUBLIC_SAAS_API_URL || 'https://api-saas.autonomia.site';
+                                      const saasApiUrl = process.env.NEXT_PUBLIC_SAAS_API_URL;
                                       const tokenToUse = authToken || (() => {
                                         try {
                                           const stored = localStorage.getItem('userData');

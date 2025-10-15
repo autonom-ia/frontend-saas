@@ -66,14 +66,43 @@ export default function KanbanPage() {
     (async () => {
       try {
         setProductsLoading(true);
-        const resp = await fetch(`${saasApiUrl}/Autonomia/Saas/Products`, {
-          headers: authToken ? { Authorization: `Bearer ${authToken}` } : undefined,
+        const headers: Record<string, string> = {
+          'Content-Type': 'application/json',
+        };
+        
+        // Adicionar header de desenvolvimento se estiver em ambiente local
+        const devEmail = process.env.NEXT_PUBLIC_DEV_EMAIL;
+        console.log('🔍 Debug - DEV_EMAIL:', devEmail);
+        console.log('🔍 Debug - saasApiUrl:', saasApiUrl);
+        
+        if (devEmail) {
+          headers['X-Dev-Email'] = devEmail;
+        }
+        
+        // Adicionar token se disponível
+        if (authToken) {
+          headers['Authorization'] = `Bearer ${authToken}`;
+        }
+        
+        console.log('🔍 Debug - Headers:', headers);
+        const url = `${saasApiUrl}/Autonomia/Saas/Products`;
+        console.log('🔍 Debug - URL:', url);
+        
+        const resp = await fetch(url, {
+          headers,
           mode: "cors",
         });
+        
+        console.log('🔍 Debug - Response status:', resp.status);
+        console.log('🔍 Debug - Response ok:', resp.ok);
+        
         if (resp.ok) {
           const j = await resp.json();
+          console.log('🔍 Debug - Response data:', j);
           setProducts(Array.isArray(j?.data) ? j.data : []);
         } else {
+          const errorText = await resp.text();
+          console.error('❌ Error response:', resp.status, errorText);
           setProducts([]);
         }
       } catch {

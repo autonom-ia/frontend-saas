@@ -73,7 +73,7 @@ export default function ProjectsPage() {
   const [authToken, setAuthToken] = useState<string | undefined>(undefined);
 
   // API URLs
-  const projectApiUrl = useMemo(() => process.env.NEXT_PUBLIC_PROJECT_API_URL || "https://api-projects.autonomia.site", []);
+  const projectApiUrl = useMemo(() => process.env.NEXT_PUBLIC_PROJECT_API_URL as string, []);
 
   // UI staged entrance
   const [showHeader, setShowHeader] = useState(false);
@@ -143,7 +143,7 @@ export default function ProjectsPage() {
       try {
         if (!authToken) return;
         setProductsLoading(true);
-        const saasApiUrl = process.env.NEXT_PUBLIC_SAAS_API_URL || 'https://api-saas.autonomia.site';
+        const saasApiUrl = process.env.NEXT_PUBLIC_SAAS_API_URL as string;
         const url = `${saasApiUrl}/Autonomia/Saas/Products`;
         const resp = await fetch(url, { headers: { 'Authorization': `Bearer ${authToken}` }, mode: 'cors' });
         if (!resp.ok) {
