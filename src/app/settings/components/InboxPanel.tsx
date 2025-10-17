@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { RefreshCw } from "lucide-react";
+import { RefreshCw, Link2 } from "lucide-react";
 
 export type InboxItem = { id?: string; name: string; status?: 'open'|'close'|'connecting'|'unknown'; notFound?: boolean };
 
@@ -16,6 +16,8 @@ export type InboxPanelProps = {
   connectMethod?: 'qrcode' | 'pairing';
   onClose: () => void;
   onSyncInstance: (instanceName: string) => void;
+  chatwootAccountEmpty?: boolean;
+  onConnectChatwoot?: (instanceName: string) => void;
 };
 
 export default function InboxPanel(props: InboxPanelProps) {
@@ -29,6 +31,8 @@ export default function InboxPanel(props: InboxPanelProps) {
     connectMethod,
     onClose,
     onSyncInstance,
+    chatwootAccountEmpty,
+    onConnectChatwoot,
   } = props;
 
   // Tabs state: default to prop, keep in sync if it changes
@@ -84,19 +88,33 @@ export default function InboxPanel(props: InboxPanelProps) {
                         {(it.status === 'unknown' || !it.status) && <span className="text-gray-400">Não Encontrada</span>}
                       </td>
                       <td className="px-4 py-2 text-right">
-                        {it.status !== 'open' ? (
-                          <Button
-                            size="sm"
-                            variant="secondary"
-                            className="bg-gray-700 hover:bg-gray-600 text-white"
-                            onClick={() => onSyncInstance(it.name)}
-                            disabled={syncingInstance === it.name}
-                          >
-                            <RefreshCw className={syncingInstance === it.name ? 'animate-spin' : ''} />
-                          </Button>
-                        ) : (
-                          <span className="text-gray-400 text-xs">—</span>
-                        )}
+                        <div className="inline-flex items-center gap-2 justify-end">
+                          {it.status !== 'open' && (
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              className="bg-gray-700 hover:bg-gray-600 text-white"
+                              onClick={() => onSyncInstance(it.name)}
+                              disabled={syncingInstance === it.name}
+                              title="Sincronizar"
+                            >
+                              <RefreshCw className={syncingInstance === it.name ? 'animate-spin' : ''} />
+                            </Button>
+                          )}
+                          {chatwootAccountEmpty && it.status === 'open' && (
+                            <Button
+                              size="sm"
+                              className="bg-blue-600 hover:bg-blue-500 text-white"
+                              onClick={() => onConnectChatwoot && onConnectChatwoot(it.name)}
+                              title="Conectar Chatwoot"
+                            >
+                              <Link2 className="mr-1 h-4 w-4" /> Conectar Chatwoot
+                            </Button>
+                          )}
+                          {!chatwootAccountEmpty && it.status === 'open' && (
+                            <span className="text-gray-400 text-xs">—</span>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))
@@ -149,7 +167,11 @@ export default function InboxPanel(props: InboxPanelProps) {
                     </div>
                     <div className="flex items-center justify-center">
                       {connectInfo?.base64 ? (
-                        <img src={`data:image/png;base64,${connectInfo.base64}`} alt="QR Code" className="rounded border border-gray-600" />
+                        (() => {
+                          const b64 = connectInfo.base64;
+                          const src = b64.startsWith('data:image') ? b64 : `data:image/png;base64,${b64}`;
+                          return (<img src={src} alt="QR Code" className="rounded border border-gray-600" />);
+                        })()
                       ) : (
                         <div className="text-gray-400 text-sm text-center">QR Code não disponível. Sincronize a instância.</div>
                       )}
