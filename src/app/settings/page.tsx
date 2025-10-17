@@ -429,6 +429,7 @@ export default function DashboardPage() {
   const [inboxes, setInboxes] = useState<InboxItem[]>([]);
   const [inboxesLoading, setInboxesLoading] = useState(false);
   const [inboxPanelAccount, setInboxPanelAccount] = useState<Account | null>(null);
+  const [chatwootAccountEmpty, setChatwootAccountEmpty] = useState<boolean>(false);
   // Dados de conexão (QR Code e Pairing Code) pós sincronização
   const [connectInfo, setConnectInfo] = useState<{ instance?: string; base64?: string; pairingCode?: string } | null>(null);
   const [connectMethod, setConnectMethod] = useState<'qrcode' | 'pairing'>('qrcode');
@@ -436,6 +437,84 @@ export default function DashboardPage() {
   const [polling, setPolling] = useState(false);
   const [pollingUntil, setPollingUntil] = useState<number | null>(null);
   const [connectionSuccess, setConnectionSuccess] = useState(false);
+  // Evitar chamadas duplicadas ao set-chatwoot por instância
+  const [setChatwootCalledFor, setSetChatwootCalledFor] = useState<Record<string, boolean>>({});
+
+  // Helper: obter token do usuário atual
+  const getAuthToken = (): string | undefined => {
+    if (authToken) return authToken;
+    try {
+      const stored = localStorage.getItem('userData');
+      if (!stored) return undefined;
+      const parsed = JSON.parse(stored);
+      return parsed.IdToken || parsed.token || parsed.AccessToken;
+    } catch { return undefined; }
+  };
+
+  // Helper: buscar parâmetros da conta por nome
+  const fetchAccountParametersMap = async (accountId: string): Promise<Record<string, string>> => {
+    const saasApiUrl = process.env.NEXT_PUBLIC_SAAS_API_URL || 'https://api-saas.autonomia.site';
+    const tokenToUse = getAuthToken();
+    const resp = await fetch(`${saasApiUrl}/Autonomia/Saas/AccountParameters?accountId=${encodeURIComponent(accountId)}`, {
+      headers: { 'Authorization': `Bearer ${tokenToUse}` },
+      mode: 'cors'
+    });
+    const out: Record<string, string> = {};
+    if (!resp.ok) return out;
+    try {
+      const j = await resp.json();
+      const rows = Array.isArray(j?.data) ? j.data as Array<{ name: string; value?: string }> : [];
+      for (const r of rows) out[r.name] = String(r.value ?? '');
+    } catch {}
+    return out;
+  };
+
+  // Chamar Evolution set-chatwoot após conexão bem-sucedida
+  const callSetChatwoot = async (domain: string, instance: string, accountId: string) => {
+    try {
+      const tokenToUse = getAuthToken();
+      const apiUrl = process.env.NEXT_PUBLIC_EVOLUTION_API_URL || process.env.NEXT_PUBLIC_API_URL;
+      // Obter parâmetros necessários: chatwoot-account, chatwoot-url, chatwoot-token
+      let paramsMap: Record<string, string> = {};
+      try {
+        paramsMap = await fetchAccountParametersMap(accountId);
+      } catch {}
+      const cwAccountId = paramsMap['chatwoot-account'] || '';
+      const cwUrl = paramsMap['chatwoot-url'] || '';
+      const cwToken = paramsMap['chatwoot-token'] || '';
+
+      const body: Record<string, unknown> = {
+        domain: normalizeDomain(domain),
+        // valores não fixos (o backend define os fixos)
+        enabled: true,
+      };
+      if (cwAccountId) body.account_id = cwAccountId;
+      if (cwUrl) body.url = cwUrl;
+      if (cwToken) body.token = cwToken;
+      // opcional: delimitador padrão se desejar customizar
+      // if (!('sign_delimiter' in body)) body.sign_delimiter = '-';
+
+      const resp = await fetch(`${apiUrl}/Autonomia/Evolution/SetChatwoot/${encodeURIComponent(instance)}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${tokenToUse}`
+        },
+        mode: 'cors',
+        body: JSON.stringify(body)
+      });
+      if (!resp.ok) {
+        const t = await resp.text();
+        console.warn('[set-chatwoot] Falha', resp.status, resp.statusText, t);
+        showToast('Falha ao configurar Chatwoot após conexão', 'error');
+        return;
+      }
+      showToast('Chatwoot configurado após conexão', 'success');
+    } catch (e) {
+      console.error('[set-chatwoot] Erro', e);
+      showToast('Erro ao configurar Chatwoot após conexão', 'error');
+    }
+  };
 
   const fetchInboxStatus = async (domain: string, instance: string): Promise<InboxItem['status']> => {
     try {
@@ -472,6 +551,12 @@ export default function DashboardPage() {
     setIsInboxPanelOpen(true);
     try {
       setInboxesLoading(true);
+      // Checar se a conta possui chatwoot-account configurado
+      try {
+        const paramsMap = await fetchAccountParametersMap(acc.id);
+        const cwAccount = (paramsMap['chatwoot-account'] || '').trim();
+        setChatwootAccountEmpty(!cwAccount);
+      } catch { setChatwootAccountEmpty(true); }
       const tokenToUse = authToken || (() => {
         try {
           const stored = localStorage.getItem('userData');
@@ -507,6 +592,23 @@ export default function DashboardPage() {
       setInboxes([]);
     } finally {
       setInboxesLoading(false);
+    }
+  };
+
+  // Handler para botão "Conectar Chatwoot" na linha do número
+  const onConnectChatwootFromPanel = async (instanceName: string) => {
+    if (!inboxPanelAccount) return;
+    try {
+      if (!setChatwootCalledFor[instanceName]) {
+        setSetChatwootCalledFor(prev => ({ ...prev, [instanceName]: true }));
+        await callSetChatwoot(inboxPanelAccount.domain || '', instanceName, inboxPanelAccount.id);
+        // Após configurar, ocultar o botão
+        setChatwootAccountEmpty(false);
+      }
+    } catch (e) {
+      console.warn('Falha ao acionar set-chatwoot via botão', e);
+      // liberar para tentar novamente em caso de erro
+      setSetChatwootCalledFor(prev => ({ ...prev, [instanceName]: false }));
     }
   };
 
@@ -578,6 +680,15 @@ export default function DashboardPage() {
         if (st === 'open') {
           setConnectionSuccess(true);
           setPolling(false);
+          // Disparar set-chatwoot uma única vez por instância
+          try {
+            if (inboxPanelAccount && instance && !setChatwootCalledFor[instance]) {
+              setSetChatwootCalledFor(prev => ({ ...prev, [instance]: true }));
+              await callSetChatwoot(inboxPanelAccount.domain || '', instance, inboxPanelAccount.id);
+            }
+          } catch (e) {
+            console.warn('Erro ao acionar set-chatwoot após conexão', e);
+          }
         }
       } catch (err) {
         console.warn('Polling connection state failed', err);
@@ -1753,6 +1864,8 @@ export default function DashboardPage() {
         connectMethod={connectMethod}
         onClose={() => setIsInboxPanelOpen(false)}
         onSyncInstance={syncInboxInstance}
+        chatwootAccountEmpty={chatwootAccountEmpty}
+        onConnectChatwoot={onConnectChatwootFromPanel}
       />
 
       {/* Slide-over Formulário de Funil (abre da direita, padrão do produto) */}

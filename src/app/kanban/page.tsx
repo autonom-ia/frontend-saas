@@ -388,50 +388,50 @@ export default function KanbanPage() {
                           <div className="text-sm font-medium lowercase tracking-wide text-neutral-100">{col.title}</div>
                           <div className="text-xs text-neutral-400">{col.items.length}</div>
                         </div>
-                        <div className="p-3 space-y-3">
+                        <div className="p-3 space-y-3 max-h-[60vh] overflow-y-auto">
                           {col.items.map((it: KanbanItem) => {
-                            const id = String(it.id ?? it.ticket_number ?? Math.random());
-                            const title = it.title || it.name || it.contact_name || `Item ${id}`;
-                            const summary = it.summary || it.description || '';
-                            const status = it.status || 'Aberto';
-                            const priority = it.priority || '';
-                            const unread = typeof it.unread_count === 'number' ? it.unread_count : undefined;
-                            const tags = Array.isArray(it.tags) ? it.tags : [];
-                            const since = formatSince(it.updated_at || it.created_at);
-                            const safeTags = (tags as TagType[])
-                              .map((t) => (typeof t === 'string' ? { name: t } : t))
-                              .filter((t) => !!t && !!t.name)
-                              .slice(0, 4);
-                            return (
-                              <div
-                                key={id}
-                                className="rounded-md border border-neutral-800/60 bg-neutral-900/60 p-3 cursor-pointer hover:bg-neutral-900/80 transition-colors"
-                                role="button"
-                                tabIndex={0}
-                                onClick={() => setSelectedItem(it)}
-                                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedItem(it); } }}
-                              >
-                                <div className="flex items-start justify-between">
-                                  <div className="text-sm font-semibold text-white truncate max-w-[70%]" title={title}>{title}</div>
-                                  <span className="text-[11px] text-neutral-300 bg-neutral-800 rounded px-2 py-0.5">{status}</span>
-                                </div>
-                                <div className="text-xs text-neutral-400 mt-1 line-clamp-3">{summary}</div>
-                                <div className="flex flex-wrap gap-1 mt-2">
-                                  {safeTags.map((t, idx) => (
-                                    <span key={idx} className="text-[11px] text-blue-300 bg-blue-900/30 border border-blue-900/40 rounded px-1.5 py-0.5">{t.name}</span>
-                                  ))}
-                                </div>
-                                <div className="mt-3 flex items-center justify-between text-[11px] text-neutral-400">
-                                  <div className="flex items-center gap-2">
-                                    <span>Último Contato</span>
-                                    {typeof unread === 'number' && (
-                                      <span className="ml-1 text-[11px] text-rose-300 bg-rose-900/40 rounded px-1.5 py-0.5">{unread}</span>
-                                    )}
+                              const id = String(it.id ?? it.ticket_number ?? Math.random());
+                              const title = it.title || it.name || it.contact_name || `Item ${id}`;
+                              const summary = it.summary || it.description || '';
+                              const status = it.status || 'Aberto';
+                              const priority = it.priority || '';
+                              const unread = typeof it.unread_count === 'number' ? it.unread_count : undefined;
+                              const tags = Array.isArray(it.tags) ? it.tags : [];
+                              const since = formatSince(it.updated_at || it.created_at);
+                              const safeTags = (tags as TagType[])
+                                .map((t) => (typeof t === 'string' ? { name: t } : t))
+                                .filter((t) => !!t && !!t.name)
+                                .slice(0, 4);
+                              return (
+                                <div
+                                  key={id}
+                                  className="rounded-md border border-neutral-800/60 bg-neutral-900/60 p-3 cursor-pointer hover:bg-neutral-900/80 transition-colors"
+                                  role="button"
+                                  tabIndex={0}
+                                  onClick={() => setSelectedItem(it)}
+                                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedItem(it); } }}
+                                >
+                                  <div className="flex items-start justify-between">
+                                    <div className="text-sm font-semibold text-white truncate max-w-[70%]" title={title}>{title}</div>
+                                    <span className="text-[11px] text-neutral-300 bg-neutral-800 rounded px-2 py-0.5">{status}</span>
                                   </div>
-                                  <div>{since}</div>
+                                  <div className="text-xs text-neutral-400 mt-1 line-clamp-3">{summary}</div>
+                                  <div className="flex flex-wrap gap-1 mt-2">
+                                    {safeTags.map((t, idx) => (
+                                      <span key={idx} className="text-[11px] text-blue-300 bg-blue-900/30 border border-blue-900/40 rounded px-1.5 py-0.5">{t.name}</span>
+                                    ))}
+                                  </div>
+                                  <div className="mt-3 flex items-center justify-between text-[11px] text-neutral-400">
+                                    <div className="flex items-center gap-2">
+                                      <span>Último Contato</span>
+                                      {typeof unread === 'number' && (
+                                        <span className="ml-1 text-[11px] text-rose-300 bg-rose-900/40 rounded px-1.5 py-0.5">{unread}</span>
+                                      )}
+                                    </div>
+                                    <div>{since}</div>
+                                  </div>
                                 </div>
-                              </div>
-                            );
+                              );
                           })}
                         </div>
                       </div>
