@@ -6,6 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import Sidebar from "../../components/Sidebar";
 import ProductHeader from "../../components/ProductHeader";
+import {
+  SESSION_SELECTED_PRODUCT_ID_KEY,
+  SESSION_SELECTED_ACCOUNT_BUNDLE_KEY,
+} from "../../utils/sessionKeys";
 
 // Types
 type UserData = {
@@ -122,6 +126,25 @@ export default function CampaignsPage() {
     return () => { clearTimeout(t1); clearTimeout(t2); };
   }, []);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const stored = sessionStorage.getItem(SESSION_SELECTED_PRODUCT_ID_KEY);
+      if (stored) setSelectedProductId(stored);
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      if (selectedProductId) {
+        sessionStorage.setItem(SESSION_SELECTED_PRODUCT_ID_KEY, selectedProductId);
+        return;
+      }
+      sessionStorage.removeItem(SESSION_SELECTED_PRODUCT_ID_KEY);
+    } catch {}
+  }, [selectedProductId]);
+
   // Load products once
   const loadProducts = async () => {
     try {
@@ -205,6 +228,15 @@ export default function CampaignsPage() {
         const list = (Array.isArray(json?.data) ? json.data : []) as Array<{ id: string; name: string }>;
         const mapped: Account[] = list.map((a: { id: string; name: string }) => ({ id: a.id, name: a.name }));
         setAccounts(mapped);
+        try {
+          const storedBundle = sessionStorage.getItem(SESSION_SELECTED_ACCOUNT_BUNDLE_KEY);
+          if (storedBundle) {
+            const parsed = JSON.parse(storedBundle) as { productId?: string; accountId?: string } | null;
+            if (parsed?.productId === selectedProductId && parsed.accountId) {
+              setFormAccountId(parsed.accountId);
+            }
+          }
+        } catch {}
       } catch {
         setAccounts([]);
       } finally {

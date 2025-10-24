@@ -8,6 +8,7 @@ export type FunnelStep = {
   id: string;
   name?: string;
   description?: string;
+  agent_instruction?: string;
 };
 
 export type FunnelStepsTabProps = {
@@ -26,6 +27,7 @@ export type FunnelStepsTabProps = {
   onClickEditStep: (step: FunnelStep) => void;
   onOpenStepSettings: (stepId: string) => void;
   truncate: (text: string, max?: number) => string;
+  onClickEditFunnel: () => void;
 };
 
 export default function FunnelStepsTab(props: FunnelStepsTabProps) {
@@ -42,6 +44,7 @@ export default function FunnelStepsTab(props: FunnelStepsTabProps) {
     canPrev,
     canNext,
     onClickIncludeStep,
+    onClickEditFunnel,
     onClickEditStep,
     onOpenStepSettings,
     truncate
@@ -56,14 +59,25 @@ export default function FunnelStepsTab(props: FunnelStepsTabProps) {
           )}
         </div>
         {isAdmin && !isDefaultFunnel && (
-          <Button
-            className="bg-blue-600 hover:bg-blue-500 text-white"
-            size="sm"
-            onClick={onClickIncludeStep}
-            title="Incluir etapa"
-          >
-            + Incluir
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="secondary"
+              size="sm"
+              className="bg-gray-700 hover:bg-gray-600 text-white"
+              onClick={onClickEditFunnel}
+              title="Editar funil"
+            >
+              <Pencil className="h-4 w-4" />
+            </Button>
+            <Button
+              className="bg-blue-600 hover:bg-blue-500 text-white"
+              size="sm"
+              onClick={onClickIncludeStep}
+              title="Incluir etapa"
+            >
+              + Incluir
+            </Button>
+          </div>
         )}
       </div>
       <div className="h-3" />

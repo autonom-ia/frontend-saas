@@ -18,6 +18,11 @@ import ProductHeader from '../../components/ProductHeader';
 import FunnelStepsTab from './components/FunnelStepsTab';
 import { KnowledgeBaseGrid } from './components';
 import SelectedAccountBar from '../../components/SelectedAccountBar';
+import {
+  SESSION_SELECTED_PRODUCT_ID_KEY,
+  SESSION_SELECTED_ACCOUNT_KEY,
+  SESSION_SELECTED_ACCOUNT_BUNDLE_KEY,
+} from '../../utils/sessionKeys';
 
 type UserData = {
   user?: {
@@ -80,16 +85,18 @@ export default function DashboardPage() {
   const [accountFormFunnelId, setAccountFormFunnelId] = useState<string>('');
   // moved selectedAccountId state above for steps loader
   // Conversation Funnels
-  type Funnel = { id: string; name: string; description?: string };
+  type Funnel = { id: string; name: string; description?: string; agent_instruction?: string };
   const [funnels, setFunnels] = useState<Funnel[]>([]);
   const [funnelsLoading, setFunnelsLoading] = useState<boolean>(false);
   // Funnel create form state
   const [isFunnelFormOpen, setIsFunnelFormOpen] = useState<boolean>(false);
+  const [funnelFormMode, setFunnelFormMode] = useState<'create'|'edit'>('create');
   const [funnelFormName, setFunnelFormName] = useState<string>('');
   const [funnelFormDescription, setFunnelFormDescription] = useState<string>('');
+  const [funnelFormAgentInstruction, setFunnelFormAgentInstruction] = useState<string>('');
   const [funnelSaving, setFunnelSaving] = useState<boolean>(false);
   // Funnel steps section (below accounts)
-  const [steps, setSteps] = useState<Array<{ id: string; name: string; description?: string }>>([]);
+  const [steps, setSteps] = useState<Array<{ id: string; name: string; description?: string; agent_instruction?: string }>>([]);
   const [stepsLoading, setStepsLoading] = useState<boolean>(false);
   const [stepsPage, setStepsPage] = useState<number>(1);
   const stepsPageSize = accPageSize; // mirror accounts grid
@@ -99,6 +106,7 @@ export default function DashboardPage() {
   const [selectedStepId, setSelectedStepId] = useState<string>('');
   const [stepFormName, setStepFormName] = useState('');
   const [stepFormDescription, setStepFormDescription] = useState('');
+  const [stepFormAgentInstruction, setStepFormAgentInstruction] = useState('');
   // Estado para settings (mensagens) da etapa
   const [isStepSettingsOpen, setIsStepSettingsOpen] = useState(false);
   type StepMessage = {
@@ -200,6 +208,9 @@ export default function DashboardPage() {
   const [selectedAccountId, setSelectedAccountId] = useState<string | ''>('');
   const [selectedAccountFunnelName, setSelectedAccountFunnelName] = useState<string>('');
   const [selectedAccountFunnelIsDefault, setSelectedAccountFunnelIsDefault] = useState<boolean>(false);
+  const [selectedAccountFunnelAgentInstruction, setSelectedAccountFunnelAgentInstruction] = useState<string>('');
+  const [selectedAccountFunnelId, setSelectedAccountFunnelId] = useState<string>('');
+  const [selectedAccountFunnelDescription, setSelectedAccountFunnelDescription] = useState<string>('');
   // Animations for grids
   const [showAccountsGrid, setShowAccountsGrid] = useState(false);
   const [showFunnelGrid, setShowFunnelGrid] = useState(false);
@@ -253,27 +264,45 @@ export default function DashboardPage() {
 
   // Persist and restore selected product/account across sessions
   useEffect(() => {
+    if (typeof window === 'undefined') return;
     try {
-      const storedProduct = sessionStorage.getItem('settingsSelectedProductId');
+      const storedProduct = sessionStorage.getItem(SESSION_SELECTED_PRODUCT_ID_KEY);
       if (storedProduct) setSelectedProductId(storedProduct);
-      const storedAccount = sessionStorage.getItem('settingsSelectedAccountId');
-      if (storedAccount) setSelectedAccountId(storedAccount);
+      const storedBundleRaw = sessionStorage.getItem(SESSION_SELECTED_ACCOUNT_BUNDLE_KEY);
+      if (storedBundleRaw) {
+        const parsed = JSON.parse(storedBundleRaw) as { productId?: string; accountId?: string } | null;
+        if (parsed?.productId && parsed.productId === storedProduct && parsed.accountId) {
+          setSelectedAccountId(parsed.accountId);
+        }
+      } else {
+        const storedAccount = sessionStorage.getItem(SESSION_SELECTED_ACCOUNT_KEY);
+        if (storedAccount) setSelectedAccountId(storedAccount);
+      }
     } catch {}
   }, []);
 
   useEffect(() => {
+    if (typeof window === 'undefined') return;
     try {
-      if (selectedProductId) sessionStorage.setItem('settingsSelectedProductId', selectedProductId);
-      else sessionStorage.removeItem('settingsSelectedProductId');
+      if (selectedProductId) sessionStorage.setItem(SESSION_SELECTED_PRODUCT_ID_KEY, selectedProductId);
+      else sessionStorage.removeItem(SESSION_SELECTED_PRODUCT_ID_KEY);
     } catch {}
   }, [selectedProductId]);
 
   useEffect(() => {
+    if (typeof window === 'undefined') return;
     try {
-      if (selectedAccountId) sessionStorage.setItem('settingsSelectedAccountId', selectedAccountId);
-      else sessionStorage.removeItem('settingsSelectedAccountId');
+      if (selectedAccountId) {
+        sessionStorage.setItem(SESSION_SELECTED_ACCOUNT_KEY, selectedAccountId);
+        if (selectedProductId) {
+          sessionStorage.setItem(SESSION_SELECTED_ACCOUNT_BUNDLE_KEY, JSON.stringify({ productId: selectedProductId, accountId: selectedAccountId }));
+        }
+      } else {
+        sessionStorage.removeItem(SESSION_SELECTED_ACCOUNT_KEY);
+        if (!selectedAccountId) sessionStorage.removeItem(SESSION_SELECTED_ACCOUNT_BUNDLE_KEY);
+      }
     } catch {}
-  }, [selectedAccountId]);
+  }, [selectedAccountId, selectedProductId]);
   // Helper to truncate long texts with ellipsis
   const truncate = (text: string, max: number = 100): string => {
     if (!text) return '';
@@ -318,6 +347,9 @@ export default function DashboardPage() {
         setSteps([]);
         setSelectedAccountFunnelName('');
         setSelectedAccountFunnelIsDefault(false);
+        setSelectedAccountFunnelAgentInstruction('');
+        setSelectedAccountFunnelId('');
+        setSelectedAccountFunnelDescription('');
         return;
       }
       try {
@@ -355,12 +387,18 @@ export default function DashboardPage() {
             const funnel = fj?.data;
             setSelectedAccountFunnelName(funnel?.name || '');
             setSelectedAccountFunnelIsDefault(!!funnel?.is_default);
+            setSelectedAccountFunnelAgentInstruction(funnel?.agent_instruction || '');
+            setSelectedAccountFunnelId(acc.conversation_funnel_id);
+            setSelectedAccountFunnelDescription(funnel?.description || '');
             console.debug('[Settings] Funnel meta carregada:', { name: funnel?.name, is_default: funnel?.is_default });
           } else {
             const t = await funnelResp.text();
             console.warn('[Settings] Falha ao buscar meta do funil:', funnelResp.status, funnelResp.statusText, t);
             setSelectedAccountFunnelName('');
             setSelectedAccountFunnelIsDefault(false);
+            setSelectedAccountFunnelAgentInstruction('');
+            setSelectedAccountFunnelId('');
+            setSelectedAccountFunnelDescription('');
           }
         } else {
           const t = await stepsResp.text();
@@ -387,10 +425,14 @@ export default function DashboardPage() {
     setSelectedStepId('');
     setStepFormName('');
     setStepFormDescription('');
+    setStepFormAgentInstruction('');
     setIsStepFormOpen(true);
   };
   const [productParams, setProductParams] = useState<Array<{ id: string; name: string; value?: string }>>([]);
+  const [productParamsOriginal, setProductParamsOriginal] = useState<Record<string, string>>({});
+  const [productParamsDirty, setProductParamsDirty] = useState<Record<string, string>>({});
   const [productParamsLoading, setProductParamsLoading] = useState(false);
+  const [productParamsSavingBulk, setProductParamsSavingBulk] = useState(false);
   // Create product parameter inline row state
   const [isCreatingProductParam, setIsCreatingProductParam] = useState(false);
   const [newProductParamName, setNewProductParamName] = useState('');
@@ -400,8 +442,11 @@ export default function DashboardPage() {
   // Account Parameters (Settings por conta)
   const [isAccountParamPanelOpen, setIsAccountParamPanelOpen] = useState(false);
   const [accountParams, setAccountParams] = useState<Array<{ id: string; name: string; value?: string }>>([]);
+  const [accountParamsOriginal, setAccountParamsOriginal] = useState<Record<string, string>>({});
+  const [accountParamsDirty, setAccountParamsDirty] = useState<Record<string, string>>({});
   const [accountParamsLoading, setAccountParamsLoading] = useState(false);
   const [accountParamsAccountId, setAccountParamsAccountId] = useState<string | ''>('');
+  const [accountParamsSavingBulk, setAccountParamsSavingBulk] = useState(false);
   const [accountSaving, setAccountSaving] = useState(false);
   const [isCreatingAccountParam, setIsCreatingAccountParam] = useState(false);
   const [newAccountParamName, setNewAccountParamName] = useState('');
@@ -701,7 +746,7 @@ export default function DashboardPage() {
       clearInterval(interval);
       clearTimeout(timeout);
     };
-  }, [polling, pollingUntil, connectInfo?.instance, connectInfo?.base64, inboxPanelAccount]);
+  }, [polling, pollingUntil, connectInfo?.instance, connectInfo?.base64, inboxPanelAccount, fetchInboxStatus, callSetChatwoot, setChatwootCalledFor]);
 
   // Abrir painel de parâmetros de conta
   const openAccountSettingsPanel = async (accountId: string) => {
@@ -728,12 +773,23 @@ export default function DashboardPage() {
         const t = await resp.text();
         console.error('Falha ao buscar parâmetros da conta:', resp.status, resp.statusText, t);
         setAccountParams([]);
+        setAccountParamsOriginal({});
+        setAccountParamsDirty({});
         return;
       }
       const json = await resp.json();
-      setAccountParams(Array.isArray(json?.data) ? json.data : []);
+      const rows = Array.isArray(json?.data) ? json.data : [];
+      setAccountParams(rows);
+      const originals: Record<string, string> = {};
+      for (const row of rows) {
+        originals[row.id] = String(row?.value ?? '');
+      }
+      setAccountParamsOriginal(originals);
+      setAccountParamsDirty({});
     } catch (e) {
       console.error('Erro ao carregar parâmetros da conta:', e);
+      setAccountParamsOriginal({});
+      setAccountParamsDirty({});
     } finally {
       setAccountParamsLoading(false);
     }
@@ -783,41 +839,18 @@ export default function DashboardPage() {
     }
   };
 
-  // Atualizar valor do parâmetro de conta (onBlur)
-  const updateAccountParameterValue = async (parameterId: string, newValue: string) => {
-    if (!userData?.user?.isAdmin) return;
-    // Atualização otimista
-    setAccountParams(prev => prev.map(p => p.id === parameterId ? { ...p, value: newValue } : p));
-    try {
-      const saasApiUrl = process.env.NEXT_PUBLIC_SAAS_API_URL || 'https://api-saas.autonomia.site';
-      const tokenToUse = authToken || (() => {
-        try {
-          const stored = localStorage.getItem('userData');
-          if (!stored) return undefined;
-          const parsed = JSON.parse(stored);
-          return parsed.IdToken || parsed.token || parsed.AccessToken;
-        } catch { return undefined; }
-      })();
-      const url = `${saasApiUrl}/Autonomia/Saas/AccountParameters/${encodeURIComponent(parameterId)}`;
-      const resp = await fetch(url, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${tokenToUse}`
-        },
-        body: JSON.stringify({ value: newValue })
-      });
-      if (!resp.ok) {
-        const t = await resp.text();
-        console.error('Falha ao atualizar parâmetro da conta:', resp.status, resp.statusText, t);
-        showToast('Falha ao atualizar parâmetro da conta', 'error');
-      } else {
-        showToast('Parâmetro da conta atualizado', 'success');
+  const handleAccountParameterValueChange = (parameterId: string, newValue: string) => {
+    setAccountParams(prev => prev.map(p => (p.id === parameterId ? { ...p, value: newValue } : p)));
+    setAccountParamsDirty(prev => {
+      const originalValue = accountParamsOriginal[parameterId] ?? '';
+      if ((newValue ?? '') === originalValue) {
+        if (!(parameterId in prev)) return prev;
+        const updated = { ...prev };
+        delete updated[parameterId];
+        return updated;
       }
-    } catch (e) {
-      console.error('Erro ao atualizar parâmetro da conta:', e);
-      showToast('Erro ao atualizar parâmetro da conta', 'error');
-    }
+      return { ...prev, [parameterId]: newValue ?? '' };
+    });
   };
 
   // Criar parâmetro de conta
@@ -876,6 +909,12 @@ export default function DashboardPage() {
       const created = json?.data;
       if (created?.id) {
         setAccountParams(prev => [created, ...prev]);
+        setAccountParamsOriginal(prev => ({ ...prev, [created.id]: String(created?.value ?? '') }));
+        setAccountParamsDirty(prev => {
+          const updated = { ...prev };
+          delete updated[created.id];
+          return updated;
+        });
         showToast('Parâmetro da conta criado', 'success');
       }
       cancelCreateAccountParam();
@@ -887,13 +926,12 @@ export default function DashboardPage() {
     }
   };
 
-  // Atualizar valor do parâmetro de produto imediatamente ao alterar
-  const updateProductParameterValue = async (parameterId: string, newValue: string) => {
+  const saveAccountParametersBulk = async () => {
+    const entries = Object.entries(accountParamsDirty);
+    if (!entries.length) return;
     if (!userData?.user?.isAdmin) return;
-    // Atualização otimista do estado
-    setProductParams(prev => prev.map(p => p.id === parameterId ? { ...p, value: newValue } : p));
-
     try {
+      setAccountParamsSavingBulk(true);
       const saasApiUrl = process.env.NEXT_PUBLIC_SAAS_API_URL || 'https://api-saas.autonomia.site';
       const tokenToUse = authToken || (() => {
         try {
@@ -903,27 +941,110 @@ export default function DashboardPage() {
           return parsed.IdToken || parsed.token || parsed.AccessToken;
         } catch { return undefined; }
       })();
-
-      const url = `${saasApiUrl}/Autonomia/Saas/ProductParameters/${encodeURIComponent(parameterId)}`;
-      const resp = await fetch(url, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${tokenToUse}`
-        },
-        body: JSON.stringify({ value: newValue })
-      });
-
-      if (!resp.ok) {
-        const t = await resp.text();
-        console.error('Falha ao atualizar parâmetro:', resp.status, resp.statusText, t);
-        showToast('Falha ao atualizar parâmetro do produto', 'error');
-      } else {
-        showToast('Parâmetro do produto atualizado', 'success');
+      let successCount = 0;
+      for (const [parameterId, value] of entries) {
+        const resp = await fetch(`${saasApiUrl}/Autonomia/Saas/AccountParameters/${encodeURIComponent(parameterId)}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${tokenToUse}`
+          },
+          mode: 'cors',
+          body: JSON.stringify({ value })
+        });
+        if (!resp.ok) {
+          const t = await resp.text();
+          console.error('Falha ao atualizar parâmetro da conta:', resp.status, resp.statusText, t);
+          showToast('Falha ao atualizar parâmetros da conta', 'error');
+          return;
+        }
+        successCount += 1;
       }
+      setAccountParamsOriginal(prev => {
+        const updated = { ...prev };
+        for (const [parameterId, value] of entries) {
+          updated[parameterId] = value ?? '';
+        }
+        return updated;
+      });
+      setAccountParamsDirty({});
+      const message = successCount === 1
+        ? '1 parâmetro de conta atualizado com sucesso'
+        : `${successCount} parâmetros de conta atualizados com sucesso`;
+      showToast(message, 'success');
     } catch (e) {
-      console.error('Erro ao atualizar parâmetro de produto:', e);
-      showToast('Erro ao atualizar parâmetro do produto', 'error');
+      console.error('Erro ao salvar parâmetros de conta:', e);
+      showToast('Erro ao salvar parâmetros de conta', 'error');
+    } finally {
+      setAccountParamsSavingBulk(false);
+    }
+  };
+
+  const handleProductParameterValueChange = (parameterId: string, newValue: string) => {
+    setProductParams(prev => prev.map(p => (p.id === parameterId ? { ...p, value: newValue } : p)));
+    setProductParamsDirty(prev => {
+      const originalValue = productParamsOriginal[parameterId] ?? '';
+      if ((newValue ?? '') === originalValue) {
+        if (!(parameterId in prev)) return prev;
+        const updated = { ...prev };
+        delete updated[parameterId];
+        return updated;
+      }
+      return { ...prev, [parameterId]: newValue ?? '' };
+    });
+  };
+
+  const saveProductParametersBulk = async () => {
+    const entries = Object.entries(productParamsDirty);
+    if (!entries.length) return;
+    if (!userData?.user?.isAdmin) return;
+    try {
+      setProductParamsSavingBulk(true);
+      const saasApiUrl = process.env.NEXT_PUBLIC_SAAS_API_URL || 'https://api-saas.autonomia.site';
+      const tokenToUse = authToken || (() => {
+        try {
+          const stored = localStorage.getItem('userData');
+          if (!stored) return undefined;
+          const parsed = JSON.parse(stored);
+          return parsed.IdToken || parsed.token || parsed.AccessToken;
+        } catch { return undefined; }
+      })();
+      let successCount = 0;
+      for (const [parameterId, value] of entries) {
+        const resp = await fetch(`${saasApiUrl}/Autonomia/Saas/ProductParameters/${encodeURIComponent(parameterId)}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${tokenToUse}`
+          },
+          mode: 'cors',
+          body: JSON.stringify({ value })
+        });
+        if (!resp.ok) {
+          const t = await resp.text();
+          console.error('Falha ao atualizar parâmetro do produto:', resp.status, resp.statusText, t);
+          showToast('Falha ao atualizar parâmetros do produto', 'error');
+          return;
+        }
+        successCount += 1;
+      }
+      setProductParamsOriginal(prev => {
+        const updated = { ...prev };
+        for (const [parameterId, value] of entries) {
+          updated[parameterId] = value ?? '';
+        }
+        return updated;
+      });
+      setProductParamsDirty({});
+      const message = successCount === 1
+        ? '1 parametro atualizado com sucesso'
+        : `${successCount} parametros atualizados com sucesso`;
+      showToast(message, 'success');
+    } catch (e) {
+      console.error('Erro ao salvar parâmetros de produto:', e);
+      showToast('Erro ao salvar parâmetros de produto', 'error');
+    } finally {
+      setProductParamsSavingBulk(false);
     }
   };
 
@@ -949,10 +1070,19 @@ export default function DashboardPage() {
         const t = await resp.text();
         console.error('Falha ao buscar parâmetros de produto:', resp.status, resp.statusText, t);
         setProductParams([]);
+        setProductParamsOriginal({});
+        setProductParamsDirty({});
         return;
       }
       const json = await resp.json();
-      setProductParams(Array.isArray(json?.data) ? json.data : []);
+      const rows = Array.isArray(json?.data) ? json.data : [];
+      setProductParams(rows);
+      const originals: Record<string, string> = {};
+      for (const row of rows) {
+        originals[row.id] = String(row?.value ?? '');
+      }
+      setProductParamsOriginal(originals);
+      setProductParamsDirty({});
     } catch (e) {
       console.error('Erro ao carregar parâmetros de produto:', e);
     } finally {
@@ -1013,6 +1143,7 @@ export default function DashboardPage() {
       const created = json?.data;
       if (created?.id) {
         setProductParams(prev => [created, ...prev]);
+        setProductParamsOriginal(prev => ({ ...prev, [created.id]: String(created?.value ?? '') }));
         showToast('Parâmetro do produto criado', 'success');
       }
       cancelCreateProductParam();
@@ -1205,19 +1336,32 @@ export default function DashboardPage() {
   const openFunnelCreateForm = () => {
     if (!userData?.user?.isAdmin) return;
     setIsAccountFormOpen(false);
+    setFunnelFormMode('create');
     setFunnelFormName('');
     setFunnelFormDescription('');
+    setFunnelFormAgentInstruction('');
     setIsFunnelFormOpen(true);
   };
 
-  // Salvar novo funil e relacionar
+  // Abrir formulário para editar funil (quando não for default)
+  const openFunnelEditForm = () => {
+    if (!userData?.user?.isAdmin) return;
+    if (!selectedAccountId || !selectedAccountFunnelId || selectedAccountFunnelIsDefault) return;
+    setIsAccountFormOpen(false);
+    setFunnelFormMode('edit');
+    setFunnelFormName(selectedAccountFunnelName || '');
+    setFunnelFormDescription(selectedAccountFunnelDescription || '');
+    setFunnelFormAgentInstruction(selectedAccountFunnelAgentInstruction || '');
+    setIsFunnelFormOpen(true);
+  };
+
+  // Salvar funil (criar e relacionar ou editar existente)
   const saveFunnelAndLink = async () => {
     const name = funnelFormName.trim();
     const description = funnelFormDescription.trim();
-    if (!name || !description) {
-      showToast('Informe nome e descrição do funil', 'error');
-      return;
-    }
+    const agent_instruction = funnelFormAgentInstruction.trim();
+    if (!name || !description) { showToast('Informe nome e descrição do funil', 'error'); return; }
+    if (!agent_instruction) { showToast('Informe a Instrução do Agente do funil', 'error'); return; }
     try {
       setFunnelSaving(true);
       const saasApiUrl = process.env.NEXT_PUBLIC_SAAS_API_URL || 'https://api-saas.autonomia.site';
@@ -1229,12 +1373,39 @@ export default function DashboardPage() {
           return parsed.IdToken || parsed.token || parsed.AccessToken;
         } catch { return undefined; }
       })();
+      if (funnelFormMode === 'edit') {
+        // Atualizar funil existente
+        if (!selectedAccountFunnelId) { showToast('Funil não encontrado para edição', 'error'); return; }
+        const updateResp = await fetch(`${saasApiUrl}/Autonomia/Saas/ConversationFunnels/${encodeURIComponent(selectedAccountFunnelId)}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${tokenToUse}` },
+          mode: 'cors',
+          body: JSON.stringify({ name, description, agent_instruction })
+        });
+        if (!updateResp.ok) {
+          const t = await updateResp.text();
+          console.error('Falha ao atualizar funil:', updateResp.status, updateResp.statusText, t);
+          showToast('Falha ao atualizar funil', 'error');
+          return;
+        }
+        const uj = await updateResp.json();
+        const updated = uj?.data as Funnel | undefined;
+        if (updated?.id) {
+          setSelectedAccountFunnelName(updated.name || name);
+          setSelectedAccountFunnelAgentInstruction(updated.agent_instruction || agent_instruction);
+          setSelectedAccountFunnelDescription(updated.description || description);
+        }
+        setIsFunnelFormOpen(false);
+        showToast('Funil atualizado com sucesso', 'success');
+        return;
+      }
+
       // 1) Criar o funil
       const createResp = await fetch(`${saasApiUrl}/Autonomia/Saas/ConversationFunnels`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${tokenToUse}` },
         mode: 'cors',
-        body: JSON.stringify({ name, description })
+        body: JSON.stringify({ name, description, is_default: false, agent_instruction })
       });
       if (!createResp.ok) {
         const t = await createResp.text();
@@ -1481,9 +1652,14 @@ export default function DashboardPage() {
         mode={stepFormMode}
         name={stepFormName}
         description={stepFormDescription}
+        agentInstruction={stepFormAgentInstruction}
         saving={stepSaving}
         onClose={() => setIsStepFormOpen(false)}
-        onChange={(f) => { if (f.name !== undefined) setStepFormName(f.name); if (f.description !== undefined) setStepFormDescription(f.description); }}
+        onChange={(f) => {
+          if (f.name !== undefined) setStepFormName(f.name);
+          if (f.description !== undefined) setStepFormDescription(f.description);
+          if (f.agentInstruction !== undefined) setStepFormAgentInstruction(f.agentInstruction);
+        }}
         onSave={async () => {
           setStepSaving(true);
           try {
@@ -1494,13 +1670,21 @@ export default function DashboardPage() {
               const acc = accounts.find(a => a.id === selectedAccountId);
               const funnelId = acc?.conversation_funnel_id;
               if (!funnelId) { console.error('Sem conversation_funnel_id para a conta selecionada'); showToast('Conta sem funil vinculado', 'error'); return; }
-              const resp = await fetch(`${saasApiUrl}/Autonomia/Saas/ConversationFunnelSteps`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${tokenToUse}` }, body: JSON.stringify({ conversation_funnel_id: funnelId, name: stepFormName, description: stepFormDescription }) });
+              const name = (stepFormName || '').trim();
+              const description = (stepFormDescription || '').trim();
+              const agent_instruction = (stepFormAgentInstruction || '').trim();
+              if (!agent_instruction) { showToast('Informe a Instrução do Agente', 'error'); return; }
+              const resp = await fetch(`${saasApiUrl}/Autonomia/Saas/ConversationFunnelSteps`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${tokenToUse}` }, body: JSON.stringify({ conversation_funnel_id: funnelId, name, description, agent_instruction }) });
               if (!resp.ok) { const t = await resp.text(); console.error('Falha ao criar etapa:', resp.status, resp.statusText, t); showToast('Falha ao criar etapa', 'error'); return; }
               const json = await resp.json(); const created = json?.data; if (created?.id) { setSteps(prev => [created, ...prev]); }
               setIsStepFormOpen(false); showToast('Etapa criada com sucesso', 'success');
             } else {
               if (!selectedStepId) return;
-              const resp = await fetch(`${saasApiUrl}/Autonomia/Saas/ConversationFunnelSteps/${selectedStepId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${tokenToUse}` }, body: JSON.stringify({ name: stepFormName, description: stepFormDescription }) });
+              const name = (stepFormName || '').trim();
+              const description = (stepFormDescription || '').trim();
+              const agent_instruction = (stepFormAgentInstruction || '').trim();
+              if (!agent_instruction) { showToast('Informe a Instrução do Agente', 'error'); return; }
+              const resp = await fetch(`${saasApiUrl}/Autonomia/Saas/ConversationFunnelSteps/${selectedStepId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${tokenToUse}` }, body: JSON.stringify({ name, description, agent_instruction }) });
               if (!resp.ok) { const t = await resp.text(); console.error('Falha ao salvar etapa:', resp.status, resp.statusText, t); showToast('Falha ao salvar etapa', 'error'); return; }
               const json = await resp.json(); const updated = json?.data; if (updated?.id) { setSteps(prev => prev.map(s => s.id === updated.id ? { ...s, ...updated } : s)); }
               setIsStepFormOpen(false); showToast('Etapa salva com sucesso', 'success');
@@ -1563,10 +1747,16 @@ export default function DashboardPage() {
         onStartCreate={startCreateProductParam}
         onCancelCreate={cancelCreateProductParam}
         onSaveCreate={createProductParameter}
-        onChangeNewName={(v) => setNewProductParamName(v)}
-        onChangeNewValue={(v) => setNewProductParamValue(v)}
-        onChangeItemValue={(id, v) => setProductParams(prev => prev.map(p => p.id === id ? { ...p, value: v } : p))}
-        onBlurItemSave={(id, v) => updateProductParameterValue(id, v)}
+        onChangeNewName={setNewProductParamName}
+        onChangeNewValue={setNewProductParamValue}
+        onChangeItemValue={handleProductParameterValueChange}
+        unsavedCount={Object.keys(productParamsDirty).length}
+        savingBulk={productParamsSavingBulk}
+        onSaveBulk={saveProductParametersBulk}
+        onCancelBulk={() => {
+          setProductParams(prev => prev.map(item => ({ ...item, value: productParamsOriginal[item.id] ?? '' })));
+          setProductParamsDirty({});
+        }}
       />
 
       <AccountParametersPanel
@@ -1578,14 +1768,20 @@ export default function DashboardPage() {
         newName={newAccountParamName}
         newValue={newAccountParamValue}
         savingNew={savingNewAccountParam}
+        unsavedCount={Object.keys(accountParamsDirty).length}
+        savingBulk={accountParamsSavingBulk}
         onClose={() => setIsAccountParamPanelOpen(false)}
         onStartCreate={startCreateAccountParam}
         onCancelCreate={cancelCreateAccountParam}
         onSaveCreate={createAccountParameter}
-        onChangeNewName={(v) => setNewAccountParamName(v)}
-        onChangeNewValue={(v) => setNewAccountParamValue(v)}
-        onChangeItemValue={(id, v) => setAccountParams(prev => prev.map(p => p.id === id ? { ...p, value: v } : p))}
-        onBlurItemSave={(id, v) => updateAccountParameterValue(id, v)}
+        onSaveBulk={saveAccountParametersBulk}
+        onCancelBulk={() => {
+          setAccountParams(prev => prev.map(item => ({ ...item, value: accountParamsOriginal[item.id] ?? '' })));
+          setAccountParamsDirty({});
+        }}
+        onChangeNewName={setNewAccountParamName}
+        onChangeNewValue={setNewAccountParamValue}
+        onChangeItemValue={handleAccountParameterValueChange}
       />
 
       {/* Cabeçalho (componente reutilizável) */}
@@ -1750,12 +1946,14 @@ export default function DashboardPage() {
                 onNextPage={() => setStepsPage(p => Math.min(Math.ceil(steps.length / stepsPageSize), p + 1))}
                 canPrev={stepsPage > 1}
                 canNext={stepsPage < Math.ceil(steps.length / stepsPageSize)}
+                onClickEditFunnel={openFunnelEditForm}
                 onClickIncludeStep={openCreateStepForm}
                 onClickEditStep={(step) => {
                   setStepFormMode('edit');
                   setSelectedStepId(step.id);
                   setStepFormName(step.name || '');
                   setStepFormDescription(step.description || '');
+                  setStepFormAgentInstruction(step.agent_instruction || '');
                   setIsStepFormOpen(true);
                 }}
                 onOpenStepSettings={async (stepId: string) => {
@@ -1880,7 +2078,7 @@ export default function DashboardPage() {
         aria-hidden={!isFunnelFormOpen}
       >
         <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-          <h2 className="text-lg font-semibold dark:text-white">Novo Funil</h2>
+          <h2 className="text-lg font-semibold dark:text-white">{funnelFormMode === 'edit' ? 'Editar Funil' : 'Novo Funil'}</h2>
           <button
             className="text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-white"
             onClick={() => { setIsFunnelFormOpen(false); }}
@@ -1910,6 +2108,18 @@ export default function DashboardPage() {
               onChange={(e) => setFunnelFormDescription(e.target.value)}
             />
           </div>
+          <div>
+            <label htmlFor="funnel-agent-instruction" className="block text-sm mb-1 dark:text-gray-200">Instruções do Agente <span className="text-red-600">*</span></label>
+            <textarea
+              id="funnel-agent-instruction"
+              required
+              rows={6}
+              className="w-full rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              value={funnelFormAgentInstruction}
+              onChange={(e) => setFunnelFormAgentInstruction(e.target.value)}
+              placeholder="Descreva as instruções gerais que o agente deve seguir neste funil"
+            />
+          </div>
         </div>
         <div className="p-4 border-t border-gray-200 dark:border-gray-700 flex items-center justify-end gap-2">
           <Button
@@ -1921,7 +2131,7 @@ export default function DashboardPage() {
           <Button
             className="bg-blue-600 hover:bg-blue-500 text-white"
             onClick={saveFunnelAndLink}
-            disabled={funnelSaving || !funnelFormName.trim() || !funnelFormDescription.trim()}
+            disabled={funnelSaving || !funnelFormName.trim() || !funnelFormDescription.trim() || !funnelFormAgentInstruction.trim()}
           >{funnelSaving ? 'Salvando...' : 'Salvar'}</Button>
         </div>
       </div>

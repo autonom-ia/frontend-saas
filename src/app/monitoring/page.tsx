@@ -72,8 +72,10 @@ type UserData = {
   AccessToken?: string;
   token?: string;
   email?: string;
-  user?: { name?: string; photoUrl?: string };
+  user?: { name?: string; photoUrl?: string; isAdmin?: boolean };
 };
+
+type DomainItem = string;
 
 // Simple count-up hook for quick number animation
 function useCountUp(target: number, durationMs: number, deps: ReadonlyArray<unknown> = []) {
@@ -118,6 +120,11 @@ export default function MonitoringPage() {
   // Right panel
   const [panelOpen, setPanelOpen] = useState(false);
   const [panelMode, setPanelMode] = useState<'logged'|'workloads'|'teams'|'stale'|'unassigned'>('logged');
+  const [headerReady, setHeaderReady] = useState(false);
+  const [domains, setDomains] = useState<DomainItem[]>([]);
+  const [domainLoading, setDomainLoading] = useState(false);
+  const [domainError, setDomainError] = useState<string>("");
+  const [selectedDomain, setSelectedDomain] = useState<string>("");
 
   // Derived KPIs
   const kpis = useMemo(() => {
@@ -190,6 +197,87 @@ export default function MonitoringPage() {
   // Animação dos gráficos (0 -> 1)
   const [chartProgress, setChartProgress] = useState(1);
 
+  const subdomain = useMemo(() => {
+    if (typeof window === "undefined") return "empresta";
+    const host = window.location.hostname || "";
+    const parts = host.split(".");
+    if (parts.length < 3) return "empresta";
+    return parts[0] || "empresta";
+  }, []);
+
+  const effectiveDomain = useMemo(() => {
+    if (!userData?.user?.isAdmin) return normalizeDomain(subdomain);
+    return selectedDomain || normalizeDomain(subdomain);
+  }, [selectedDomain, subdomain, userData?.user?.isAdmin]);
+
+  useEffect(() => {
+    if (!userData?.user?.isAdmin) {
+      setSelectedDomain("");
+      setDomains([]);
+      setDomainError("");
+      setDomainLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+
+    (async () => {
+      try {
+        setDomainLoading(true);
+        setDomainError("");
+        const baseUrl = process.env.NEXT_PUBLIC_CLIENTS_API_URL || "https://api-clients.autonomia.site";
+        const token = userData?.IdToken || userData?.token || userData?.AccessToken;
+        const uidStr = (() => {
+          const u: unknown = userData?.user;
+          if (u && typeof u === 'object' && 'id' in (u as Record<string, unknown>)) {
+            const v = (u as Record<string, unknown>).id;
+            if (typeof v === 'string') return v;
+            if (typeof v === 'number') return String(v);
+          }
+          return '';
+        })();
+        if (!uidStr) throw new Error('Usuário inválido para carregar clientes');
+        const qs = new URLSearchParams({ userId: uidStr });
+        const res = await fetch(`${baseUrl}/Autonomia/Clients/Domains?${qs.toString()}`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+          mode: "cors",
+        });
+        if (!res.ok) throw new Error(`Erro ao buscar domínios (${res.status})`);
+        const json = await res.json();
+        const rawItems: unknown[] = Array.isArray(json?.data) ? json.data : [];
+        const uniqueDomains: string[] = [];
+        for (const item of rawItems) {
+          if (typeof item !== "string") continue;
+          const normalized = normalizeDomain(item);
+          if (uniqueDomains.includes(normalized)) continue;
+          uniqueDomains.push(normalized);
+        }
+        if (cancelled) return;
+        setDomains(uniqueDomains);
+        if (uniqueDomains.length === 0) {
+          setSelectedDomain("");
+          return;
+        }
+        setSelectedDomain((current) => {
+          if (current && uniqueDomains.includes(current)) return current;
+          return uniqueDomains[0];
+        });
+      } catch (err) {
+        if (cancelled) return;
+        const msg = err instanceof Error ? err.message : "Erro ao carregar domínios";
+        setDomainError(msg);
+        setDomains([]);
+        setSelectedDomain("");
+      } finally {
+        if (!cancelled) setDomainLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [userData?.AccessToken, userData?.IdToken, userData?.token, userData?.user?.isAdmin]);
+
   // Derive date range based on selection
   const { startDate, endDate } = useMemo(() => {
     const now = new Date();
@@ -224,16 +312,20 @@ export default function MonitoringPage() {
         break;
     }
     return { startDate: start, endDate: end };
-  }, [range, customStart, customEnd]);
+  }, [range, customStart, customEnd, effectiveDomain]);
 
-  // Fetch logged users (default accountId=6 on backend)
+  // Fetch logged users, reloading when client (effectiveDomain) changes
   useEffect(() => {
     (async () => {
       try {
         setLoggedLoading(true);
         setLoggedError("");
         const baseUrl = process.env.NEXT_PUBLIC_CLIENTS_API_URL || "https://api-clients.autonomia.site";
-        const res = await fetch(`${baseUrl}/Autonomia/Clients/LoggedUsers`);
+        const numericId = typeof effectiveDomain === 'string' && /^\d+$/.test(effectiveDomain) ? effectiveDomain : '';
+        const url = numericId
+          ? `${baseUrl}/Autonomia/Clients/LoggedUsers?accountId=${numericId}`
+          : `${baseUrl}/Autonomia/Clients/LoggedUsers`;
+        const res = await fetch(url);
         if (!res.ok) throw new Error(`Erro ao buscar usuários logados (${res.status})`);
         const json = await res.json();
         const arr = json?.data?.data || json?.data || [];
@@ -246,7 +338,7 @@ export default function MonitoringPage() {
         setLoggedLoading(false);
       }
     })();
-  }, []);
+  }, [effectiveDomain]);
 
   // ===== Charts data (blue tones) =====
   const blues = ['#3B82F6', '#60A5FA', '#93C5FD', '#1E40AF', '#2563EB', '#1D4ED8'];
@@ -324,22 +416,13 @@ export default function MonitoringPage() {
     return `M ${cx} ${cy} L ${x1} ${y1} A ${r} ${r} 0 ${largeArc} 1 ${x2} ${y2} Z`;
   };
 
-  const subdomain = useMemo(() => {
-    if (typeof window === "undefined") return "empresta";
-    const host = window.location.hostname || "";
-    const parts = host.split(".");
-    // If localhost or no subdomain, default
-    if (parts.length < 3) return "empresta";
-    return parts[0] || "empresta";
-  }, []);
-
   async function fetchConversations() {
     try {
       setLoading(true);
       setError("");
       setData([]);
       const qs = new URLSearchParams({
-        accountId: normalizeDomain(subdomain),
+        accountId: effectiveDomain,
         startDate: startDate.toISOString(),
         endDate: endDate.toISOString(),
       });
@@ -357,18 +440,19 @@ export default function MonitoringPage() {
       const msg = e instanceof Error ? e.message : "Erro ao buscar conversas";
       setError(msg);
     } finally {
+      setHeaderReady(true);
       setLoading(false);
     }
   }
 
-  // Trigger fetch on CHANGE of selectors/inputs (not blur)
+  // Trigger fetch on CHANGE of selectors/inputs and effectiveDomain (client)
   useEffect(() => {
     if (range === "custom") {
       if (!customStart || !customEnd) return; // wait for both custom dates
     }
     fetchConversations();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [range, customStart, customEnd]);
+  }, [range, customStart, customEnd, effectiveDomain]);
 
   useEffect(() => {
     // Simple auth guard similar to dashboard: require userData in storage
@@ -442,29 +526,63 @@ export default function MonitoringPage() {
           </div>
           {/* Range controls in header */}
           <div className="flex-1 px-2 relative">
-            <div className="max-w-xl flex items-center gap-3">
-              <label htmlFor="range" className="text-sm">Informe o período</label>
-              <select
-                id="range"
-                className="select-clean"
-                value={range}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  if (val === 'custom') {
-                    const today = toISODate(new Date());
-                    setCustomStart((prev) => prev || today);
-                    setCustomEnd((prev) => prev || today);
-                    setShowCustomPicker(true);
-                  }
-                  setRange(val);
-                }}
-              >
-                <option value="today">Hoje</option>
-                <option value="last3">Últimos 3 dias</option>
-                <option value="last7">Últimos 7 dias</option>
-                <option value="last30">Últimos 30 dias</option>
-                <option value="custom">Personalizado</option>
-              </select>
+            <div
+              className={`max-w-xl flex items-center gap-4 transition-all duration-300 ease-out ${headerReady ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2 pointer-events-none'}`}
+            >
+              {userData?.user?.isAdmin && (
+                <div className="flex flex-col gap-1 min-w-[220px]">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm whitespace-nowrap">Cliente</span>
+                    <select
+                      className="select-clean min-w-[160px]"
+                      value={selectedDomain}
+                      onChange={(event) => setSelectedDomain(event.target.value)}
+                      disabled={domainLoading || (!domainLoading && domains.length === 0)}
+                    >
+                      {domainLoading && (
+                        <option value="" disabled>
+                          Carregando clientes...
+                        </option>
+                      )}
+                      {!domainLoading && domains.length === 0 && (
+                        <option value="" disabled>
+                          Nenhum cliente disponível
+                        </option>
+                      )}
+                      {!domainLoading && domains.length > 0 && (
+                        domains.map((dom) => (
+                          <option key={dom} value={dom}>{dom}</option>
+                        ))
+                      )}
+                    </select>
+                  </div>
+                  {domainError && <span className="text-xs text-red-300">{domainError}</span>}
+                </div>
+              )}
+              <div className="flex items-center gap-2">
+                <span className="text-sm whitespace-nowrap">Informe o período</span>
+                <select
+                  id="range"
+                  className="select-clean"
+                  value={range}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === 'custom') {
+                      const today = toISODate(new Date());
+                      setCustomStart((prev) => prev || today);
+                      setCustomEnd((prev) => prev || today);
+                      setShowCustomPicker(true);
+                    }
+                    setRange(val);
+                  }}
+                >
+                  <option value="today">Hoje</option>
+                  <option value="last3">Últimos 3 dias</option>
+                  <option value="last7">Últimos 7 dias</option>
+                  <option value="last30">Últimos 30 dias</option>
+                  <option value="custom">Personalizado</option>
+                </select>
+              </div>
               {range === 'custom' && (
                 <div className="relative">
                   {/* Single visible component (no native placeholder) */}

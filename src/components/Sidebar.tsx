@@ -11,9 +11,9 @@ type SidebarProps = {
 const navItems = [
   { href: "/monitoring", label: "Monitoramento", Icon: LayoutDashboard },
   { href: "/settings", label: "Configurações", Icon: Settings },
-  { href: "/projects", label: "Projetos", Icon: ClipboardList },
   { href: "/kanban", label: "Kanban", Icon: KanbanSquare },
   { href: "/campaigns", label: "Campanhas", Icon: Megaphone },
+  { href: "/projects", label: "Projetos", Icon: ClipboardList },
 ];
 
 export default function Sidebar({ show = true }: SidebarProps) {

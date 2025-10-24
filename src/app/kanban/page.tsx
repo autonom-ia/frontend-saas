@@ -6,6 +6,11 @@ import Image from "next/image";
 import Sidebar from "../../components/Sidebar";
 import ProductHeader from "../../components/ProductHeader";
 import SelectedAccountBar from "../../components/SelectedAccountBar";
+import {
+  SESSION_SELECTED_PRODUCT_ID_KEY,
+  SESSION_SELECTED_ACCOUNT_KEY,
+  SESSION_SELECTED_ACCOUNT_BUNDLE_KEY,
+} from "../../utils/sessionKeys";
 
 // Types reused in a lightweight way
 type UserData = {
@@ -62,6 +67,25 @@ export default function KanbanPage() {
   const [productsLoading, setProductsLoading] = useState(false);
   const [selectedProductId, setSelectedProductId] = useState<string>("");
   const saasApiUrl = useMemo(() => process.env.NEXT_PUBLIC_SAAS_API_URL || "https://api-saas.autonomia.site", []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const storedProduct = sessionStorage.getItem(SESSION_SELECTED_PRODUCT_ID_KEY);
+      if (storedProduct) setSelectedProductId(storedProduct);
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      if (selectedProductId) {
+        sessionStorage.setItem(SESSION_SELECTED_PRODUCT_ID_KEY, selectedProductId);
+        return;
+      }
+      sessionStorage.removeItem(SESSION_SELECTED_PRODUCT_ID_KEY);
+    } catch {}
+  }, [selectedProductId]);
   useEffect(() => {
     (async () => {
       try {
@@ -88,6 +112,42 @@ export default function KanbanPage() {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [accountsLoading, setAccountsLoading] = useState(false);
   const [selectedAccountId, setSelectedAccountId] = useState<string>("");
+
+  useEffect(() => {
+    if (!selectedProductId) return;
+    if (typeof window === "undefined") return;
+    try {
+      const rawBundle = sessionStorage.getItem(SESSION_SELECTED_ACCOUNT_BUNDLE_KEY);
+      if (rawBundle) {
+        try {
+          const parsed = JSON.parse(rawBundle) as { productId?: string; accountId?: string } | null;
+          if (parsed?.productId === selectedProductId && parsed.accountId) {
+            setSelectedAccountId(parsed.accountId);
+            return;
+          }
+        } catch {}
+      }
+      const rawAccount = sessionStorage.getItem(SESSION_SELECTED_ACCOUNT_KEY);
+      if (rawAccount) {
+        setSelectedAccountId(rawAccount);
+      }
+    } catch {}
+  }, [selectedProductId]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      if (selectedAccountId) {
+        sessionStorage.setItem(SESSION_SELECTED_ACCOUNT_KEY, selectedAccountId);
+        if (selectedProductId) {
+          sessionStorage.setItem(SESSION_SELECTED_ACCOUNT_BUNDLE_KEY, JSON.stringify({ productId: selectedProductId, accountId: selectedAccountId }));
+        }
+        return;
+      }
+      sessionStorage.removeItem(SESSION_SELECTED_ACCOUNT_KEY);
+      sessionStorage.removeItem(SESSION_SELECTED_ACCOUNT_BUNDLE_KEY);
+    } catch {}
+  }, [selectedAccountId, selectedProductId]);
   useEffect(() => {
     (async () => {
       if (!selectedProductId) { setAccounts([]); setSelectedAccountId(""); return; }
@@ -110,6 +170,13 @@ export default function KanbanPage() {
       }
     })();
   }, [selectedProductId, saasApiUrl, authToken]);
+
+  useEffect(() => {
+    if (accountsLoading) return;
+    if (!selectedAccountId) return;
+    if (accounts.some(acc => acc.id === selectedAccountId)) return;
+    setSelectedAccountId("");
+  }, [accounts, accountsLoading, selectedAccountId]);
 
   // Kanban: load items when account selected
   type TagType = string | { name?: string; key?: string };
@@ -301,10 +368,7 @@ export default function KanbanPage() {
             <div className="sticky top-5 z-50 w-full max-w-full min-w-0 overflow-hidden">
               <SelectedAccountBar
                 name={accounts.find(a => a.id === selectedAccountId)?.name || 'Conta'}
-                isAdmin={!!userData?.user?.isAdmin}
-                onEdit={() => { /* future: open account edit */ }}
-                onInbox={() => { /* future: open inbox panel */ }}
-                onSettings={() => { /* future: open account settings */ }}
+                isAdmin={false}
                 onChangeAccount={() => setSelectedAccountId("")}
               />
             </div>

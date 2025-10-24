@@ -14,14 +14,17 @@ export type ProductParametersPanelProps = {
   newName: string;
   newValue: string;
   savingNew?: boolean;
+  unsavedCount: number;
+  savingBulk?: boolean;
   onClose: () => void;
   onStartCreate: () => void;
   onCancelCreate: () => void;
   onSaveCreate: () => void;
+  onSaveBulk: () => void;
+  onCancelBulk: () => void;
   onChangeNewName: (v: string) => void;
   onChangeNewValue: (v: string) => void;
   onChangeItemValue: (id: string, v: string) => void;
-  onBlurItemSave: (id: string, v: string) => void;
 };
 
 export default function ProductParametersPanel(props: ProductParametersPanelProps) {
@@ -38,10 +41,13 @@ export default function ProductParametersPanel(props: ProductParametersPanelProp
     onStartCreate,
     onCancelCreate,
     onSaveCreate,
+    unsavedCount,
+    savingBulk,
+    onCancelBulk,
     onChangeNewName,
     onChangeNewValue,
     onChangeItemValue,
-    onBlurItemSave,
+    onSaveBulk,
   } = props;
 
   return (
@@ -107,7 +113,6 @@ export default function ProductParametersPanel(props: ProductParametersPanelProp
                           rows={Math.min(8, Math.max(3, Math.ceil(((item.value ?? '').length) / 60)))}
                           value={item.value ?? ''}
                           onChange={(e) => onChangeItemValue(item.id, e.target.value)}
-                          onBlur={(e) => onBlurItemSave(item.id, e.target.value)}
                           placeholder="Defina o valor"
                         />
                       ) : (
@@ -116,7 +121,6 @@ export default function ProductParametersPanel(props: ProductParametersPanelProp
                           className="w-full rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-2 py-1 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
                           value={item.value ?? ''}
                           onChange={(e) => onChangeItemValue(item.id, e.target.value)}
-                          onBlur={(e) => onBlurItemSave(item.id, e.target.value)}
                           placeholder="Defina o valor"
                         />
                       )}
@@ -128,19 +132,46 @@ export default function ProductParametersPanel(props: ProductParametersPanelProp
           </table>
         </div>
       </div>
-      <div className="p-4 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between gap-2">
-        {isCreating ? (
+      <div className="p-4 border-t border-gray-200 dark:border-gray-700 flex flex-col gap-3">
+        <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
-            <Button className="bg-blue-600 hover:bg-blue-500 text-white" onClick={onSaveCreate} disabled={!!savingNew} title="Salvar parâmetro">Salvar</Button>
+            {isAdmin && unsavedCount > 0 && (
+              <Button
+                className="bg-green-600 hover:bg-green-500 text-white"
+                onClick={onSaveBulk}
+                disabled={!!savingBulk}
+                title="Salvar alterações nos parâmetros"
+              >
+                {savingBulk ? 'Salvando...' : `Salvar ${unsavedCount} alteração${unsavedCount > 1 ? 'es' : ''}`}
+              </Button>
+            )}
+            {isAdmin && unsavedCount > 0 && (
+              <Button
+                variant="secondary"
+                className="bg-gray-700 hover:bg-gray-600 text-white"
+                onClick={onCancelBulk}
+                disabled={!!savingBulk}
+                title="Cancelar alterações"
+              >
+                Cancelar
+              </Button>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            {!isCreating && isAdmin && unsavedCount === 0 && (
+              <Button className="bg-blue-600 hover:bg-blue-500 text-white" size="sm" onClick={onStartCreate} title="Incluir parâmetro">Incluir nos parâmetros</Button>
+            )}
+            {unsavedCount === 0 && (
+              <Button variant="secondary" className="bg-gray-700 hover:bg-gray-600 text-white" onClick={onClose}>Fechar</Button>
+            )}
+          </div>
+        </div>
+        {isCreating && (
+          <div className="flex items-center gap-2">
+            <Button className="bg-blue-600 hover:bg-blue-500 text-white" onClick={onSaveCreate} disabled={!!savingNew} title="Salvar parâmetro">Salvar parâmetro</Button>
             <Button variant="secondary" className="bg-gray-700 hover:bg-gray-600 text-white" onClick={onCancelCreate} disabled={!!savingNew}>Cancelar</Button>
           </div>
-        ) : <span />}
-        <div className="flex items-center gap-2">
-          {!isCreating && isAdmin && (
-            <Button className="bg-blue-600 hover:bg-blue-500 text-white" size="sm" onClick={onStartCreate} title="Incluir parâmetro">Incluir nos parâmetros</Button>
-          )}
-          <Button variant="secondary" className="bg-gray-700 hover:bg-gray-600 text-white" onClick={onClose}>Fechar</Button>
-        </div>
+        )}
       </div>
     </div>
   );

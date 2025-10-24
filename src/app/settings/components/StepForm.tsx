@@ -8,15 +8,16 @@ export type StepFormProps = {
   mode: "create" | "edit";
   name: string;
   description: string;
+  agentInstruction: string;
   saving?: boolean;
   onClose: () => void;
-  onChange: (fields: Partial<{ name: string; description: string }>) => void;
+  onChange: (fields: Partial<{ name: string; description: string; agentInstruction: string }>) => void;
   onSave: () => void;
   titleCreate?: string;
   titleEdit?: string;
 };
 
-export default function StepForm({ open, mode, name, description, saving, onClose, onChange, onSave, titleCreate = 'Nova Etapa do Funil', titleEdit = 'Editar Etapa do Funil' }: StepFormProps) {
+export default function StepForm({ open, mode, name, description, agentInstruction, saving, onClose, onChange, onSave, titleCreate = 'Nova Etapa do Funil', titleEdit = 'Editar Etapa do Funil' }: StepFormProps) {
   return (
     <>
       <div
@@ -39,6 +40,17 @@ export default function StepForm({ open, mode, name, description, saving, onClos
           <div>
             <label htmlFor="step-desc" className="block text-sm mb-1 dark:text-gray-200">Descrição</label>
             <textarea id="step-desc" className="w-full rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y min-h-[100px]" value={description} onChange={(e) => onChange({ description: e.target.value })} />
+          </div>
+          <div>
+            <label htmlFor="step-agent-instruction" className="block text-sm mb-1 dark:text-gray-200">Instrução do Agente <span className="text-red-600">*</span></label>
+            <textarea
+              id="step-agent-instruction"
+              required
+              className="w-full rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y min-h-[120px]"
+              value={agentInstruction}
+              onChange={(e) => onChange({ agentInstruction: e.target.value })}
+              placeholder="Descreva a instrução que o agente deve seguir nesta etapa"
+            />
           </div>
         </div>
         <div className="p-4 border-t border-gray-200 dark:border-gray-700 flex items-center justify-end gap-2">
