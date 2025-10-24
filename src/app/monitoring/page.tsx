@@ -126,6 +126,11 @@ export default function MonitoringPage() {
   const [domainError, setDomainError] = useState<string>("");
   const [selectedDomain, setSelectedDomain] = useState<string>("");
 
+  // Tabs: mirror Settings style
+  const [selectedTab, setSelectedTab] = useState<'atendimentos' | 'indicadores'>(
+    'atendimentos'
+  );
+
   // Derived KPIs
   const kpis = useMemo(() => {
     const total = data.length;
@@ -314,17 +319,20 @@ export default function MonitoringPage() {
     return { startDate: start, endDate: end };
   }, [range, customStart, customEnd, effectiveDomain]);
 
-  // Fetch logged users, reloading when client (effectiveDomain) changes
+  // Fetch logged users only when on Atendimentos tab and when client changes
   useEffect(() => {
+    if (selectedTab !== 'atendimentos') return;
     (async () => {
       try {
         setLoggedLoading(true);
         setLoggedError("");
         const baseUrl = process.env.NEXT_PUBLIC_CLIENTS_API_URL || "https://api-clients.autonomia.site";
         const numericId = typeof effectiveDomain === 'string' && /^\d+$/.test(effectiveDomain) ? effectiveDomain : '';
-        const url = numericId
-          ? `${baseUrl}/Autonomia/Clients/LoggedUsers?accountId=${numericId}`
-          : `${baseUrl}/Autonomia/Clients/LoggedUsers`;
+        const domainParam = selectedDomain || normalizeDomain(subdomain);
+        const params = new URLSearchParams();
+        if (numericId) params.set('accountId', numericId);
+        if (domainParam) params.set('domain', domainParam);
+        const url = `${baseUrl}/Autonomia/Clients/LoggedUsers${params.toString() ? `?${params.toString()}` : ''}`;
         const res = await fetch(url);
         if (!res.ok) throw new Error(`Erro ao buscar usuários logados (${res.status})`);
         const json = await res.json();
@@ -338,7 +346,7 @@ export default function MonitoringPage() {
         setLoggedLoading(false);
       }
     })();
-  }, [effectiveDomain]);
+  }, [effectiveDomain, selectedDomain, selectedTab]);
 
   // ===== Charts data (blue tones) =====
   const blues = ['#3B82F6', '#60A5FA', '#93C5FD', '#1E40AF', '#2563EB', '#1D4ED8'];
@@ -559,6 +567,7 @@ export default function MonitoringPage() {
                   {domainError && <span className="text-xs text-red-300">{domainError}</span>}
                 </div>
               )}
+              {/* Tabs removed from header; rendered in main below */}
               <div className="flex items-center gap-2">
                 <span className="text-sm whitespace-nowrap">Informe o período</span>
                 <select
@@ -655,6 +664,28 @@ export default function MonitoringPage() {
           {/* Status */}
           {error && <div className="text-red-400">{error}</div>}
 
+          {/* Tabs - underline style (match Settings) */}
+          <div className="mt-1 mb-4">
+            <div className="inline-flex items-center gap-6 border-b border-gray-200 dark:border-gray-700">
+              <button
+                type="button"
+                className={`px-2 py-2 text-lg font-semibold ${selectedTab === 'atendimentos' ? 'text-white border-b-2 border-blue-500' : 'text-gray-400 hover:text-gray-200'}`}
+                onClick={() => setSelectedTab('atendimentos')}
+              >
+                Atendimentos
+              </button>
+              <button
+                type="button"
+                className={`px-2 py-2 text-lg font-semibold ${selectedTab === 'indicadores' ? 'text-white border-b-2 border-blue-500' : 'text-gray-400 hover:text-gray-200'}`}
+                onClick={() => setSelectedTab('indicadores')}
+              >
+                Indicadores
+              </button>
+            </div>
+          </div>
+
+          {selectedTab === 'atendimentos' && (
+          <>
           {/* KPI Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {/* Total de Conversas - sempre azul */}
@@ -815,29 +846,34 @@ export default function MonitoringPage() {
                 {timeSeries.length === 0 ? (
                   <div className="h-56 flex items-center justify-center text-sm text-gray-400">Sem dados para exibir.</div>
                 ) : (
-                  <div className="h-56 w-full flex items-end gap-3">
-                    {(() => {
-                      const max = Math.max(...timeSeries.map(t => t.value));
-                      return timeSeries.map((t, idx) => {
-                        const hRaw = max > 0 ? (t.value / max) * 100 : 0;
-                        const hAnim = hRaw * chartProgress;
-                        const h = Math.max(Math.round(hAnim), t.value > 0 ? 3 : 0); // min 3% se valor > 0
-                        return (
-                          <div key={idx} className="flex-1 flex flex-col items-center">
-                            <div className="w-full h-44 relative">
-                              <div
-                                className="absolute left-1/2 -translate-x-1/2 text-[10px] text-gray-200"
-                                style={{ bottom: `calc(${h}% + 4px)` }}
-                              >
-                                {t.value}
+                  <div className="h-56 w-full overflow-x-auto">
+                    <div
+                      className="h-56 flex items-end gap-3 pr-2"
+                      style={{ minWidth: timeSeries.length * 56 }}
+                    >
+                      {(() => {
+                        const max = Math.max(...timeSeries.map(t => t.value));
+                        return timeSeries.map((t, idx) => {
+                          const hRaw = max > 0 ? (t.value / max) * 100 : 0;
+                          const hAnim = hRaw * chartProgress;
+                          const h = Math.max(Math.round(hAnim), t.value > 0 ? 3 : 0); // min 3% se valor > 0
+                          return (
+                            <div key={idx} className="flex-1 flex flex-col items-center" style={{ minWidth: 56 }}>
+                              <div className="w-full h-44 relative">
+                                <div
+                                  className="absolute left-1/2 -translate-x-1/2 text-[10px] text-gray-200"
+                                  style={{ bottom: `calc(${h}% + 4px)` }}
+                                >
+                                  {t.value}
+                                </div>
+                                <div className="absolute bottom-0 w-full bg-blue-500 rounded-sm" style={{ height: `${h}%` }} />
                               </div>
-                              <div className="absolute bottom-0 w-full bg-blue-500 rounded-sm" style={{ height: `${h}%` }} />
+                              <div className="mt-1 text-[10px] text-gray-300 truncate w-full text-center" title={t.label}>{t.label}</div>
                             </div>
-                            <div className="mt-1 text-[10px] text-gray-300 truncate w-full text-center" title={t.label}>{t.label}</div>
-                          </div>
-                        );
-                      });
-                    })()}
+                          );
+                        });
+                      })()}
+                    </div>
                   </div>
                 )}
               </div>
@@ -1072,35 +1108,7 @@ export default function MonitoringPage() {
                           </div>
                         ))}
                         {list.length === 0 && (
-                          <div className="text-sm text-gray-400">Sem atendimentos no período.</div>
-                        )}
-                      </div>
-                    );
-                  })()
-                ) : panelMode === 'teams' ? (
-                  (() => {
-                    const map = new Map<string, { id:string; name:string; count:number }>();
-                    for (const r of data) {
-                      const id = String(r.team_id ?? '');
-                      const name = (r.team_name ?? '').toString().trim() || (id ? `Time ${id}` : 'Sem time');
-                      if (!id && !name) continue;
-                      const key = name || id;
-                      const curr = map.get(key) || { id: id || key, name: key, count: 0 };
-                      curr.count += 1;
-                      map.set(key, curr);
-                    }
-                    const list = Array.from(map.values()).sort((a,b)=> b.count - a.count);
-                    return (
-                      <div className="grid grid-cols-1 gap-3">
-                        {list.map((t) => (
-                          <div key={t.id + t.name} className="rounded-md border border-gray-700 bg-gray-800/60 p-3">
-                            <div className="text-sm text-white font-medium">{t.name}</div>
-                            <div className="mt-1 text-xs text-gray-400">ID: {t.id}</div>
-                            <div className="mt-2 text-2xl text-blue-400 font-semibold">{t.count}</div>
-                          </div>
-                        ))}
-                        {list.length === 0 && (
-                          <div className="text-sm text-gray-400">Sem atendimentos no período.</div>
+                          <div className="text-sm text-gray-400">Selecione uma opção.</div>
                         )}
                       </div>
                     );
@@ -1167,6 +1175,8 @@ export default function MonitoringPage() {
               </div>
             </div>
           </div>
+                  </>
+          )}
         </main>
       </div>
     </div>
