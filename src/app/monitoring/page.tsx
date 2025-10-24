@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import Image from "next/image";
 import Sidebar from "../../components/Sidebar";
+import Indicators from "./Indicators";
+import type { Conversation as MetricsConversation } from "@/services/conversations";
 
 // Simple inputs to avoid new deps; using native date inputs
 function toISODate(date: Date) {
@@ -390,11 +392,17 @@ export default function MonitoringPage() {
       if (!d) continue;
       const key = isHoje
         ? `${d.getHours().toString().padStart(2,'0')}:00`
-        : d.toISOString().slice(0,10); // YYYY-MM-DD
+        : d.toISOString().slice(0,10); // YYYY-MM-DD (stable key)
       map.set(key, (map.get(key) || 0) + 1);
     }
     const entries = Array.from(map.entries()).sort((a,b) => a[0].localeCompare(b[0]));
-    return entries.map(([label, value]) => ({ label, value }));
+    if (isHoje) return entries.map(([label, value]) => ({ label, value }));
+    return entries.map(([key, value]) => {
+      const parts = key.split('-');
+      const dd = parts[2] || '';
+      const mm = parts[1] || '';
+      return { label: `${dd}/${mm}` as string, value };
+    });
   }, [data, isHoje]);
 
   // Inicia animação após termos statusCounts e timeSeries calculados
@@ -679,7 +687,7 @@ export default function MonitoringPage() {
                 className={`px-2 py-2 text-lg font-semibold ${selectedTab === 'indicadores' ? 'text-white border-b-2 border-blue-500' : 'text-gray-400 hover:text-gray-200'}`}
                 onClick={() => setSelectedTab('indicadores')}
               >
-                Indicadores
+                Indicadores Tempo
               </button>
             </div>
           </div>
@@ -1176,6 +1184,9 @@ export default function MonitoringPage() {
             </div>
           </div>
                   </>
+          )}
+          {selectedTab === 'indicadores' && (
+            <Indicators data={data as unknown as MetricsConversation[]} />
           )}
         </main>
       </div>
