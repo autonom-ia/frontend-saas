@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import ItemDetailsPanel from "./components/ItemDetailsPanel";
 import Image from "next/image";
 import Sidebar from "../../components/Sidebar";
@@ -219,7 +219,7 @@ export default function KanbanPage() {
   const [chatwootUrl, setChatwootUrl] = useState<string>("");
 
   // Load items for a specific step
-  const loadItemsForStep = async (stepId: string, offset: number = 0): Promise<KanbanItem[]> => {
+  const loadItemsForStep = useCallback(async (stepId: string, offset: number = 0): Promise<KanbanItem[]> => {
     if (!selectedAccountId) return [];
     
     try {
@@ -250,7 +250,7 @@ export default function KanbanPage() {
       console.error(`Erro ao carregar itens da etapa ${stepId}:`, e);
       return [];
     }
-  };
+  }, [selectedAccountId, authToken, saasApiUrl, funnelId]);
 
   // Load initial items for all steps
   useEffect(() => {
@@ -303,7 +303,7 @@ export default function KanbanPage() {
         setLoadingSteps({});
       }
     })();
-  }, [selectedAccountId, steps, authToken, saasApiUrl]);
+  }, [selectedAccountId, steps, authToken, saasApiUrl, loadItemsForStep]);
 
   // Load account parameters to get chatwoot-url
   useEffect(() => {
@@ -323,7 +323,7 @@ export default function KanbanPage() {
         if (resp.ok) {
           const j = await resp.json();
           const data = Array.isArray(j?.data) ? j.data : [];
-          const chatwootParam = data.find((p: any) => p.name === 'chatwoot-url');
+          const chatwootParam = data.find((p: { name?: string; value?: string }) => p.name === 'chatwoot-url');
           if (chatwootParam?.value) {
             setChatwootUrl(chatwootParam.value);
           }
@@ -368,7 +368,7 @@ export default function KanbanPage() {
         } else {
           setSteps([]);
         }
-      } catch (err) {
+      } catch {
         setSteps([]);
       } finally {
         setStepsLoading(false);
@@ -715,9 +715,9 @@ export default function KanbanPage() {
                           {col.items.map((it: KanbanItem) => {
                               const id = String(it.id ?? it.ticket_number ?? Math.random());
                               const title = it.title || it.name || it.contact_name || `Item ${id}`;
-                              const summary = it.summary || it.description || '';
+                              const rawSummary = it.summary || it.description || '';
+                              const summary = rawSummary.length > 200 ? rawSummary.substring(0, 200) + '...' : rawSummary;
                               const status = it.status || 'Aberto';
-                              const priority = it.priority || '';
                               const unread = typeof it.unread_count === 'number' ? it.unread_count : undefined;
                               const tags = Array.isArray(it.tags) ? it.tags : [];
                               const since = formatSince(it.updated_at || it.created_at);
@@ -757,7 +757,7 @@ export default function KanbanPage() {
                                       <span className="text-[11px] text-neutral-300 bg-neutral-800 rounded px-2 py-0.5">{status}</span>
                                     </div>
                                   </div>
-                                  <div className="text-xs text-neutral-400 mt-1 line-clamp-6">{formatSummary(summary)}</div>
+                                  <div className="text-xs text-neutral-400 mt-1 line-clamp-6 break-words whitespace-pre-wrap">{formatSummary(summary)}</div>
                                   <div className="flex flex-wrap gap-1 mt-2">
                                     {safeTags.map((t, idx) => (
                                       <span key={idx} className="text-[11px] text-blue-300 bg-blue-900/30 border border-blue-900/40 rounded px-1.5 py-0.5">{t.name}</span>
