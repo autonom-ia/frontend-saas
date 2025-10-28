@@ -5,6 +5,7 @@ import ItemDetailsPanel from "./components/ItemDetailsPanel";
 import Image from "next/image";
 import Sidebar from "../../components/Sidebar";
 import ProductHeader from "../../components/ProductHeader";
+import { MessageCircle } from "lucide-react";
 import SelectedAccountBar from "../../components/SelectedAccountBar";
 import {
   SESSION_SELECTED_PRODUCT_ID_KEY,
@@ -302,8 +303,36 @@ export default function KanbanPage() {
         setLoadingSteps({});
       }
     })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedAccountId, steps, authToken, saasApiUrl]);
+
+  // Load account parameters to get chatwoot-url
+  useEffect(() => {
+    (async () => {
+      if (!selectedAccountId) {
+        setChatwootUrl("");
+        return;
+      }
+
+      try {
+        const url = `${saasApiUrl}/Autonomia/Saas/AccountParameters?accountId=${encodeURIComponent(selectedAccountId)}`;
+        const resp = await fetch(url, {
+          headers: authToken ? { Authorization: `Bearer ${authToken}` } : undefined,
+          mode: 'cors',
+        });
+
+        if (resp.ok) {
+          const j = await resp.json();
+          const data = Array.isArray(j?.data) ? j.data : [];
+          const chatwootParam = data.find((p: any) => p.name === 'chatwoot-url');
+          if (chatwootParam?.value) {
+            setChatwootUrl(chatwootParam.value);
+          }
+        }
+      } catch (err) {
+        console.error('[Kanban] Error loading account parameters:', err);
+      }
+    })();
+  }, [selectedAccountId, saasApiUrl, authToken]);
 
   // Load steps when funnelId is known (fallback to accountId if needed)
   useEffect(() => {
@@ -339,43 +368,13 @@ export default function KanbanPage() {
         } else {
           setSteps([]);
         }
-      } catch {
+      } catch (err) {
         setSteps([]);
       } finally {
         setStepsLoading(false);
       }
     })();
   }, [selectedAccountId, funnelId, saasApiUrl, authToken]);
-
-  // Load chatwoot URL from account parameters
-  useEffect(() => {
-    (async () => {
-      if (!selectedAccountId) {
-        setChatwootUrl("");
-        return;
-      }
-
-      try {
-        const url = `${saasApiUrl}/Autonomia/Saas/AccountParameters?accountId=${encodeURIComponent(selectedAccountId)}`;
-        const resp = await fetch(url, {
-          headers: authToken ? { Authorization: `Bearer ${authToken}` } : undefined,
-          mode: 'cors',
-        });
-
-        if (resp.ok) {
-          const j = await resp.json();
-          const data = Array.isArray(j?.data) ? j.data : [];
-          const chatwootParam = data.find((p: Record<string, unknown>) => p.name === 'chatwoot-url');
-          if (chatwootParam) {
-            const url = String(chatwootParam.value || "");
-            setChatwootUrl(url);
-          }
-        }
-      } catch (err) {
-        console.error('[Kanban] Error loading chatwoot URL:', err);
-      }
-    })();
-  }, [selectedAccountId, saasApiUrl, authToken]);
 
   // Group items by step using steps list
   type Column = { key: string; title: string; items: KanbanItem[] };
@@ -518,18 +517,23 @@ export default function KanbanPage() {
     setDraggedItem(null);
   };
 
-  // Open chatwoot conversation
+  // Open Chatwoot conversation
   const openChatwoot = (item: KanbanItem) => {
     const inboxId = item.user_session_inbox_id;
     const conversationId = item.user_session_conversation_id;
 
-    if (!chatwootUrl || !inboxId || !conversationId) {
-      console.warn('[Kanban] Cannot open chatwoot: missing URL or conversation data');
+    if (!inboxId || !conversationId) {
+      console.warn('[Kanban] Missing inbox_id or conversation_id for item', item.id);
+      return;
+    }
+
+    if (!chatwootUrl) {
+      console.warn('[Kanban] Chatwoot URL not configured');
       return;
     }
 
     const url = `${chatwootUrl}/app/accounts/${inboxId}/conversations/${conversationId}`;
-    window.open(url, '_blank');
+    window.open(url, '_blank', 'noopener,noreferrer');
   };
 
   // Load more items for a specific step
@@ -713,6 +717,7 @@ export default function KanbanPage() {
                               const title = it.title || it.name || it.contact_name || `Item ${id}`;
                               const summary = it.summary || it.description || '';
                               const status = it.status || 'Aberto';
+                              const priority = it.priority || '';
                               const unread = typeof it.unread_count === 'number' ? it.unread_count : undefined;
                               const tags = Array.isArray(it.tags) ? it.tags : [];
                               const since = formatSince(it.updated_at || it.created_at);
@@ -736,21 +741,19 @@ export default function KanbanPage() {
                                 >
                                   <div className="flex items-start justify-between gap-2">
                                     <div className="text-sm font-semibold text-white truncate flex-1" title={title}>{title}</div>
-                                    <div className="flex items-center gap-1 shrink-0">
-                                      {(it.user_session_inbox_id && it.user_session_conversation_id && chatwootUrl) ? (
+                                    <div className="flex items-center gap-1.5 shrink-0">
+                                      {!!it.user_session_inbox_id && !!it.user_session_conversation_id && !!chatwootUrl && (
                                         <button
                                           onClick={(e) => {
                                             e.stopPropagation();
                                             openChatwoot(it);
                                           }}
-                                          className="p-1 rounded hover:bg-neutral-700/50 transition-colors"
+                                          className="p-1 hover:bg-neutral-700/50 rounded transition-colors"
                                           title="Abrir conversa no Chatwoot"
                                         >
-                                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-blue-400">
-                                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-                                          </svg>
+                                          <MessageCircle className="w-4 h-4 text-blue-400" />
                                         </button>
-                                      ) : null}
+                                      )}
                                       <span className="text-[11px] text-neutral-300 bg-neutral-800 rounded px-2 py-0.5">{status}</span>
                                     </div>
                                   </div>
