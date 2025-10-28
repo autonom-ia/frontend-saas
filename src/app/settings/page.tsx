@@ -44,6 +44,7 @@ type Product = {
   id: string;
   name: string;
   description?: string;
+  product_type_id?: string | null;
   created_at?: string;
   updated_at?: string;
 };
@@ -70,6 +71,9 @@ export default function DashboardPage() {
   const [formName, setFormName] = useState('');
   const [formDescription, setFormDescription] = useState('');
   const [saving, setSaving] = useState(false);
+  const [formProductTypeId, setFormProductTypeId] = useState<string>('');
+  const [productTypes, setProductTypes] = useState<Array<{id:string; description:string}>>([]);
+  const [productTypesLoading, setProductTypesLoading] = useState(false);
   const [authToken, setAuthToken] = useState<string | undefined>(undefined);
   // Accounts state
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -428,6 +432,45 @@ export default function DashboardPage() {
     setStepFormAgentInstruction('');
     setIsStepFormOpen(true);
   };
+
+  // Atualizar order de uma etapa
+  const onUpdateStepOrder = async (stepId: string, order: number | null) => {
+    try {
+      const saasApiUrl = process.env.NEXT_PUBLIC_SAAS_API_URL || 'https://api-saas.autonomia.site';
+      const tokenToUse = authToken || (() => {
+        try {
+          const stored = localStorage.getItem('userData');
+          if (!stored) return undefined;
+          const parsed = JSON.parse(stored);
+          return parsed.IdToken || parsed.token || parsed.AccessToken;
+        } catch { return undefined; }
+      })();
+      const resp = await fetch(`${saasApiUrl}/Autonomia/Saas/ConversationFunnelSteps/${encodeURIComponent(stepId)}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${tokenToUse}`
+        },
+        body: JSON.stringify({ order })
+      });
+      if (!resp.ok) {
+        const t = await resp.text();
+        console.error('Falha ao atualizar order da etapa:', resp.status, resp.statusText, t);
+        showToast('Falha ao atualizar order da etapa', 'error');
+        return;
+      }
+      const json = await resp.json();
+      const updated = json?.data;
+      if (updated?.id) {
+        setSteps(prev => prev.map(s => s.id === updated.id ? updated : s));
+        showToast('Order atualizado', 'success');
+      }
+    } catch (e) {
+      console.error('Erro ao atualizar order da etapa:', e);
+      showToast('Erro ao atualizar order da etapa', 'error');
+    }
+  };
+
   const [productParams, setProductParams] = useState<Array<{ id: string; name: string; value?: string }>>([]);
   const [productParamsOriginal, setProductParamsOriginal] = useState<Record<string, string>>({});
   const [productParamsDirty, setProductParamsDirty] = useState<Record<string, string>>({});
@@ -1160,7 +1203,7 @@ export default function DashboardPage() {
     try {
       const raw = localStorage.getItem('userData') || sessionStorage.getItem('userData');
       if (!raw) {
-        router.replace('/login?next=/settings');
+        router.replace('/');
         return;
       }
 
@@ -1168,7 +1211,7 @@ export default function DashboardPage() {
       // Confiar na existência de token em vez do flag isAuthenticated (que pode não estar presente)
       const tokenComputed: string | undefined = parsedData?.IdToken || parsedData?.token || parsedData?.AccessToken;
       if (!tokenComputed) {
-        router.replace('/login?next=/settings');
+        router.replace('/');
         return;
       }
 
@@ -1537,7 +1580,23 @@ export default function DashboardPage() {
     setFormMode('create');
     setFormName('');
     setFormDescription('');
+    setFormProductTypeId('');
     setIsFormOpen(true);
+    (async () => {
+      try {
+        setProductTypesLoading(true);
+        const saasApiUrl = process.env.NEXT_PUBLIC_SAAS_API_URL || 'https://api-saas.autonomia.site';
+        const tokenToUse = authToken || (() => {
+          try { const stored = localStorage.getItem('userData'); if (!stored) return undefined; const parsed = JSON.parse(stored); return parsed.IdToken || parsed.token || parsed.AccessToken; } catch { return undefined; }
+        })();
+        const res = await fetch(`${saasApiUrl}/Autonomia/Saas/ProductTypes`, { headers: tokenToUse ? { 'Authorization': `Bearer ${tokenToUse}` } : undefined, mode: 'cors' });
+        if (res.ok) {
+          const j = await res.json();
+          const rows: Array<{id:string; description:string}> = Array.isArray(j?.data) ? j.data : [];
+          setProductTypes(rows);
+        }
+      } catch {} finally { setProductTypesLoading(false); }
+    })();
   };
 
   // Abrir formulário em modo edição
@@ -1547,7 +1606,23 @@ export default function DashboardPage() {
     setFormMode('edit');
     setFormName(product?.name || '');
     setFormDescription(product?.description || '');
+    setFormProductTypeId(String(product?.product_type_id || ''));
     setIsFormOpen(true);
+    (async () => {
+      try {
+        setProductTypesLoading(true);
+        const saasApiUrl = process.env.NEXT_PUBLIC_SAAS_API_URL || 'https://api-saas.autonomia.site';
+        const tokenToUse = authToken || (() => {
+          try { const stored = localStorage.getItem('userData'); if (!stored) return undefined; const parsed = JSON.parse(stored); return parsed.IdToken || parsed.token || parsed.AccessToken; } catch { return undefined; }
+        })();
+        const res = await fetch(`${saasApiUrl}/Autonomia/Saas/ProductTypes`, { headers: tokenToUse ? { 'Authorization': `Bearer ${tokenToUse}` } : undefined, mode: 'cors' });
+        if (res.ok) {
+          const j = await res.json();
+          const rows: Array<{id:string; description:string}> = Array.isArray(j?.data) ? j.data : [];
+          setProductTypes(rows);
+        }
+      } catch {} finally { setProductTypesLoading(false); }
+    })();
   };
 
   // Salvar (criar/atualizar) produto
@@ -1584,7 +1659,7 @@ export default function DashboardPage() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${tokenToUse}`
         },
-        body: JSON.stringify({ name: formName, description: formDescription })
+        body: JSON.stringify({ name: formName, description: formDescription, product_type_id: formProductTypeId || null })
       });
 
       if (!resp.ok) {
@@ -1992,6 +2067,7 @@ export default function DashboardPage() {
                   }
                 }}
                 truncate={truncate}
+                onUpdateStepOrder={onUpdateStepOrder}
               />
             )}
             </>
@@ -2042,10 +2118,14 @@ export default function DashboardPage() {
         mode={formMode}
         name={formName}
         description={formDescription}
+        productTypeId={formProductTypeId}
+        productTypes={productTypes}
+        productTypesLoading={productTypesLoading}
         saving={saving}
         onChange={(f) => {
           if (f.name !== undefined) setFormName(f.name);
           if (f.description !== undefined) setFormDescription(f.description);
+          if (f.productTypeId !== undefined) setFormProductTypeId(f.productTypeId);
         }}
         onSave={handleSaveProduct}
         onClose={() => setIsFormOpen(false)}

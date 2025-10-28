@@ -8,14 +8,17 @@ export type ProductFormProps = {
   mode: "create" | "edit";
   name: string;
   description: string;
+  productTypeId?: string;
+  productTypes?: Array<{ id: string; description: string }>;
+  productTypesLoading?: boolean;
   saving?: boolean;
-  onChange: (fields: Partial<{ name: string; description: string }>) => void;
+  onChange: (fields: Partial<{ name: string; description: string; productTypeId: string }>) => void;
   onSave: () => void;
   onClose: () => void;
 };
 
 export default function ProductForm(props: ProductFormProps) {
-  const { open, mode, name, description, saving, onChange, onSave, onClose } = props;
+  const { open, mode, name, description, productTypeId, productTypes, productTypesLoading, saving, onChange, onSave, onClose } = props;
 
   return (
     <>
@@ -49,7 +52,7 @@ export default function ProductForm(props: ProductFormProps) {
               type="text"
               className="w-full rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
               value={name}
-              onChange={(e) => onChange({ name: e.target.value })}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => onChange({ name: e.target.value })}
             />
           </div>
           <div>
@@ -59,8 +62,25 @@ export default function ProductForm(props: ProductFormProps) {
               rows={5}
               className="w-full rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
               value={description}
-              onChange={(e) => onChange({ description: e.target.value })}
+              onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => onChange({ description: e.target.value })}
             />
+          </div>
+          <div>
+            <label htmlFor="prod-type" className="block text-sm mb-1 dark:text-gray-200">Tipo de Produto</label>
+            <select
+              id="prod-type"
+              className="select-clean w-full"
+              value={productTypeId || ''}
+              onChange={(e: React.ChangeEvent<HTMLSelectElement>) => onChange({ productTypeId: e.target.value })}
+              disabled={!!productTypesLoading}
+            >
+              <option value="" disabled>
+                {productTypesLoading ? 'Carregando tipos...' : 'Selecione um tipo de produto'}
+              </option>
+              {(productTypes || []).map((pt) => (
+                <option key={pt.id} value={pt.id}>{pt.description}</option>
+              ))}
+            </select>
           </div>
         </div>
         <div className="p-4 border-t border-gray-200 dark:border-gray-700 flex items-center justify-end gap-2">

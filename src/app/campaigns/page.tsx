@@ -112,10 +112,10 @@ export default function CampaignsPage() {
       const stored = localStorage.getItem("userData");
       if (stored) {
         const parsed: UserData = JSON.parse(stored);
-        if (!parsed?.isAuthenticated) { router.push('/login'); return; }
+        if (!parsed?.isAuthenticated) { router.push('/'); return; }
         setUserData(parsed);
-      } else { router.push('/login'); return; }
-    } catch { router.push('/login'); return; }
+      } else { router.push('/'); return; }
+    } catch { router.push('/'); return; }
     setAuthToken((prev) => prev || getTokenFromLocal());
   }, [router]);
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -16,6 +16,38 @@ function debugLog(message: string, data: unknown = undefined) {
 }
 
 export default function LoginPage() {
+  const router = useRouter();
+  const hasInitialized = useRef(false);
+  
+  useEffect(() => {
+    // Guard contra múltiplas execuções
+    if (hasInitialized.current) {
+      return;
+    }
+    
+    hasInitialized.current = true;
+    
+    // Verificar se usuário já está autenticado antes de limpar
+    try {
+      const raw = localStorage.getItem('userData') || sessionStorage.getItem('userData');
+      const parsed = raw ? JSON.parse(raw) : null;
+      const hasToken = !!(parsed?.IdToken || parsed?.AccessToken || parsed?.token);
+      
+      if (hasToken && parsed?.isAuthenticated) {
+        // Usuário já está autenticado - redirecionar para monitoring
+        console.log('[Login] user already authenticated, redirecting to monitoring');
+        router.push('/monitoring');
+        return;
+      }
+    } catch (e) {
+      console.warn('[Login] error checking existing auth', e);
+    }
+    
+    // Se chegou aqui, pode limpar o storage
+    try { localStorage.clear(); console.log('[Login] localStorage cleared'); } catch (e) { console.warn('[Login] localStorage clear error', e); }
+    try { sessionStorage.clear(); console.log('[Login] sessionStorage cleared'); } catch (e) { console.warn('[Login] sessionStorage clear error', e); }
+    console.log('[Login] storage cleared on entry', { path: window.location.pathname, search: window.location.search, referrer: document.referrer });
+  }, [router]);
   const [isRegister, setIsRegister] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -27,7 +59,6 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   // Controla se o formulário foi submetido para mostrar validações
   const [formSubmitted, setFormSubmitted] = useState(false);
-  const router = useRouter();
 
   const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
 
@@ -78,6 +109,7 @@ export default function LoginPage() {
       // Armazenar dados do usuário e tokens no localStorage
       // O backend não inclui os dados do usuário, apenas tokens de autenticação
       // Vamos armazenar o email usado no login para buscar os dados depois
+      const now = Date.now();
       localStorage.setItem('userData', JSON.stringify({
         user: { email }, // Armazenando email usado no login
         email: email, // Também armazenando o email em primeiro nível
@@ -87,16 +119,26 @@ export default function LoginPage() {
         RefreshToken: data.RefreshToken, // Para renovar tokens
         // Mantendo token para compatibilidade, mas usando IdToken como padrão
         token: data.IdToken || data.AccessToken || data.token,
-        isAuthenticated: true
+        isAuthenticated: true,
+        loginAt: now,
+        refreshedAt: now
       }));
       
       console.log('Tokens armazenados:', {
         IdToken: data.IdToken?.substring(0, 20) + '...' || 'não disponível',
         AccessToken: data.AccessToken?.substring(0, 20) + '...' || 'não disponível'
       });
+      try {
+        const snapshot = localStorage.getItem('userData');
+        console.log('[Login] userData snapshot after store', snapshot ? JSON.parse(snapshot) : null);
+      } catch (e) { console.warn('[Login] failed to read back userData', e); }
       
       // Redirecionar para a página de monitoramento
-      router.push('/monitoring');
+      console.log('[Login] navigating to /monitoring from', window.location.pathname);
+      router.replace('/monitoring');
+      setTimeout(() => {
+        console.log('[Login] after router.replace, current path is', window.location.pathname);
+      }, 300);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Falha no login';
       setError(msg);

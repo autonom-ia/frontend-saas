@@ -200,7 +200,7 @@ export default function KanbanPage() {
   };
   const [kanbanLoading, setKanbanLoading] = useState(false);
   const [kanbanError, setKanbanError] = useState<string>("");
-  const [kanbanItems, setKanbanItems] = useState<KanbanItem[]>([]);
+  const [kanbanItemsByStep, setKanbanItemsByStep] = useState<Record<string, KanbanItem[]>>({});
   const [funnelId, setFunnelId] = useState<string>("");
   const [funnelName, setFunnelName] = useState<string>("");
   type Step = { id: string; name: string; shipping_order?: number };
@@ -208,66 +208,124 @@ export default function KanbanPage() {
   const [stepsLoading, setStepsLoading] = useState(false);
   const lanesRef = useRef<HTMLDivElement | null>(null);
   const [selectedItem, setSelectedItem] = useState<KanbanItem | null>(null);
+  // Pagination per step: offset and hasMore
+  const [stepOffsets, setStepOffsets] = useState<Record<string, number>>({});
+  const [stepHasMore, setStepHasMore] = useState<Record<string, boolean>>({});
+  const [loadingMoreForStep, setLoadingMoreForStep] = useState<string | null>(null);
+  const [loadingSteps, setLoadingSteps] = useState<Record<string, boolean>>({});
+  const [draggedItem, setDraggedItem] = useState<{ item: KanbanItem; fromStepId: string } | null>(null);
+  const [dragOverStepId, setDragOverStepId] = useState<string | null>(null);
+  const [chatwootUrl, setChatwootUrl] = useState<string>("");
 
+  // Load items for a specific step
+  const loadItemsForStep = async (stepId: string, offset: number = 0): Promise<KanbanItem[]> => {
+    if (!selectedAccountId) return [];
+    
+    try {
+      const url = `${saasApiUrl}/Autonomia/Saas/KanbanItems?accountId=${encodeURIComponent(selectedAccountId)}&funnelStageId=${encodeURIComponent(stepId)}&limit=100&offset=${offset}`;
+      const resp = await fetch(url, {
+        headers: authToken ? { Authorization: `Bearer ${authToken}` } : undefined,
+        mode: "cors",
+      });
+      
+      if (!resp.ok) {
+        console.error(`Falha ao carregar itens da etapa ${stepId}:`, resp.status, resp.statusText);
+        return [];
+      }
+      
+      const j = await resp.json();
+      // API can return {data: [...]} or [...] directly
+      const data = Array.isArray(j?.data) ? j.data : Array.isArray(j) ? j : [];
+      
+      // Get funnel info from first item
+      if (data.length > 0 && !funnelId) {
+        const first = data[0] as KanbanItem;
+        setFunnelId(String(first?.funnel_id || ""));
+        setFunnelName(String(first?.funnel_name || ""));
+      }
+      
+      return data as KanbanItem[];
+    } catch (e) {
+      console.error(`Erro ao carregar itens da etapa ${stepId}:`, e);
+      return [];
+    }
+  };
+
+  // Load initial items for all steps
   useEffect(() => {
     (async () => {
-      if (!selectedAccountId) { setKanbanItems([]); return; }
+      if (!selectedAccountId) {
+        setKanbanItemsByStep({});
+        setStepOffsets({});
+        setStepHasMore({});
+        setLoadingSteps({});
+        return;
+      }
+      
+      if (steps.length === 0) {
+        return;
+      }
+      
       try {
         setKanbanLoading(true);
         setKanbanError("");
-        // Try common paths
-        const candidates = [
-          `${saasApiUrl}/Autonomia/Saas/KanbanItems?accountId=${encodeURIComponent(selectedAccountId)}`,
-        ];
-        let lastError: string | null = null;
-        for (const url of candidates) {
-          try {
-            const resp = await fetch(url, {
-              headers: authToken ? { Authorization: `Bearer ${authToken}` } : undefined,
-              mode: "cors",
-            });
-            if (!resp.ok) { lastError = `${resp.status} ${resp.statusText}`; continue; }
-            const j = await resp.json();
-            const data = Array.isArray(j?.data) ? j.data : Array.isArray(j) ? j : [];
-            setKanbanItems(data as KanbanItem[]);
-            const first = (data as KanbanItem[])[0];
-            setFunnelId(String(first?.funnel_id || ""));
-            setFunnelName(String(first?.funnel_name || ""));
-            lastError = null;
-            break;
-          } catch (err: unknown) {
-            const msg = err && typeof err === 'object' && 'message' in err ? String((err as { message?: unknown }).message) : String(err);
-            lastError = msg;
-          }
-        }
-        if (lastError) {
-          setKanbanItems([]);
-          setKanbanError(`Falha ao carregar Kanban: ${lastError}`);
-        }
+        
+        // Mark all steps as loading
+        const loadingState: Record<string, boolean> = {};
+        steps.forEach(step => { loadingState[step.id] = true; });
+        setLoadingSteps(loadingState);
+        
+        const itemsByStep: Record<string, KanbanItem[]> = {};
+        const offsets: Record<string, number> = {};
+        const hasMore: Record<string, boolean> = {};
+        
+        // Load first 100 items for each step in parallel
+        await Promise.all(
+          steps.map(async (step) => {
+            const items = await loadItemsForStep(step.id, 0);
+            itemsByStep[step.id] = items;
+            offsets[step.id] = 100;
+            hasMore[step.id] = items.length >= 100;
+            // Mark this step as loaded
+            setLoadingSteps(prev => ({ ...prev, [step.id]: false }));
+          })
+        );
+        
+        setKanbanItemsByStep(itemsByStep);
+        setStepOffsets(offsets);
+        setStepHasMore(hasMore);
       } catch (e: unknown) {
         const msg = e && typeof e === 'object' && 'message' in e ? String((e as { message?: unknown }).message) : 'Erro ao carregar Kanban';
         setKanbanError(msg);
-        setKanbanItems([]);
       } finally {
         setKanbanLoading(false);
+        setLoadingSteps({});
       }
     })();
-  }, [selectedAccountId, authToken, saasApiUrl]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedAccountId, steps, authToken, saasApiUrl]);
 
   // Load steps when funnelId is known (fallback to accountId if needed)
   useEffect(() => {
     (async () => {
-      if (!selectedAccountId) { setSteps([]); return; }
+      if (!selectedAccountId) { 
+        setSteps([]); 
+        return; 
+      }
+      
       try {
         setStepsLoading(true);
         const url = `${saasApiUrl}/Autonomia/Saas/ConversationFunnelSteps?accountId=${encodeURIComponent(selectedAccountId)}${funnelId ? `&funnelId=${encodeURIComponent(funnelId)}` : ''}`;
+        
         const resp = await fetch(url, {
           headers: authToken ? { Authorization: `Bearer ${authToken}` } : undefined,
           mode: 'cors',
         });
+        
         if (resp.ok) {
           const j = await resp.json();
           const data = Array.isArray(j?.data) ? j.data : [];
+          
           // normalize (no-any)
           const norm: Step[] = data.map((s: unknown) => {
             const obj = (s ?? {}) as Record<string, unknown>;
@@ -276,6 +334,7 @@ export default function KanbanPage() {
             const shipping_order = typeof obj.shipping_order === 'number' ? obj.shipping_order : undefined;
             return { id, name, shipping_order };
           });
+          
           setSteps(norm);
         } else {
           setSteps([]);
@@ -288,26 +347,46 @@ export default function KanbanPage() {
     })();
   }, [selectedAccountId, funnelId, saasApiUrl, authToken]);
 
+  // Load chatwoot URL from account parameters
+  useEffect(() => {
+    (async () => {
+      if (!selectedAccountId) {
+        setChatwootUrl("");
+        return;
+      }
+
+      try {
+        const url = `${saasApiUrl}/Autonomia/Saas/AccountParameters?accountId=${encodeURIComponent(selectedAccountId)}`;
+        const resp = await fetch(url, {
+          headers: authToken ? { Authorization: `Bearer ${authToken}` } : undefined,
+          mode: 'cors',
+        });
+
+        if (resp.ok) {
+          const j = await resp.json();
+          const data = Array.isArray(j?.data) ? j.data : [];
+          const chatwootParam = data.find((p: Record<string, unknown>) => p.name === 'chatwoot-url');
+          if (chatwootParam) {
+            const url = String(chatwootParam.value || "");
+            setChatwootUrl(url);
+          }
+        }
+      } catch (err) {
+        console.error('[Kanban] Error loading chatwoot URL:', err);
+      }
+    })();
+  }, [selectedAccountId, saasApiUrl, authToken]);
+
   // Group items by step using steps list
   type Column = { key: string; title: string; items: KanbanItem[] };
   const columns: Column[] = useMemo(() => {
-    const byStepId = new Map<string, KanbanItem[]>();
-    for (const it of kanbanItems) {
-      const sid = String(it.funnel_stage_id || it.step_id || '');
-      if (!byStepId.has(sid)) byStepId.set(sid, []);
-      byStepId.get(sid)!.push(it);
-    }
-    const cols: Column[] = steps.map((s) => ({ key: s.id, title: s.name, items: (byStepId.get(s.id) || []).slice() }));
-    // sort items inside each column by updated_at desc
-    for (const c of cols) {
-      c.items.sort((a, b) => {
-        const da = new Date(a.updated_at || a.created_at || 0).getTime();
-        const db = new Date(b.updated_at || b.created_at || 0).getTime();
-        return db - da;
-      });
-    }
+    const cols: Column[] = steps.map((s) => ({ 
+      key: s.id, 
+      title: s.name, 
+      items: kanbanItemsByStep[s.id] || [] 
+    }));
     return cols;
-  }, [kanbanItems, steps]);
+  }, [kanbanItemsByStep, steps]);
 
   const formatSince = (iso?: string) => {
     if (!iso) return '';
@@ -318,6 +397,166 @@ export default function KanbanPage() {
     if (hours > 0) return `${hours} h`;
     const mins = Math.floor(diff / (1000*60));
     return `${mins} min`;
+  };
+
+  // Format summary with markdown-like bold sections
+  const formatSummary = (text: string) => {
+    if (!text) return null;
+    
+    // Split by ** markers, capturing the content between them
+    const parts = text.split(/\*\*([^*]+)\*\*/g);
+    
+    return parts.map((part, idx) => {
+      // Odd indices are the content that was between **
+      if (idx % 2 === 1) {
+        return (
+          <span key={idx}>
+            <br />
+            <strong className="font-semibold text-neutral-200">{part}</strong>
+          </span>
+        );
+      }
+      // Even indices are regular text (without **)
+      return <span key={idx}>{part}</span>;
+    });
+  };
+
+  // Update kanban item stage
+  const updateItemStage = async (itemId: string, newStageId: string) => {
+    if (!authToken) {
+      console.error('[Kanban] No auth token available');
+      return false;
+    }
+
+    try {
+      const url = `${saasApiUrl}/Autonomia/Saas/KanbanItems/${encodeURIComponent(itemId)}`;
+      const resp = await fetch(url, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${authToken}`,
+        },
+        mode: 'cors',
+        body: JSON.stringify({
+          funnel_stage_id: newStageId,
+        }),
+      });
+
+      if (!resp.ok) {
+        console.error('[Kanban] Failed to update item stage:', resp.status, resp.statusText);
+        return false;
+      }
+
+      console.log('[Kanban] Item stage updated successfully');
+      return true;
+    } catch (e) {
+      console.error('[Kanban] Error updating item stage:', e);
+      return false;
+    }
+  };
+
+  // Drag and drop handlers
+  const handleDragStart = (item: KanbanItem, fromStepId: string) => {
+    setDraggedItem({ item, fromStepId });
+  };
+
+  const handleDragEnd = () => {
+    setDraggedItem(null);
+    setDragOverStepId(null);
+  };
+
+  const handleDragOver = (e: React.DragEvent, stepId: string) => {
+    e.preventDefault();
+    setDragOverStepId(stepId);
+  };
+
+  const handleDragLeave = () => {
+    setDragOverStepId(null);
+  };
+
+  const handleDrop = async (e: React.DragEvent, toStepId: string) => {
+    e.preventDefault();
+    setDragOverStepId(null);
+
+    if (!draggedItem) return;
+
+    const { item, fromStepId } = draggedItem;
+    const itemId = String(item.id);
+
+    // If dropped in the same column, do nothing
+    if (fromStepId === toStepId) {
+      setDraggedItem(null);
+      return;
+    }
+
+    console.log(`[Kanban] Moving item ${itemId} from ${fromStepId} to ${toStepId}`);
+
+    // Optimistic update
+    setKanbanItemsByStep(prev => {
+      const newState = { ...prev };
+      // Remove from old column
+      newState[fromStepId] = (prev[fromStepId] || []).filter(it => String(it.id) !== itemId);
+      // Add to new column with updated stage
+      const updatedItem = { ...item, funnel_stage_id: toStepId };
+      newState[toStepId] = [...(prev[toStepId] || []), updatedItem];
+      return newState;
+    });
+
+    // Update via API
+    const success = await updateItemStage(itemId, toStepId);
+
+    if (!success) {
+      // Rollback on failure
+      setKanbanItemsByStep(prev => {
+        const newState = { ...prev };
+        newState[toStepId] = (prev[toStepId] || []).filter(it => String(it.id) !== itemId);
+        newState[fromStepId] = [...(prev[fromStepId] || []), item];
+        return newState;
+      });
+    }
+
+    setDraggedItem(null);
+  };
+
+  // Open chatwoot conversation
+  const openChatwoot = (item: KanbanItem) => {
+    const inboxId = item.user_session_inbox_id;
+    const conversationId = item.user_session_conversation_id;
+
+    if (!chatwootUrl || !inboxId || !conversationId) {
+      console.warn('[Kanban] Cannot open chatwoot: missing URL or conversation data');
+      return;
+    }
+
+    const url = `${chatwootUrl}/app/accounts/${inboxId}/conversations/${conversationId}`;
+    window.open(url, '_blank');
+  };
+
+  // Load more items for a specific step
+  const loadMoreForStep = async (stepId: string) => {
+    if (!selectedAccountId || loadingMoreForStep) return;
+    const currentOffset = stepOffsets[stepId] || 100;
+    
+    try {
+      setLoadingMoreForStep(stepId);
+      const newItems = await loadItemsForStep(stepId, currentOffset);
+      
+      if (newItems.length > 0) {
+        setKanbanItemsByStep(prev => ({
+          ...prev,
+          [stepId]: [...(prev[stepId] || []), ...newItems]
+        }));
+        setStepOffsets(prev => ({ ...prev, [stepId]: currentOffset + 100 }));
+        setStepHasMore(prev => ({ ...prev, [stepId]: newItems.length >= 100 }));
+      } else {
+        setStepHasMore(prev => ({ ...prev, [stepId]: false }));
+      }
+    } catch (e) {
+      console.error('Erro ao carregar mais itens:', e);
+      setStepHasMore(prev => ({ ...prev, [stepId]: false }));
+    } finally {
+      setLoadingMoreForStep(null);
+    }
   };
 
   // Derive initials for header avatar (same pattern as other pages)
@@ -447,18 +686,33 @@ export default function KanbanPage() {
                 >
                   <div className="min-w-max inline-flex gap-4">
                     {columns.map((col) => (
-                      <div key={col.key} className="w-80 shrink-0 rounded-lg border border-neutral-800/60 bg-neutral-900/40">
+                      <div 
+                        key={col.key} 
+                        className={`w-80 shrink-0 rounded-lg border transition-all duration-500 ${
+                          dragOverStepId === col.key 
+                            ? 'border-blue-500 bg-blue-900/20' 
+                            : 'border-neutral-800/60 bg-neutral-900/40'
+                        } ${loadingSteps[col.key] ? 'opacity-50 animate-pulse' : 'opacity-100'}`}
+                        onDragOver={(e) => handleDragOver(e, col.key)}
+                        onDragLeave={handleDragLeave}
+                        onDrop={(e) => handleDrop(e, col.key)}
+                      >
                         <div className="px-4 py-3 border-b border-neutral-800/60 flex items-center justify-between">
                           <div className="text-sm font-medium lowercase tracking-wide text-neutral-100">{col.title}</div>
-                          <div className="text-xs text-neutral-400">{col.items.length}</div>
+                          <div className="text-xs text-neutral-400">
+                            {loadingSteps[col.key] ? (
+                              <span className="inline-block animate-spin">⟳</span>
+                            ) : (
+                              col.items.length
+                            )}
+                          </div>
                         </div>
-                        <div className="p-3 space-y-3 max-h-[60vh] overflow-y-auto">
+                        <div className="p-3 space-y-3 max-h-[60vh] overflow-y-auto min-h-[100px]">
                           {col.items.map((it: KanbanItem) => {
                               const id = String(it.id ?? it.ticket_number ?? Math.random());
                               const title = it.title || it.name || it.contact_name || `Item ${id}`;
                               const summary = it.summary || it.description || '';
                               const status = it.status || 'Aberto';
-                              const priority = it.priority || '';
                               const unread = typeof it.unread_count === 'number' ? it.unread_count : undefined;
                               const tags = Array.isArray(it.tags) ? it.tags : [];
                               const since = formatSince(it.updated_at || it.created_at);
@@ -469,17 +723,38 @@ export default function KanbanPage() {
                               return (
                                 <div
                                   key={id}
-                                  className="rounded-md border border-neutral-800/60 bg-neutral-900/60 p-3 cursor-pointer hover:bg-neutral-900/80 transition-colors"
+                                  draggable={true}
+                                  onDragStart={() => handleDragStart(it, col.key)}
+                                  onDragEnd={handleDragEnd}
+                                  className={`rounded-md border border-neutral-800/60 bg-neutral-900/60 p-3 cursor-move hover:bg-neutral-900/80 transition-all ${
+                                    draggedItem?.item.id === it.id ? 'opacity-50 scale-95' : 'opacity-100'
+                                  }`}
                                   role="button"
                                   tabIndex={0}
                                   onClick={() => setSelectedItem(it)}
                                   onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedItem(it); } }}
                                 >
-                                  <div className="flex items-start justify-between">
-                                    <div className="text-sm font-semibold text-white truncate max-w-[70%]" title={title}>{title}</div>
-                                    <span className="text-[11px] text-neutral-300 bg-neutral-800 rounded px-2 py-0.5">{status}</span>
+                                  <div className="flex items-start justify-between gap-2">
+                                    <div className="text-sm font-semibold text-white truncate flex-1" title={title}>{title}</div>
+                                    <div className="flex items-center gap-1 shrink-0">
+                                      {(it.user_session_inbox_id && it.user_session_conversation_id && chatwootUrl) ? (
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            openChatwoot(it);
+                                          }}
+                                          className="p-1 rounded hover:bg-neutral-700/50 transition-colors"
+                                          title="Abrir conversa no Chatwoot"
+                                        >
+                                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-blue-400">
+                                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                                          </svg>
+                                        </button>
+                                      ) : null}
+                                      <span className="text-[11px] text-neutral-300 bg-neutral-800 rounded px-2 py-0.5">{status}</span>
+                                    </div>
                                   </div>
-                                  <div className="text-xs text-neutral-400 mt-1 line-clamp-3">{summary}</div>
+                                  <div className="text-xs text-neutral-400 mt-1 line-clamp-6">{formatSummary(summary)}</div>
                                   <div className="flex flex-wrap gap-1 mt-2">
                                     {safeTags.map((t, idx) => (
                                       <span key={idx} className="text-[11px] text-blue-300 bg-blue-900/30 border border-blue-900/40 rounded px-1.5 py-0.5">{t.name}</span>
@@ -497,6 +772,23 @@ export default function KanbanPage() {
                                 </div>
                               );
                           })}
+                          {/* Load more button */}
+                          {stepHasMore[col.key] && (
+                            <button
+                              onClick={() => loadMoreForStep(col.key)}
+                              disabled={loadingMoreForStep === col.key}
+                              className="w-full py-2 px-3 text-xs text-neutral-300 bg-neutral-800/40 hover:bg-neutral-800/60 border border-neutral-700/50 rounded-md transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              {loadingMoreForStep === col.key ? (
+                                <span className="flex items-center justify-center gap-2">
+                                  <span className="inline-block animate-spin">⟳</span>
+                                  Carregando...
+                                </span>
+                              ) : (
+                                'Carregar mais'
+                              )}
+                            </button>
+                          )}
                         </div>
                       </div>
                     ))}

@@ -4,8 +4,9 @@ import React, { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import Sidebar from "@/components/Sidebar";
+import AuthGuard from "@/components/AuthGuard";
 import Image from "next/image";
-import Sidebar from "../../components/Sidebar";
 import Indicators from "./Indicators";
 import type { Conversation as MetricsConversation } from "@/services/conversations";
 
@@ -105,6 +106,7 @@ function useCountUp(target: number, durationMs: number, deps: ReadonlyArray<unkn
 export default function MonitoringPage() {
   const router = useRouter();
   const [userData, setUserData] = useState<UserData | null>(null);
+  const domainsFetchedRef = React.useRef(false);
   const [range, setRange] = useState<string>("today");
   const [customStart, setCustomStart] = useState<string>("");
   const [customEnd, setCustomEnd] = useState<string>("");
@@ -223,8 +225,12 @@ export default function MonitoringPage() {
       setDomains([]);
       setDomainError("");
       setDomainLoading(false);
+      domainsFetchedRef.current = false;
       return;
     }
+
+    // Evita re-fetch infinito quando userData muda (ex.: após buscar perfil completo)
+    if (domainsFetchedRef.current) return;
 
     let cancelled = false;
 
@@ -263,18 +269,21 @@ export default function MonitoringPage() {
         setDomains(uniqueDomains);
         if (uniqueDomains.length === 0) {
           setSelectedDomain("");
+          domainsFetchedRef.current = true;
           return;
         }
         setSelectedDomain((current) => {
           if (current && uniqueDomains.includes(current)) return current;
           return uniqueDomains[0];
         });
+        domainsFetchedRef.current = true;
       } catch (err) {
         if (cancelled) return;
         const msg = err instanceof Error ? err.message : "Erro ao carregar domínios";
         setDomainError(msg);
         setDomains([]);
         setSelectedDomain("");
+        domainsFetchedRef.current = true;
       } finally {
         if (!cancelled) setDomainLoading(false);
       }
@@ -283,7 +292,7 @@ export default function MonitoringPage() {
     return () => {
       cancelled = true;
     };
-  }, [userData?.AccessToken, userData?.IdToken, userData?.token, userData?.user?.isAdmin]);
+  }, [userData?.user?.isAdmin]);
 
   // Derive date range based on selection
   const { startDate, endDate } = useMemo(() => {
@@ -471,41 +480,40 @@ export default function MonitoringPage() {
   }, [range, customStart, customEnd, effectiveDomain]);
 
   useEffect(() => {
-    // Simple auth guard similar to dashboard: require userData in storage
+    // Load user data from storage
     try {
-      const raw = typeof window !== 'undefined' ? localStorage.getItem('userData') : null;
-      const parsed = raw ? JSON.parse(raw) : null;
-      if (!parsed || !parsed.isAuthenticated) {
-        router.push('/login');
-        return;
-      }
-      setUserData(parsed);
+      const raw = localStorage.getItem('userData');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        setUserData(parsed);
 
-      // Buscar dados completos do usuário usando o email (portado do Settings)
-      (async () => {
-        try {
-          const tokenComputed: string | undefined = parsed.IdToken || parsed.token || parsed.AccessToken;
-          const userEmail = parsed.email || (parsed.user?.email) || '';
-          if (!userEmail || !tokenComputed) return;
-          const apiUrl = process.env.NEXT_PUBLIC_PROFILE_API_URL || process.env.NEXT_PUBLIC_API_URL;
-          const response = await fetch(
-            `${apiUrl}/Autonomia/Profile/Users/email?email=${encodeURIComponent(userEmail)}`,
-            {
-              headers: { 'Authorization': `Bearer ${tokenComputed}` },
-              mode: 'cors'
-            }
-          );
-          if (!response.ok) return;
-          const fullUser = await response.json();
-          const updatedData = { ...parsed, user: fullUser.user };
-          setUserData(updatedData);
-          localStorage.setItem('userData', JSON.stringify(updatedData));
-        } catch (err) {
-          console.error('Erro ao buscar dados completos do usuário no Monitoring:', err);
-        }
-      })();
-    } catch {}
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        // Buscar dados completos do usuário usando o email
+        (async () => {
+          try {
+            const tokenComputed: string | undefined = parsed.IdToken || parsed.token || parsed.AccessToken;
+            const userEmail = parsed.email || (parsed.user?.email) || '';
+            if (!userEmail || !tokenComputed) return;
+            const apiUrl = process.env.NEXT_PUBLIC_PROFILE_API_URL || process.env.NEXT_PUBLIC_API_URL;
+            const response = await fetch(
+              `${apiUrl}/Autonomia/Profile/Users/email?email=${encodeURIComponent(userEmail)}`,
+              {
+                headers: { 'Authorization': `Bearer ${tokenComputed}` },
+                mode: 'cors'
+              }
+            );
+            if (!response.ok) return;
+            const fullUser = await response.json();
+            const updatedData = { ...parsed, user: fullUser.user };
+            setUserData(updatedData);
+            localStorage.setItem('userData', JSON.stringify(updatedData));
+          } catch (err) {
+            console.error('Erro ao buscar dados completos do usuário no Monitoring:', err);
+          }
+        })();
+      }
+    } catch (e) { 
+      console.error('[Monitoring] erro ao carregar userData', e);
+    }
   }, []);
 
   // staged header/menu animation (match Settings)
@@ -529,9 +537,10 @@ export default function MonitoringPage() {
   }, [range]);
 
   return (
-    <div className="flex h-screen bg-background dark:bg-gray-900">
-      {/* Sidebar */}
-      <Sidebar show={showMenu} />
+    <AuthGuard>
+      <div className="flex h-screen bg-background dark:bg-gray-900">
+        {/* Sidebar */}
+        <Sidebar show={showMenu} />
 
       <div className="flex-1 flex flex-col">
         {/* Header (same visual pattern and animation as Settings) */}
@@ -1191,5 +1200,6 @@ export default function MonitoringPage() {
         </main>
       </div>
     </div>
+    </AuthGuard>
   );
 }

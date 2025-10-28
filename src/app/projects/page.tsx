@@ -126,14 +126,14 @@ export default function ProjectsPage() {
   // Auth load
   useEffect(() => {
     const stored = localStorage.getItem('userData');
-    if (!stored) { router.push('/login'); return; }
+    if (!stored) { router.push('/'); return; }
     try {
       const parsed: UserData = JSON.parse(stored);
-      if (!parsed?.isAuthenticated) { router.push('/login'); return; }
+      if (!parsed?.isAuthenticated) { router.push('/'); return; }
       setUserData(parsed);
       setAuthToken(tokenFrom(parsed));
     } catch {
-      router.push('/login');
+      router.push('/');
     }
   }, [router]);
 

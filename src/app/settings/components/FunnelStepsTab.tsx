@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Pencil, Settings } from "lucide-react";
 
@@ -9,6 +9,7 @@ export type FunnelStep = {
   name?: string;
   description?: string;
   agent_instruction?: string;
+  order?: number;
 };
 
 export type FunnelStepsTabProps = {
@@ -28,6 +29,7 @@ export type FunnelStepsTabProps = {
   onOpenStepSettings: (stepId: string) => void;
   truncate: (text: string, max?: number) => string;
   onClickEditFunnel: () => void;
+  onUpdateStepOrder: (stepId: string, order: number | null) => Promise<void>;
 };
 
 export default function FunnelStepsTab(props: FunnelStepsTabProps) {
@@ -47,8 +49,12 @@ export default function FunnelStepsTab(props: FunnelStepsTabProps) {
     onClickEditFunnel,
     onClickEditStep,
     onOpenStepSettings,
-    truncate
+    truncate,
+    onUpdateStepOrder
   } = props;
+
+  // Local state for editing order values
+  const [editingOrders, setEditingOrders] = useState<Record<string, number | null>>({});
 
   return (
     <section className="mt-6 transition-all duration-400 ease-out opacity-100 translate-y-0">
@@ -85,6 +91,7 @@ export default function FunnelStepsTab(props: FunnelStepsTabProps) {
         <table className="min-w-full text-sm">
           <thead className="bg-gray-50 dark:bg-gray-700 sticky top-0">
             <tr>
+              <th className="text-left px-4 py-2 dark:text-gray-100">Ordem</th>
               <th className="text-left px-4 py-2 dark:text-gray-100">Nome</th>
               <th className="text-left px-4 py-2 dark:text-gray-100">Descrição</th>
               <th className="text-right px-4 py-2 dark:text-gray-100">Ações</th>
@@ -93,17 +100,43 @@ export default function FunnelStepsTab(props: FunnelStepsTabProps) {
           <tbody>
             {stepsLoading ? (
               <tr>
-                <td className="px-4 py-3 dark:text-gray-200" colSpan={3}>Carregando...</td>
+                <td className="px-4 py-3 dark:text-gray-200" colSpan={4}>Carregando...</td>
               </tr>
             ) : steps.length === 0 ? (
               <tr>
-                <td className="px-4 py-3 dark:text-gray-200" colSpan={3}>Nenhuma etapa encontrada.</td>
+                <td className="px-4 py-3 dark:text-gray-200" colSpan={4}>Nenhuma etapa encontrada.</td>
               </tr>
             ) : (
               steps
                 .slice((stepsPage - 1) * stepsPageSize, (stepsPage - 1) * stepsPageSize + stepsPageSize)
                 .map((step) => (
                   <tr key={step.id} className="border-t border-gray-100 dark:border-gray-700">
+                    <td className="px-4 py-2 dark:text-gray-100">
+                      <input
+                        type="number"
+                        min="0"
+                        step="1"
+                        className="w-20 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                        value={editingOrders[step.id] !== undefined ? (editingOrders[step.id] ?? '') : (step.order ?? '')}
+                        onChange={(e) => {
+                          const newOrder = e.target.value === '' ? null : parseInt(e.target.value, 10);
+                          setEditingOrders(prev => ({ ...prev, [step.id]: newOrder }));
+                        }}
+                        onBlur={async (e) => {
+                          const newOrder = e.target.value === '' ? null : parseInt(e.target.value, 10);
+                          if (newOrder !== step.order) {
+                            await onUpdateStepOrder(step.id, newOrder);
+                          }
+                          // Clear editing state
+                          setEditingOrders(prev => {
+                            const updated = { ...prev };
+                            delete updated[step.id];
+                            return updated;
+                          });
+                        }}
+                        disabled={!isAdmin || isDefaultFunnel}
+                      />
+                    </td>
                     <td className="px-4 py-2 dark:text-gray-100">{truncate(step.name || "", 100)}</td>
                     <td className="px-4 py-2 dark:text-gray-100">{truncate(step.description || "-", 100)}</td>
                     <td className="px-4 py-2 text-right">

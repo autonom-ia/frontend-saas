@@ -34,6 +34,28 @@ export default function ItemDetailsPanel({ item, onClose }: Props) {
     return () => window.removeEventListener("keydown", handler);
   }, [onClose]);
 
+  // Format summary with markdown-like bold sections
+  const formatSummary = (text: string) => {
+    if (!text) return null;
+    
+    // Split by ** markers, capturing the content between them
+    const parts = text.split(/\*\*([^*]+)\*\*/g);
+    
+    return parts.map((part, idx) => {
+      // Odd indices are the content that was between **
+      if (idx % 2 === 1) {
+        return (
+          <span key={idx}>
+            <br />
+            <strong className="font-semibold text-gray-50">{part}</strong>
+          </span>
+        );
+      }
+      // Even indices are regular text (without **)
+      return <span key={idx}>{part}</span>;
+    });
+  };
+
   // Normalize fields
   const title = item?.title || item?.name || item?.contact_name || "Detalhes";
   const summary = item?.summary || item?.description || "";
@@ -83,7 +105,9 @@ export default function ItemDetailsPanel({ item, onClose }: Props) {
           <div className="divide-y divide-gray-700 text-sm">
             <div className="py-3 grid grid-cols-3 gap-4">
               <div className="col-span-1 text-gray-400">Resumo</div>
-              <div className="col-span-2 text-gray-100 whitespace-pre-wrap break-words">{summary || "—"}</div>
+              <div className="col-span-2 text-gray-100 whitespace-pre-wrap break-words">
+                {summary ? formatSummary(summary) : "—"}
+              </div>
             </div>
             <div className="py-3 grid grid-cols-3 gap-4">
               <div className="col-span-1 text-gray-400">Status</div>
