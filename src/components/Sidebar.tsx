@@ -10,8 +10,8 @@ type SidebarProps = {
 
 const navItems = [
   { href: "/monitoring", label: "Monitoramento", Icon: LayoutDashboard },
-  { href: "/settings", label: "Configurações", Icon: Settings },
   { href: "/kanban", label: "Kanban", Icon: KanbanSquare },
+  { href: "/settings", label: "Configurações", Icon: Settings },
   { href: "/campaigns", label: "Campanhas", Icon: Megaphone },
   { href: "/projects", label: "Projetos", Icon: ClipboardList },
 ];

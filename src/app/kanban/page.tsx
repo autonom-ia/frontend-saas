@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import ItemDetailsPanel from "./components/ItemDetailsPanel";
+import ConversationDrawer from "./components/ConversationDrawer";
 import Image from "next/image";
 import Sidebar from "../../components/Sidebar";
 import ProductHeader from "../../components/ProductHeader";
@@ -40,6 +41,9 @@ export default function KanbanPage() {
   // UI staged entrance
   const [showHeader, setShowHeader] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
+  const [conversationDrawerOpen, setConversationDrawerOpen] = useState(false);
+  const [selectedConversationItem, setSelectedConversationItem] = useState<KanbanItem | null>(null);
+  
   useEffect(() => {
     const t1 = setTimeout(() => setShowHeader(true), 160);
     const t2 = setTimeout(() => setShowMenu(true), 420);
@@ -68,6 +72,7 @@ export default function KanbanPage() {
   const [productsLoading, setProductsLoading] = useState(false);
   const [selectedProductId, setSelectedProductId] = useState<string>("");
   const saasApiUrl = useMemo(() => process.env.NEXT_PUBLIC_SAAS_API_URL || "https://api-saas.autonomia.site", []);
+  const clientsApiUrl = useMemo(() => process.env.NEXT_PUBLIC_CLIENTS_API_URL || "https://api-clients.autonomia.site", []);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -216,7 +221,6 @@ export default function KanbanPage() {
   const [loadingSteps, setLoadingSteps] = useState<Record<string, boolean>>({});
   const [draggedItem, setDraggedItem] = useState<{ item: KanbanItem; fromStepId: string } | null>(null);
   const [dragOverStepId, setDragOverStepId] = useState<string | null>(null);
-  const [chatwootUrl, setChatwootUrl] = useState<string>("");
 
   // Load items for a specific step
   const loadItemsForStep = useCallback(async (stepId: string, offset: number = 0): Promise<KanbanItem[]> => {
@@ -305,34 +309,6 @@ export default function KanbanPage() {
     })();
   }, [selectedAccountId, steps, authToken, saasApiUrl, loadItemsForStep]);
 
-  // Load account parameters to get chatwoot-url
-  useEffect(() => {
-    (async () => {
-      if (!selectedAccountId) {
-        setChatwootUrl("");
-        return;
-      }
-
-      try {
-        const url = `${saasApiUrl}/Autonomia/Saas/AccountParameters?accountId=${encodeURIComponent(selectedAccountId)}`;
-        const resp = await fetch(url, {
-          headers: authToken ? { Authorization: `Bearer ${authToken}` } : undefined,
-          mode: 'cors',
-        });
-
-        if (resp.ok) {
-          const j = await resp.json();
-          const data = Array.isArray(j?.data) ? j.data : [];
-          const chatwootParam = data.find((p: { name?: string; value?: string }) => p.name === 'chatwoot-url');
-          if (chatwootParam?.value) {
-            setChatwootUrl(chatwootParam.value);
-          }
-        }
-      } catch (err) {
-        console.error('[Kanban] Error loading account parameters:', err);
-      }
-    })();
-  }, [selectedAccountId, saasApiUrl, authToken]);
 
   // Load steps when funnelId is known (fallback to accountId if needed)
   useEffect(() => {
@@ -517,23 +493,11 @@ export default function KanbanPage() {
     setDraggedItem(null);
   };
 
-  // Open Chatwoot conversation
-  const openChatwoot = (item: KanbanItem) => {
-    const inboxId = item.user_session_inbox_id;
-    const conversationId = item.user_session_conversation_id;
-
-    if (!inboxId || !conversationId) {
-      console.warn('[Kanban] Missing inbox_id or conversation_id for item', item.id);
-      return;
-    }
-
-    if (!chatwootUrl) {
-      console.warn('[Kanban] Chatwoot URL not configured');
-      return;
-    }
-
-    const url = `${chatwootUrl}/app/accounts/${inboxId}/conversations/${conversationId}`;
-    window.open(url, '_blank', 'noopener,noreferrer');
+  // Open conversation drawer
+  const openConversation = (item: KanbanItem) => {
+    console.log('[Kanban] Opening conversation drawer for item:', item.id);
+    setSelectedConversationItem(item);
+    setConversationDrawerOpen(true);
   };
 
   // Load more items for a specific step
@@ -742,18 +706,16 @@ export default function KanbanPage() {
                                   <div className="flex items-start justify-between gap-2">
                                     <div className="text-sm font-semibold text-white truncate flex-1" title={title}>{title}</div>
                                     <div className="flex items-center gap-1.5 shrink-0">
-                                      {!!it.user_session_inbox_id && !!it.user_session_conversation_id && !!chatwootUrl && (
-                                        <button
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            openChatwoot(it);
-                                          }}
-                                          className="p-1 hover:bg-neutral-700/50 rounded transition-colors"
-                                          title="Abrir conversa no Chatwoot"
-                                        >
-                                          <MessageCircle className="w-4 h-4 text-blue-400" />
-                                        </button>
-                                      )}
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          openConversation(it);
+                                        }}
+                                        className="p-1 hover:bg-neutral-700/50 rounded transition-colors"
+                                        title="Abrir conversas"
+                                      >
+                                        <MessageCircle className="w-4 h-4 text-blue-400" />
+                                      </button>
                                       <span className="text-[11px] text-neutral-300 bg-neutral-800 rounded px-2 py-0.5">{status}</span>
                                     </div>
                                   </div>
@@ -807,6 +769,15 @@ export default function KanbanPage() {
           )}
         </main>
       </div>
+
+      {/* Conversation Drawer */}
+      <ConversationDrawer
+        isOpen={conversationDrawerOpen}
+        onClose={() => setConversationDrawerOpen(false)}
+        itemData={selectedConversationItem ?? undefined}
+        proxyUrl={`${clientsApiUrl}/Autonomia/Clients/ChatwootProxy`}
+        accountId={selectedAccountId || ''}
+      />
     </div>
   );
 }
