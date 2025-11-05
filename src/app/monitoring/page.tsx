@@ -338,26 +338,44 @@ export default function MonitoringPage() {
         setLoggedLoading(true);
         setLoggedError("");
         const baseUrl = process.env.NEXT_PUBLIC_CLIENTS_API_URL || "https://api-clients.autonomia.site";
-        const numericId = typeof effectiveDomain === 'string' && /^\d+$/.test(effectiveDomain) ? effectiveDomain : '';
-        const domainParam = selectedDomain || normalizeDomain(subdomain);
+        
+        // Usar effectiveDomain como domain
+        const domainParam = effectiveDomain || normalizeDomain(subdomain);
+        
+        if (!domainParam) {
+          setLoggedError('Domain não identificado');
+          setLoggedLoading(false);
+          return;
+        }
+        
+        console.log(`Buscando usuários logados para domain: ${domainParam}`);
+        
         const params = new URLSearchParams();
-        if (numericId) params.set('accountId', numericId);
-        if (domainParam) params.set('domain', domainParam);
-        const url = `${baseUrl}/Autonomia/Clients/LoggedUsers${params.toString() ? `?${params.toString()}` : ''}`;
+        params.set('domain', domainParam);
+        
+        const url = `${baseUrl}/Autonomia/Clients/LoggedUsers?${params.toString()}`;
         const res = await fetch(url);
-        if (!res.ok) throw new Error(`Erro ao buscar usuários logados (${res.status})`);
+        
+        if (!res.ok) {
+          const errorText = await res.text();
+          throw new Error(`Erro ao buscar usuários logados (${res.status}): ${errorText}`);
+        }
+        
         const json = await res.json();
         const arr = json?.data?.data || json?.data || [];
         const items = Array.isArray(arr) ? arr : [];
         setLoggedUsers(items);
+        
+        console.log(`Usuários logados encontrados: ${items.length}`);
       } catch (e: unknown) {
         const msg = e instanceof Error ? e.message : 'Erro ao buscar usuários logados';
+        console.error('[LoggedUsers] Erro:', msg);
         setLoggedError(msg);
       } finally {
         setLoggedLoading(false);
       }
     })();
-  }, [effectiveDomain, selectedDomain, selectedTab]);
+  }, [effectiveDomain, selectedDomain, subdomain, selectedTab]);
 
   // ===== Charts data (blue tones) =====
   const blues = ['#3B82F6', '#60A5FA', '#93C5FD', '#1E40AF', '#2563EB', '#1D4ED8'];
