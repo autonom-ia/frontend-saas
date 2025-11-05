@@ -15,6 +15,9 @@ function debugLog(message: string, data: unknown = undefined) {
   console.log(`%c[FORM DEBUG] ${message}`, 'background: #222; color: #bada55', data !== undefined ? data : '');
 }
 
+// Base URL do serviço de autenticação (api/auth)
+const AUTH_BASE = process.env.NEXT_PUBLIC_AUTH_API_URL;
+
 export default function LoginPage() {
   const router = useRouter();
   const hasInitialized = useRef(false);
@@ -92,7 +95,7 @@ export default function LoginPage() {
     setError('');
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/login`, {
+      const response = await fetch(`${AUTH_BASE}/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
@@ -106,19 +109,27 @@ export default function LoginPage() {
 
       console.log('Dados recebidos do login:', data);
 
+      // Persistir token para uso pelo cliente do SAAS
+      const authToken = data.IdToken || data.AccessToken || data.token;
+      if (authToken) {
+        localStorage.setItem('authToken', authToken);
+      }
+
       // Armazenar dados do usuário e tokens no localStorage
       // O backend não inclui os dados do usuário, apenas tokens de autenticação
       // Vamos armazenar o email usado no login para buscar os dados depois
       const now = Date.now();
+      const isDev = process.env.NODE_ENV === 'development';
       localStorage.setItem('userData', JSON.stringify({
-        user: { email }, // Armazenando email usado no login
+        // Em desenvolvimento, já marcamos o usuário como admin para liberar recursos de teste
+        user: { email, ...(isDev ? { isAdmin: true } : {}) },
         email: email, // Também armazenando o email em primeiro nível
         // Armazenando tokens separadamente para uso adequado em diferentes APIs
         AccessToken: data.AccessToken, // Para chamar APIs do próprio Cognito
         IdToken: data.IdToken, // Para API Gateway com Cognito Authorizer
         RefreshToken: data.RefreshToken, // Para renovar tokens
         // Mantendo token para compatibilidade, mas usando IdToken como padrão
-        token: data.IdToken || data.AccessToken || data.token,
+        token: authToken,
         isAuthenticated: true,
         loginAt: now,
         refreshedAt: now
@@ -178,7 +189,7 @@ export default function LoginPage() {
     setError('');
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/register`, {
+      const response = await fetch(`${AUTH_BASE}/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, phone, email, password }),

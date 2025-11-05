@@ -1,0 +1,11 @@
+name,phone,email,empresa,cargo,cidade
+João Silva,+5511999999999,joao.silva@email.com,Empresa ABC,Gerente,São Paulo
+Maria Santos,+5511888888888,maria.santos@email.com,Empresa XYZ,Diretora,Rio de Janeiro
+Pedro Costa,+5511777777777,pedro.costa@email.com,Empresa 123,Analista,Belo Horizonte
+Ana Oliveira,+5511666666666,ana.oliveira@email.com,Empresa DEF,Coordenadora,Porto Alegre
+Carlos Ferreira,+5511555555555,carlos.ferreira@email.com,Empresa GHI,Supervisor,Curitiba
+Lucia Mendes,+5511444444444,lucia.mendes@email.com,Empresa JKL,Assistente,Salvador
+Roberto Lima,+5511333333333,roberto.lima@email.com,Empresa MNO,Técnico,Fortaleza
+Fernanda Rocha,+5511222222222,fernanda.rocha@email.com,Empresa PQR,Consultora,Recife
+Marcos Alves,+5511111111111,marcos.alves@email.com,Empresa STU,Especialista,Brasília
+Patricia Gomes,+5511000000000,patricia.gomes@email.com,Empresa VWX,Coordenadora,Manaus
