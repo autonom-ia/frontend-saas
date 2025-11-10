@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { RefreshCw, Plus, Users, Send, Eye, MoreHorizontal, Upload } from "lucide-react";
 import { Card } from "@/components/ui/card";
-import { Plus } from "lucide-react";
 import Sidebar from "../../components/Sidebar";
 import ProductHeader from "../../components/ProductHeader";
 import {
@@ -215,7 +214,7 @@ export default function CampaignsPage() {
     }
     try {
       setCampaignsLoading(true);
-      const resp = await fetch(`${leadshotApiUrl}/Autonomia/Saas/Campaigns?accountId=${encodeURIComponent(productId)}`, {
+      const resp = await fetch(`${leadshotApiUrl}/Autonomia/Leadshot/Campaigns?productId=${encodeURIComponent(productId)}`, {
         headers: createHeaders(authToken),
         mode: "cors",
       });
@@ -325,7 +324,7 @@ export default function CampaignsPage() {
     try {
       setFormSaving(true);
       const tokenToUse = authToken || getTokenFromLocal();
-      const resp = await fetch(`${leadshotApiUrl}/Autonomia/Saas/Campaigns`, {
+      const resp = await fetch(`${leadshotApiUrl}/Autonomia/Leadshot/Campaigns`, {
         method: 'POST',
         headers: createHeaders(tokenToUse),
         mode: 'cors',
@@ -418,7 +417,7 @@ export default function CampaignsPage() {
         headers['Authorization'] = `Bearer ${tokenToUse}`;
       }
 
-      const resp = await fetch(`${leadshotApiUrl}/Autonomia/Saas/Campaigns/${selectedCampaignForImport.id}/contacts/upload`, {
+      const resp = await fetch(`${leadshotApiUrl}/Autonomia/Leadshot/Campaigns/${selectedCampaignForImport.id}/contacts/upload`, {
         method: 'POST',
         headers,
         mode: 'cors',
