@@ -572,17 +572,18 @@ export default function DashboardPage() {
       const cwToken = paramsMap['chatwoot-token'] || '';
 
       const body: Record<string, unknown> = {
-        domain: normalizeDomain(domain),
+        account_id: accountId, // ID da conta no banco (obrigatório)
         // valores não fixos (o backend define os fixos)
         enabled: true,
       };
+      // Parâmetros do Chatwoot - se existirem, sobrescrevem
       if (cwAccountId) body.account_id = cwAccountId;
       if (cwUrl) body.url = cwUrl;
       if (cwToken) body.token = cwToken;
       // opcional: delimitador padrão se desejar customizar
       // if (!('sign_delimiter' in body)) body.sign_delimiter = '-';
 
-      const resp = await fetch(`${apiUrl}/Autonomia/Evolution/SetChatwoot/${encodeURIComponent(instance)}`, {
+      const resp = await fetch(`${apiUrl}/Autonomia/Evolution/SetChatwoot/${encodeURIComponent(instance)}?account_id=${encodeURIComponent(accountId)}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -604,14 +605,14 @@ export default function DashboardPage() {
     }
   };
 
-  const fetchInboxStatus = async (domain: string, instance: string): Promise<InboxItem['status']> => {
+  const fetchInboxStatus = async (accountId: string, instance: string): Promise<InboxItem['status']> => {
     try {
-      console.debug('fetchInboxStatus:call', { domain, instance });
+      console.debug('fetchInboxStatus:call', { accountId, instance });
       const tokenToUse = authToken || (() => {
         try { const stored = localStorage.getItem('userData'); if (!stored) return undefined; const parsed = JSON.parse(stored); return parsed.IdToken || parsed.token || parsed.AccessToken; } catch { return undefined; }
       })();
       const apiUrl = process.env.NEXT_PUBLIC_EVOLUTION_API_URL || process.env.NEXT_PUBLIC_API_URL;
-      const url = `${apiUrl}/Autonomia/Evolution/ConnectionState?domain=${encodeURIComponent(domain)}&instance=${encodeURIComponent(instance)}`;
+      const url = `${apiUrl}/Autonomia/Evolution/ConnectionState?account_id=${encodeURIComponent(accountId)}&instance=${encodeURIComponent(instance)}`;
       const resp = await fetch(url, { headers: { 'Authorization': `Bearer ${tokenToUse}` }, mode: 'cors' });
       if (resp.status === 404) return 'unknown';
       if (!resp.ok) return 'unknown';
@@ -669,9 +670,8 @@ export default function DashboardPage() {
       }
       console.debug('openAccountInboxPanel:list', { accountId: acc.id, domain: acc.domain, list });
       // Buscar status de cada item
-      const domain = normalizeDomain(acc.domain || '');
       const withStatus = await Promise.all(list.map(async (it) => {
-        const st = domain && it.name ? await fetchInboxStatus(domain, it.name) : 'unknown';
+        const st = acc.id && it.name ? await fetchInboxStatus(acc.id, it.name) : 'unknown';
         return { ...it, status: st, notFound: st === 'unknown' };
       }));
       setInboxes(withStatus);
@@ -718,7 +718,7 @@ export default function DashboardPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${tokenToUse}` },
         mode: 'cors',
-        body: JSON.stringify({ domain: normalizeDomain(inboxPanelAccount.domain || ''), instanceName: instanceName })
+        body: JSON.stringify({ account_id: inboxPanelAccount.id, instanceName: instanceName })
       });
       if (!resp.ok) {
         const t = await resp.text();
@@ -736,7 +736,7 @@ export default function DashboardPage() {
       setConnectMethod(base64 ? 'qrcode' : 'pairing');
       showToast('Instância sincronizada. Atualizando estado...', 'success');
       // Refresh status for this item
-      const st = await fetchInboxStatus(normalizeDomain(inboxPanelAccount.domain || ''), instanceName);
+      const st = await fetchInboxStatus(inboxPanelAccount.id, instanceName);
       setInboxes(prev => prev.map(it => it.name === instanceName ? { ...it, status: st, notFound: st === 'unknown' } : it));
 
       // Iniciar polling se QR foi gerado
@@ -758,12 +758,12 @@ export default function DashboardPage() {
   useEffect(() => {
     if (!polling || !connectInfo?.instance || !connectInfo?.base64 || !inboxPanelAccount) return;
     const instance = connectInfo.instance;
-    const domain = inboxPanelAccount.domain || '';
+    const accountId = inboxPanelAccount.id;
     let stopped = false;
     const interval = setInterval(async () => {
       if (stopped) return;
       try {
-        const st = await fetchInboxStatus(normalizeDomain(domain), instance);
+        const st = await fetchInboxStatus(accountId, instance);
         setInboxes(prev => prev.map(it => it.name === instance ? { ...it, status: st, notFound: st === 'unknown' } : it));
         if (st === 'open') {
           setConnectionSuccess(true);
