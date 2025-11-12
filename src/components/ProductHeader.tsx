@@ -14,6 +14,7 @@ export type ProductHeaderProps = {
   userName?: string;
   userPhotoUrl?: string;
   userInitials?: string;
+  showProductActions?: boolean;
   onChangeProduct: (productId: string) => void;
   onCreateProduct: () => void;
   onEditProduct: () => void;
@@ -29,6 +30,7 @@ export default function ProductHeader(props: ProductHeaderProps) {
     userName,
     userPhotoUrl,
     userInitials,
+    showProductActions = false,
     onChangeProduct,
     onCreateProduct,
     onEditProduct,
@@ -59,7 +61,7 @@ export default function ProductHeader(props: ProductHeaderProps) {
               <option key={p.id} value={p.id}>{p.name}</option>
             ))}
           </select>
-          {isAdmin && (
+          {isAdmin && showProductActions && (
             <Button
               type="button"
               variant="secondary"
@@ -70,7 +72,7 @@ export default function ProductHeader(props: ProductHeaderProps) {
               <Plus className="h-4 w-4 mr-1" /> Incluir
             </Button>
           )}
-          {isAdmin && (
+          {isAdmin && showProductActions && (
             <>
               <Button
                 type="button"

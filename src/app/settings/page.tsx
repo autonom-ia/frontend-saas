@@ -1865,6 +1865,7 @@ export default function DashboardPage() {
         userName={userData?.user?.name}
         userPhotoUrl={userData?.user?.photoUrl}
         userInitials={userInitials}
+        showProductActions={true}
         onChangeProduct={(val) => {
           // Troca de produto: limpar seleção de conta e estado do funil
           setSelectedProductId(val);
