@@ -564,7 +564,7 @@ export default function CampaignsPage() {
                       <tr>
                         <th className="text-left px-4 py-2 dark:text-gray-100">Nome</th>
                         <th className="text-left px-4 py-2 dark:text-gray-100">Descrição</th>
-                        <th className="text-left px-4 py-2 dark:text-gray-100">Account</th>
+                        <th className="text-left px-4 py-2 dark:text-gray-100">Conta</th>
                         <th className="text-left px-4 py-2 dark:text-gray-100">Template</th>
                         <th className="text-left px-4 py-2 dark:text-gray-100">Contatos</th>
                         <th className="text-left px-4 py-2 dark:text-gray-100">Criado em</th>
