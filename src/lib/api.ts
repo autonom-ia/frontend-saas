@@ -1,30 +1,13 @@
 // API Configuration and Services
-const API_BASE_URL = process.env.NEXT_PUBLIC_SAAS_API_URL || 'https://api-saas.autonomia.site';
+import { getStoredUser, setStoredUser, refreshTokens } from './auth';
 
-const IS_DEV = process.env.NODE_ENV === 'development';
-
-function getDevUserEmail(): string | undefined {
-  // Priority: explicit env -> localStorage userData
-  if (typeof process !== 'undefined' && process.env.NEXT_PUBLIC_DEV_EMAIL) {
-    return process.env.NEXT_PUBLIC_DEV_EMAIL;
-  }
-  if (typeof window !== 'undefined') {
-    try {
-      const raw = localStorage.getItem('userData');
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        return parsed?.email || parsed?.user?.email;
-      }
-    } catch (_) { /* ignore */ }
-  }
-  return undefined;
-}
+const API_BASE_URL = process.env.NEXT_PUBLIC_LEADSHOT_API_URL || 'https://api-leadshot.autonomia.site';
 
 export interface Contact {
   id: string;
   name: string;
   phone: string;
-  contact_data?: Record<string, any>;
+  contact_data?: Record<string, unknown>;
   campaign_id: string;
   account_id: string;
   external_code?: string;
@@ -65,38 +48,126 @@ export interface MessageLog {
 }
 
 class ApiService {
-  private getAuthHeaders(): HeadersInit {
-    const token = localStorage.getItem('authToken');
+  /**
+   * Decodifica token JWT e retorna o payload
+   */
+  private decodeToken(token: string): { exp?: number; sub?: string } | null {
+    try {
+      const base64Url = token.split('.')[1];
+      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      const jsonPayload = decodeURIComponent(atob(base64).split('').map(c => 
+        '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)
+      ).join(''));
+      return JSON.parse(jsonPayload);
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Verifica se o token está expirado ou vai expirar em breve (5 min)
+   */
+  private isTokenExpired(token: string): boolean {
+    const payload = this.decodeToken(token);
+    if (!payload || !payload.exp) return true;
+    
+    const now = Math.floor(Date.now() / 1000);
+    const expiresIn = payload.exp - now;
+    
+    // Considera expirado se falta menos de 5 minutos
+    return expiresIn < 300;
+  }
+
+  /**
+   * Renova o token se necessário
+   */
+  private async ensureValidToken(): Promise<void> {
+    const userData = getStoredUser();
+    if (!userData?.RefreshToken) return;
+
+    const currentToken = userData.IdToken || userData.token || userData.AccessToken;
+    if (!currentToken) return;
+
+    // Se o token está válido (não expira em 5 min), não faz nada
+    if (!this.isTokenExpired(currentToken)) return;
+
+    console.log('[API] Token expirado ou próximo da expiração, renovando...');
+    
+    try {
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || '';
+      const updated = await refreshTokens(apiBase, userData.RefreshToken);
+      const merged = {
+        ...userData,
+        ...updated,
+        refreshedAt: Date.now(),
+        isAuthenticated: true,
+      };
+      setStoredUser(merged);
+      console.log('[API] Token renovado com sucesso');
+    } catch (error) {
+      console.error('[API] Erro ao renovar token:', error);
+      // Se falhar, limpa autenticação
+      setStoredUser({ ...userData, isAuthenticated: false });
+      if (typeof window !== 'undefined') {
+        window.location.href = '/login';
+      }
+      throw new Error('Sessão expirada. Faça login novamente.');
+    }
+  }
+
+  private getAuthToken(): string | undefined {
+    try {
+      // Try direct authToken first
+      const directToken = localStorage.getItem('authToken');
+      if (directToken) return directToken;
+      
+      // Fallback to userData
+      const userData = localStorage.getItem('userData');
+      if (userData) {
+        const parsed = JSON.parse(userData);
+        return parsed.IdToken || parsed.token || parsed.AccessToken;
+      }
+    } catch (e) {
+      console.error('Error getting auth token:', e);
+    }
+    return undefined;
+  }
+
+  private async getAuthHeaders(): Promise<HeadersInit> {
+    // Garante que o token está válido antes de fazer a requisição
+    await this.ensureValidToken();
+    
+    const token = this.getAuthToken();
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
     };
     if (token) headers['Authorization'] = `Bearer ${token}`;
-    if (IS_DEV) {
-      const devEmail = getDevUserEmail();
-      if (devEmail) headers['X-User-Email'] = devEmail;
-    }
     return headers;
   }
 
-  private getAuthHeadersForFormData(): HeadersInit {
-    const token = localStorage.getItem('authToken');
-    const headers: Record<string, string> = {};
-    if (token) headers['Authorization'] = `Bearer ${token}`;
-    if (IS_DEV) {
-      const devEmail = getDevUserEmail();
-      if (devEmail) headers['X-User-Email'] = devEmail;
-    }
-    return headers;
-  }
+  async uploadContacts(campaignId: string, file: File, accountId: string, sendMessages = false): Promise<UploadResponse> {
+    // Converter arquivo para base64
+    const base64Content = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = reader.result as string;
+        const base64 = result.split(',')[1] || '';
+        resolve(base64);
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
 
-  async uploadContacts(campaignId: string, file: File): Promise<UploadResponse> {
-    const formData = new FormData();
-    formData.append('file', file);
-
-    const response = await fetch(`${API_BASE_URL}/campaigns/${campaignId}/contacts/upload`, {
+    const response = await fetch(`${API_BASE_URL}/Autonomia/Leadshot/Campaigns/${campaignId}/contacts/upload`, {
       method: 'POST',
-      headers: this.getAuthHeadersForFormData(),
-      body: formData,
+      headers: await this.getAuthHeaders(),
+      body: JSON.stringify({
+        file: base64Content,
+        filename: file.name,
+        accountId,
+        sendMessages
+      }),
+      mode: 'cors',
     });
 
     if (!response.ok) {
@@ -114,9 +185,10 @@ class ApiService {
     limit: number;
   }> {
     const response = await fetch(
-      `${API_BASE_URL}/campaigns/${campaignId}/contacts?page=${page}&limit=${limit}`,
+      `${API_BASE_URL}/Autonomia/Leadshot/Campaigns/${campaignId}/contacts?page=${page}&limit=${limit}`,
       {
-        headers: this.getAuthHeaders(),
+        headers: await this.getAuthHeaders(),
+        mode: 'cors',
       }
     );
 
@@ -128,10 +200,11 @@ class ApiService {
   }
 
   async updateContactStatus(contactId: string, status: string): Promise<Contact> {
-    const response = await fetch(`${API_BASE_URL}/contacts/${contactId}/status`, {
+    const response = await fetch(`${API_BASE_URL}/Autonomia/Leadshot/contacts/${contactId}/status`, {
       method: 'PUT',
-      headers: this.getAuthHeaders(),
+      headers: await this.getAuthHeaders(),
       body: JSON.stringify({ external_status: status }),
+      mode: 'cors',
     });
 
     if (!response.ok) {
@@ -150,9 +223,10 @@ class ApiService {
       total: number;
     };
   }> {
-    const response = await fetch(`${API_BASE_URL}/campaigns/${campaignId}/send`, {
+    const response = await fetch(`${API_BASE_URL}/Autonomia/Leadshot/Campaigns/${campaignId}/send`, {
       method: 'POST',
-      headers: this.getAuthHeaders(),
+      headers: await this.getAuthHeaders(),
+      mode: 'cors',
     });
 
     if (!response.ok) {
@@ -170,9 +244,10 @@ class ApiService {
     limit: number;
   }> {
     const response = await fetch(
-      `${API_BASE_URL}/campaigns/${campaignId}/logs?page=${page}&limit=${limit}`,
+      `${API_BASE_URL}/Autonomia/Leadshot/Campaigns/${campaignId}/logs?page=${page}&limit=${limit}`,
       {
-        headers: this.getAuthHeaders(),
+        headers: await this.getAuthHeaders(),
+        mode: 'cors',
       }
     );
 
@@ -183,9 +258,14 @@ class ApiService {
     return response.json();
   }
 
-  async getCampaigns(): Promise<Campaign[]> {
-    const response = await fetch(`${API_BASE_URL}/campaigns`, {
-      headers: this.getAuthHeaders(),
+  async getCampaigns(productId?: string): Promise<Campaign[]> {
+    const url = productId 
+      ? `${API_BASE_URL}/Autonomia/Leadshot/Campaigns?productId=${encodeURIComponent(productId)}`
+      : `${API_BASE_URL}/Autonomia/Leadshot/Campaigns`;
+    
+    const response = await fetch(url, {
+      headers: await this.getAuthHeaders(),
+      mode: 'cors',
     });
 
     if (!response.ok) {
@@ -193,7 +273,43 @@ class ApiService {
     }
 
     const data = await response.json();
-    return data.campaigns || [];
+    console.log('[API] Campanhas recebidas:', data);
+    // Try different response formats
+    return Array.isArray(data) ? data : (data.data || data.campaigns || []);
+  }
+
+  async getProducts(): Promise<Array<{ id: string; name: string; description?: string }>> {
+    const SAAS_API_URL = process.env.NEXT_PUBLIC_SAAS_API_URL || 'https://api-saas.autonomia.site';
+    const url = `${SAAS_API_URL}/Autonomia/Saas/Products`;
+    
+    const response = await fetch(url, {
+      headers: await this.getAuthHeaders(),
+      mode: 'cors',
+    });
+
+    if (!response.ok) {
+      throw new Error('Erro ao buscar produtos');
+    }
+
+    const data = await response.json();
+    return Array.isArray(data) ? data : (data.data || data.products || []);
+  }
+
+  async getAccounts(productId: string): Promise<Array<{ id: string; name: string; email?: string }>> {
+    const SAAS_API_URL = process.env.NEXT_PUBLIC_SAAS_API_URL || 'https://api-saas.autonomia.site';
+    const url = `${SAAS_API_URL}/Autonomia/Saas/Accounts?productId=${encodeURIComponent(productId)}`;
+    
+    const response = await fetch(url, {
+      headers: await this.getAuthHeaders(),
+      mode: 'cors',
+    });
+
+    if (!response.ok) {
+      throw new Error('Erro ao buscar contas');
+    }
+
+    const data = await response.json();
+    return Array.isArray(data) ? data : (data.data || data.accounts || []);
   }
 }
 

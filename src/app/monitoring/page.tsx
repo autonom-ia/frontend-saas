@@ -75,7 +75,7 @@ type UserData = {
   AccessToken?: string;
   token?: string;
   email?: string;
-  user?: { name?: string; photoUrl?: string; isAdmin?: boolean };
+  user?: { id?: string | number; name?: string; photoUrl?: string; isAdmin?: boolean; email?: string };
 };
 
 type DomainItem = string;
@@ -106,6 +106,7 @@ function useCountUp(target: number, durationMs: number, deps: ReadonlyArray<unkn
 export default function MonitoringPage() {
   const router = useRouter();
   const [userData, setUserData] = useState<UserData | null>(null);
+  const [profileLoading, setProfileLoading] = useState(true);
   const domainsFetchedRef = React.useRef(false);
   const [range, setRange] = useState<string>("today");
   const [customStart, setCustomStart] = useState<string>("");
@@ -229,6 +230,12 @@ export default function MonitoringPage() {
       return;
     }
 
+    // Aguardar até que o user.id esteja disponível
+    if (!userData?.user?.id) {
+      console.log('[Monitoring] Aguardando user.id carregar...');
+      return;
+    }
+
     // Evita re-fetch infinito quando userData muda (ex.: após buscar perfil completo)
     if (domainsFetchedRef.current) return;
 
@@ -238,6 +245,7 @@ export default function MonitoringPage() {
       try {
         setDomainLoading(true);
         setDomainError("");
+        console.log('[Monitoring] Iniciando busca de domínios para user.id:', userData?.user?.id);
         const baseUrl = process.env.NEXT_PUBLIC_CLIENTS_API_URL || "https://api-clients.autonomia.site";
         const token = userData?.IdToken || userData?.token || userData?.AccessToken;
         const uidStr = (() => {
@@ -266,10 +274,12 @@ export default function MonitoringPage() {
           uniqueDomains.push(normalized);
         }
         if (cancelled) return;
+        console.log('[Monitoring] Domínios carregados:', uniqueDomains);
         setDomains(uniqueDomains);
         if (uniqueDomains.length === 0) {
           setSelectedDomain("");
           domainsFetchedRef.current = true;
+          console.log('[Monitoring] Nenhum domínio encontrado');
           return;
         }
         setSelectedDomain((current) => {
@@ -277,6 +287,7 @@ export default function MonitoringPage() {
           return uniqueDomains[0];
         });
         domainsFetchedRef.current = true;
+        console.log('[Monitoring] Domínio selecionado:', uniqueDomains[0]);
       } catch (err) {
         if (cancelled) return;
         const msg = err instanceof Error ? err.message : "Erro ao carregar domínios";
@@ -292,7 +303,7 @@ export default function MonitoringPage() {
     return () => {
       cancelled = true;
     };
-  }, [userData?.user?.isAdmin]);
+  }, [userData?.user?.isAdmin, userData?.user?.id]);
 
   // Derive date range based on selection
   const { startDate, endDate } = useMemo(() => {
@@ -333,22 +344,24 @@ export default function MonitoringPage() {
   // Fetch logged users only when on Atendimentos tab and when client changes
   useEffect(() => {
     if (selectedTab !== 'atendimentos') return;
+    if (profileLoading) return; // Aguardar perfil carregar
+    
+    const domainParam = effectiveDomain || normalizeDomain(subdomain);
+    if (!domainParam) return;
+    
+    // Para admins: aguardar até que o primeiro domínio seja selecionado
+    if (userData?.user?.isAdmin && !selectedDomain) {
+      console.log('[LoggedUsers] Aguardando seleção de domínio...');
+      return;
+    }
+    
     (async () => {
       try {
         setLoggedLoading(true);
         setLoggedError("");
         const baseUrl = process.env.NEXT_PUBLIC_CLIENTS_API_URL || "https://api-clients.autonomia.site";
         
-        // Usar effectiveDomain como domain
-        const domainParam = effectiveDomain || normalizeDomain(subdomain);
-        
-        if (!domainParam) {
-          setLoggedError('Domain não identificado');
-          setLoggedLoading(false);
-          return;
-        }
-        
-        console.log(`Buscando usuários logados para domain: ${domainParam}`);
+        console.log(`[LoggedUsers] Buscando usuários logados para domain: ${domainParam}`);
         
         const params = new URLSearchParams();
         params.set('domain', domainParam);
@@ -366,7 +379,7 @@ export default function MonitoringPage() {
         const items = Array.isArray(arr) ? arr : [];
         setLoggedUsers(items);
         
-        console.log(`Usuários logados encontrados: ${items.length}`);
+        console.log(`[LoggedUsers] Usuários logados encontrados: ${items.length}`);
       } catch (e: unknown) {
         const msg = e instanceof Error ? e.message : 'Erro ao buscar usuários logados';
         console.error('[LoggedUsers] Erro:', msg);
@@ -375,7 +388,7 @@ export default function MonitoringPage() {
         setLoggedLoading(false);
       }
     })();
-  }, [effectiveDomain, selectedDomain, subdomain, selectedTab]);
+  }, [effectiveDomain, selectedTab, profileLoading]);
 
   // ===== Charts data (blue tones) =====
   const blues = ['#3B82F6', '#60A5FA', '#93C5FD', '#1E40AF', '#2563EB', '#1D4ED8'];
@@ -490,48 +503,88 @@ export default function MonitoringPage() {
 
   // Trigger fetch on CHANGE of selectors/inputs and effectiveDomain (client)
   useEffect(() => {
+    if (profileLoading) return; // Aguardar perfil carregar
     if (range === "custom") {
       if (!customStart || !customEnd) return; // wait for both custom dates
     }
+    
+    const domainParam = effectiveDomain || normalizeDomain(subdomain);
+    if (!domainParam) return;
+    
+    // Para admins: aguardar até que o primeiro domínio seja selecionado
+    if (userData?.user?.isAdmin && !selectedDomain) {
+      console.log('[Conversations] Aguardando seleção de domínio...');
+      return;
+    }
+    
+    console.log('[Conversations] Buscando conversas para domain:', domainParam);
     fetchConversations();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [range, customStart, customEnd, effectiveDomain]);
+  }, [range, customStart, customEnd, effectiveDomain, profileLoading]);
 
   useEffect(() => {
     // Load user data from storage
-    try {
-      const raw = localStorage.getItem('userData');
-      if (raw) {
+    let mounted = true;
+    
+    (async () => {
+      try {
+        const raw = localStorage.getItem('userData');
+        if (!raw) {
+          console.log('[Monitoring] Nenhum userData no localStorage');
+          if (mounted) setProfileLoading(false);
+          return;
+        }
+        
         const parsed = JSON.parse(raw);
-        setUserData(parsed);
+        console.log('[Monitoring] userData inicial carregado:', { hasUser: !!parsed.user, hasUserId: !!parsed.user?.id, isAdmin: !!parsed.user?.isAdmin });
+        if (mounted) setUserData(parsed);
 
         // Buscar dados completos do usuário usando o email
-        (async () => {
-          try {
-            const tokenComputed: string | undefined = parsed.IdToken || parsed.token || parsed.AccessToken;
-            const userEmail = parsed.email || (parsed.user?.email) || '';
-            if (!userEmail || !tokenComputed) return;
-            const apiUrl = process.env.NEXT_PUBLIC_PROFILE_API_URL || process.env.NEXT_PUBLIC_API_URL;
-            const response = await fetch(
-              `${apiUrl}/Autonomia/Profile/Users/email?email=${encodeURIComponent(userEmail)}`,
-              {
-                headers: { 'Authorization': `Bearer ${tokenComputed}` },
-                mode: 'cors'
-              }
-            );
-            if (!response.ok) return;
-            const fullUser = await response.json();
-            const updatedData = { ...parsed, user: fullUser.user };
-            setUserData(updatedData);
-            localStorage.setItem('userData', JSON.stringify(updatedData));
-          } catch (err) {
-            console.error('Erro ao buscar dados completos do usuário no Monitoring:', err);
+        try {
+          const tokenComputed: string | undefined = parsed.IdToken || parsed.token || parsed.AccessToken;
+          const userEmail = parsed.email || (parsed.user?.email) || '';
+          
+          if (!userEmail || !tokenComputed) {
+            console.log('[Monitoring] Sem email ou token para buscar perfil completo');
+            if (mounted) setProfileLoading(false);
+            return;
           }
-        })();
+          
+          console.log('[Monitoring] Buscando perfil completo para:', userEmail);
+          const apiUrl = process.env.NEXT_PUBLIC_PROFILE_API_URL || process.env.NEXT_PUBLIC_API_URL;
+          const response = await fetch(
+            `${apiUrl}/Autonomia/Profile/Users/email?email=${encodeURIComponent(userEmail)}`,
+            {
+              headers: { 'Authorization': `Bearer ${tokenComputed}` },
+              mode: 'cors'
+            }
+          );
+          
+          if (response.ok) {
+            const fullUser = await response.json();
+            console.log('[Monitoring] Perfil completo recebido:', { hasUser: !!fullUser.user, hasUserId: !!fullUser.user?.id, isAdmin: !!fullUser.user?.isAdmin });
+            const updatedData = { ...parsed, user: fullUser.user };
+            if (mounted) {
+              setUserData(updatedData);
+              localStorage.setItem('userData', JSON.stringify(updatedData));
+              console.log('[Monitoring] userData atualizado com perfil completo');
+            }
+          } else {
+            console.warn('[Monitoring] Falha ao buscar perfil completo:', response.status);
+          }
+        } catch (err) {
+          console.error('[Monitoring] Erro ao buscar dados completos do usuário:', err);
+        } finally {
+          if (mounted) setProfileLoading(false);
+          console.log('[Monitoring] profileLoading = false');
+        }
+      } catch (e) { 
+        console.error('[Monitoring] erro ao carregar userData', e);
+        if (mounted) setProfileLoading(false);
       }
-    } catch (e) { 
-      console.error('[Monitoring] erro ao carregar userData', e);
-    }
+    })();
+    
+    return () => { mounted = false; };
   }, []);
 
   // staged header/menu animation (match Settings)
@@ -553,6 +606,20 @@ export default function MonitoringPage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [range]);
+
+  // Tela de loading enquanto o perfil é carregado
+  if (profileLoading) {
+    return (
+      <AuthGuard>
+        <div className="flex h-screen bg-background dark:bg-gray-900 items-center justify-center">
+          <div className="flex flex-col items-center gap-4">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+            <p className="text-gray-400 text-sm">Carregando perfil do usuário...</p>
+          </div>
+        </div>
+      </AuthGuard>
+    );
+  }
 
   return (
     <AuthGuard>

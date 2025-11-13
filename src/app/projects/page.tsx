@@ -6,6 +6,7 @@ import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Plus, Pencil } from "lucide-react";
 import Sidebar from "../../components/Sidebar";
+// import { apiService } from "@/lib/api"; // Removido - usando fetch direto
 
 // Types
 type UserData = {
@@ -123,46 +124,57 @@ export default function ProjectsPage() {
     return data.IdToken || data.token || data.AccessToken;
   };
 
-  // Auth load
+  // Auth load and fetch products in one go (like Settings)
   useEffect(() => {
-    const stored = localStorage.getItem('userData');
-    if (!stored) { router.push('/'); return; }
     try {
+      const stored = localStorage.getItem('userData');
+      if (!stored) { router.push('/'); return; }
+
       const parsed: UserData = JSON.parse(stored);
-      if (!parsed?.isAuthenticated) { router.push('/'); return; }
+      const tokenComputed = parsed.IdToken || parsed.token || parsed.AccessToken;
+      
+      if (!tokenComputed) { router.push('/'); return; }
+
       setUserData(parsed);
-      setAuthToken(tokenFrom(parsed));
-    } catch {
+      setAuthToken(tokenComputed);
+
+      // Buscar produtos do SaaS usando o token
+      const fetchProducts = async () => {
+        try {
+          setProductsLoading(true);
+          const saasApiUrl = process.env.NEXT_PUBLIC_SAAS_API_URL || 'https://api-saas.autonomia.site';
+          const url = `${saasApiUrl}/Autonomia/Saas/Products`;
+          
+          const resp = await fetch(url, {
+            headers: {
+              'Authorization': `Bearer ${tokenComputed}`
+            },
+            mode: 'cors'
+          });
+
+          if (!resp.ok) {
+            console.error('[Projects] Falha ao buscar produtos:', resp.status, await resp.text());
+            setProducts([]);
+            return;
+          }
+
+          const json = await resp.json();
+          const list: Product[] = Array.isArray(json?.data) ? json.data : [];
+          setProducts(list);
+        } catch (err) {
+          console.error('[Projects] Erro ao buscar produtos:', err);
+          setProducts([]);
+        } finally {
+          setProductsLoading(false);
+        }
+      };
+
+      fetchProducts();
+    } catch (error) {
+      console.error('[Projects] Erro ao carregar sessão:', error);
       router.push('/');
     }
   }, [router]);
-
-  // Load products from SaaS to populate the form select (mirrors Settings)
-  useEffect(() => {
-    const loadProducts = async () => {
-      try {
-        if (!authToken) return;
-        setProductsLoading(true);
-        const saasApiUrl = process.env.NEXT_PUBLIC_SAAS_API_URL as string;
-        const url = `${saasApiUrl}/Autonomia/Saas/Products`;
-        const resp = await fetch(url, { headers: { 'Authorization': `Bearer ${authToken}` }, mode: 'cors' });
-        if (!resp.ok) {
-          console.error('Falha ao buscar produtos (Projects):', resp.status, resp.statusText, await resp.text());
-          setProducts([]);
-          return;
-        }
-        const json = await resp.json();
-        const list: Product[] = Array.isArray(json?.data) ? json.data : [];
-        setProducts(list);
-      } catch (e) {
-        console.error('Erro ao carregar produtos (Projects):', e);
-        setProducts([]);
-      } finally {
-        setProductsLoading(false);
-      }
-    };
-    loadProducts();
-  }, [authToken]);
 
   // Load projects
   const reloadProjects = async () => {

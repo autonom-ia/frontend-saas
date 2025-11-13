@@ -3,14 +3,15 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, Plus, Users, Send, Eye, MoreHorizontal, Upload } from "lucide-react";
-import { Card } from "@/components/ui/card";
+import { Upload, Trash2, ChevronLeft, ChevronRight, Users, Plus } from "lucide-react";
+import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Sidebar from "../../components/Sidebar";
 import ProductHeader from "../../components/ProductHeader";
 import {
   SESSION_SELECTED_PRODUCT_ID_KEY,
   SESSION_SELECTED_ACCOUNT_BUNDLE_KEY,
 } from "../../utils/sessionKeys";
+// import { apiService } from "@/lib/api"; // Removido - usando fetch direto
 
 // Types
 type UserData = {
@@ -49,7 +50,7 @@ export default function CampaignsPage() {
 
   const [authToken, setAuthToken] = useState<string | undefined>(undefined);
   const [userData, setUserData] = useState<UserData | null>(null);
-  const [showHeader, setShowHeader] = useState(false);
+  const [, setShowHeader] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
 
   const [products, setProducts] = useState<Product[]>([]);
@@ -91,7 +92,17 @@ export default function CampaignsPage() {
   const [importFile, setImportFile] = useState<File | null>(null);
   const [importSendMessages, setImportSendMessages] = useState(false);
   const [importUploading, setImportUploading] = useState(false);
-  const [importResult, setImportResult] = useState<any>(null);
+  const [importResult, setImportResult] = useState<{ 
+    success: boolean; 
+    message?: string; 
+    valid?: number; 
+    invalid?: number;
+    totalProcessed?: number;
+    totalSaved?: number;
+    totalDuplicates?: number;
+    messagesSent?: number;
+    validationErrors?: Array<{ lineNumber?: number; errors?: string[]; error?: string }>;
+  } | null>(null);
 
   // Helpers
   const getTokenFromLocal = (): string | undefined => {
@@ -112,7 +123,7 @@ export default function CampaignsPage() {
     return n.split(" ").map((p) => p[0]).join("").toUpperCase().substring(0,2);
   }, [userData?.user?.name]);
 
-  const saasApiUrl = process.env.NEXT_PUBLIC_SAAS_API_URL || "https://api-saas.autonomia.site";
+  // const saasApiUrl = process.env.NEXT_PUBLIC_SAAS_API_URL || "https://api-saas.autonomia.site";
   const leadshotApiUrl = process.env.NEXT_PUBLIC_LEADSHOT_API_URL || "https://api-leadshot.autonomia.site";
   
   // Função para criar headers dinâmicos baseados no ambiente
@@ -139,13 +150,58 @@ export default function CampaignsPage() {
   useEffect(() => {
     try {
       const stored = localStorage.getItem("userData");
-      if (stored) {
-        const parsed: UserData = JSON.parse(stored);
-        if (!parsed?.isAuthenticated) { router.push('/'); return; }
-        setUserData(parsed);
-      } else { router.push('/'); return; }
-    } catch { router.push('/'); return; }
-    setAuthToken((prev) => prev || getTokenFromLocal());
+      if (!stored) {
+        router.push('/');
+        return;
+      }
+
+      const parsed: UserData = JSON.parse(stored);
+      const tokenComputed = parsed.IdToken || parsed.token || parsed.AccessToken;
+      
+      if (!tokenComputed) {
+        router.push('/');
+        return;
+      }
+
+      setUserData(parsed);
+      setAuthToken(tokenComputed);
+
+      // Buscar produtos do SaaS usando o token
+      const fetchProducts = async () => {
+        try {
+          setProductsLoading(true);
+          const saasApiUrl = process.env.NEXT_PUBLIC_SAAS_API_URL || 'https://api-saas.autonomia.site';
+          const url = `${saasApiUrl}/Autonomia/Saas/Products`;
+          
+          const resp = await fetch(url, {
+            headers: {
+              'Authorization': `Bearer ${tokenComputed}`
+            },
+            mode: 'cors'
+          });
+
+          if (!resp.ok) {
+            console.error('[Campaigns] Falha ao buscar produtos:', resp.status, await resp.text());
+            setProducts([]);
+            return;
+          }
+
+          const json = await resp.json();
+          const list: Product[] = Array.isArray(json?.data) ? json.data : [];
+          setProducts(list);
+        } catch (err) {
+          console.error('[Campaigns] Erro ao buscar produtos:', err);
+          setProducts([]);
+        } finally {
+          setProductsLoading(false);
+        }
+      };
+
+      fetchProducts();
+    } catch (error) {
+      console.error('[Campaigns] Erro ao carregar sessão:', error);
+      router.push('/');
+    }
   }, [router]);
 
   // staged header/menu animation like Settings
@@ -174,36 +230,6 @@ export default function CampaignsPage() {
     } catch {}
   }, [selectedProductId]);
 
-  // Load products once
-  const loadProducts = async () => {
-    try {
-      setProductsLoading(true);
-      const resp = await fetch(`${saasApiUrl}/Autonomia/Saas/Products`, {
-        headers: authToken ? { Authorization: `Bearer ${authToken}` } : undefined,
-        mode: "cors",
-      });
-      if (!resp.ok) {
-        console.error("Falha ao listar produtos", resp.status, resp.statusText);
-        setProducts([]);
-        return;
-      }
-      const json = await resp.json();
-      const list = Array.isArray(json?.data) ? (json.data as Product[]) : [];
-      setProducts(list);
-    } catch (e) {
-      console.error("Erro ao carregar produtos", e);
-      setProducts([]);
-    } finally {
-      setProductsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (!authToken) return; // aguarda token para evitar 401
-    loadProducts();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authToken]);
-
   // Settings-like layout uses a direct select instead of search grid
 
   // Load campaigns when product selected
@@ -214,21 +240,27 @@ export default function CampaignsPage() {
     }
     try {
       setCampaignsLoading(true);
-      const resp = await fetch(`${leadshotApiUrl}/Autonomia/Leadshot/Campaigns?productId=${encodeURIComponent(productId)}`, {
-        headers: createHeaders(authToken),
-        mode: "cors",
+      const leadshotApiUrl = process.env.NEXT_PUBLIC_LEADSHOT_API_URL || 'https://api-leadshot.autonomia.site';
+      const url = `${leadshotApiUrl}/Autonomia/Leadshot/Campaigns?productId=${encodeURIComponent(productId)}`;
+      
+      const resp = await fetch(url, {
+        headers: {
+          'Authorization': `Bearer ${authToken}`
+        },
+        mode: 'cors'
       });
+
       if (!resp.ok) {
-        const t = await resp.text();
-        console.error("Falha ao listar campanhas:", resp.status, resp.statusText, t);
+        console.error('[Campaigns] Falha ao buscar campanhas:', resp.status, await resp.text());
         setCampaigns([]);
         return;
       }
+
       const json = await resp.json();
-      const list = Array.isArray(json?.data) ? (json.data as Campaign[]) : [];
+      const list = Array.isArray(json) ? json : (json.data || json.campaigns || []);
       setCampaigns(list);
-    } catch (e) {
-      console.error("Erro ao carregar campanhas", e);
+    } catch (error) {
+      console.error('[Campaigns] Erro ao carregar campanhas:', error);
       setCampaigns([]);
     } finally {
       setCampaignsLoading(false);
@@ -247,16 +279,27 @@ export default function CampaignsPage() {
       if (!selectedProductId) { setAccounts([]); return; }
       try {
         setAccountsLoading(true);
-        const tokenToUse = authToken || getTokenFromLocal();
-        const resp = await fetch(`${saasApiUrl}/Autonomia/Saas/Accounts?productId=${encodeURIComponent(selectedProductId)}`, {
-          headers: tokenToUse ? { Authorization: `Bearer ${tokenToUse}` } : undefined,
-          mode: 'cors',
+        const saasApiUrl = process.env.NEXT_PUBLIC_SAAS_API_URL || 'https://api-saas.autonomia.site';
+        const url = `${saasApiUrl}/Autonomia/Saas/Accounts?productId=${encodeURIComponent(selectedProductId)}`;
+        
+        const resp = await fetch(url, {
+          headers: {
+            'Authorization': `Bearer ${authToken}`
+          },
+          mode: 'cors'
         });
-        if (!resp.ok) { setAccounts([]); return; }
+
+        if (!resp.ok) {
+          console.error('[Campaigns] Falha ao buscar contas:', resp.status, await resp.text());
+          setAccounts([]);
+          return;
+        }
+
         const json = await resp.json();
-        const list = (Array.isArray(json?.data) ? json.data : []) as Array<{ id: string; name: string }>;
+        const list = Array.isArray(json?.data) ? json.data : [];
         const mapped: Account[] = list.map((a: { id: string; name: string }) => ({ id: a.id, name: a.name }));
         setAccounts(mapped);
+        
         try {
           const storedBundle = sessionStorage.getItem(SESSION_SELECTED_ACCOUNT_BUNDLE_KEY);
           if (storedBundle) {
@@ -266,14 +309,14 @@ export default function CampaignsPage() {
             }
           }
         } catch {}
-      } catch {
+      } catch (error) {
+        console.error('[Campaigns] Erro ao carregar contas:', error);
         setAccounts([]);
       } finally {
         setAccountsLoading(false);
       }
     };
     loadAccounts();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedProductId, authToken]);
 
   // Load template messages when an account is chosen in the form
@@ -323,24 +366,30 @@ export default function CampaignsPage() {
     if (!formName.trim() || !formAccountId) return;
     try {
       setFormSaving(true);
-      const tokenToUse = authToken || getTokenFromLocal();
-      const resp = await fetch(`${leadshotApiUrl}/Autonomia/Leadshot/Campaigns`, {
+      const leadshotApiUrl = process.env.NEXT_PUBLIC_LEADSHOT_API_URL || 'https://api-leadshot.autonomia.site';
+      const url = `${leadshotApiUrl}/Autonomia/Leadshot/Campaigns`;
+      
+      const resp = await fetch(url, {
         method: 'POST',
-        headers: createHeaders(tokenToUse),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${authToken}`
+        },
         mode: 'cors',
         body: JSON.stringify({
           name: formName.trim(),
           description: formDescription || null,
           account_id: formAccountId,
           template_message_id: formTemplateId || null,
-          // Inclui o product_id para compatibilidade com API local de dev
           product_id: selectedProductId,
         })
       });
+      
       if (!resp.ok) {
-        console.error('Falha ao criar campanha', resp.status, await resp.text());
+        console.error('[Campaigns] Falha ao criar campanha:', resp.status, await resp.text());
         return;
       }
+      
       const json = await resp.json();
       const created: Campaign | undefined = json?.data;
       if (created?.id) {
@@ -357,7 +406,7 @@ export default function CampaignsPage() {
         setIsFormOpen(false);
       }
     } catch (e) {
-      console.error('Erro ao criar campanha', e);
+      console.error('[Campaigns] Erro ao criar campanha:', e);
     } finally {
       setFormSaving(false);
     }
@@ -392,41 +441,61 @@ export default function CampaignsPage() {
     }
   };
 
+  // Converter arquivo para base64
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = reader.result as string;
+        const base64 = result.split(',')[1] || '';
+        resolve(base64);
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleLogout = () => {
+    // Limpar todos os dados de autenticação
+    localStorage.removeItem('userData');
+    localStorage.removeItem('authToken');
+    sessionStorage.clear();
+    
+    // Redirecionar para login
+    router.push('/login');
+  };
+
   const submitImport = async () => {
     if (!importFile || !selectedCampaignForImport) return;
     
     try {
       setImportUploading(true);
       
-      const formData = new FormData();
-      formData.append('file', importFile);
-      formData.append('accountId', selectedCampaignForImport.account_id);
-      formData.append('sendMessages', importSendMessages.toString());
+      // Converter arquivo para base64
+      const base64Content = await fileToBase64(importFile);
 
-      const tokenToUse = authToken || getTokenFromLocal();
-      const headers: Record<string, string> = {};
-      
-      // Adicionar header de desenvolvimento se estiver em ambiente local
-      const devEmail = process.env.NEXT_PUBLIC_DEV_EMAIL;
-      if (devEmail) {
-        headers['X-Dev-Email'] = devEmail;
-      }
-      
-      // Adicionar token se disponível
-      if (tokenToUse) {
-        headers['Authorization'] = `Bearer ${tokenToUse}`;
-      }
+      const leadshotApiUrl = process.env.NEXT_PUBLIC_LEADSHOT_API_URL || 'https://api-leadshot.autonomia.site';
+      const url = `${leadshotApiUrl}/Autonomia/Leadshot/Campaigns/${selectedCampaignForImport.id}/contacts/upload`;
 
-      const resp = await fetch(`${leadshotApiUrl}/Autonomia/Leadshot/Campaigns/${selectedCampaignForImport.id}/contacts/upload`, {
+      const resp = await fetch(url, {
         method: 'POST',
-        headers,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${authToken}`
+        },
         mode: 'cors',
-        body: formData
+        body: JSON.stringify({
+          file: base64Content,
+          filename: importFile.name,
+          accountId: selectedCampaignForImport.account_id,
+          sendMessages: importSendMessages
+        })
       });
 
       const result = await resp.json();
       
       if (!resp.ok) {
+        console.error('[Campaigns] Falha no upload:', resp.status, result);
         throw new Error(result.message || 'Erro ao fazer upload');
       }
 
@@ -437,11 +506,11 @@ export default function CampaignsPage() {
         loadCampaigns(selectedProductId);
       }
       
-    } catch (error: any) {
-      console.error('Erro no upload:', error);
+    } catch (error: unknown) {
+      console.error('[Campaigns] Erro no upload:', error);
       setImportResult({
         success: false,
-        message: error.message || 'Erro ao processar arquivo'
+        message: error instanceof Error ? error.message : 'Erro ao processar arquivo'
       });
     } finally {
       setImportUploading(false);
@@ -468,6 +537,7 @@ export default function CampaignsPage() {
           onCreateProduct={() => {}}
           onEditProduct={() => {}}
           onOpenProductSettings={() => {}}
+          onLogout={handleLogout}
         />
 
         {/* Content */}
@@ -484,7 +554,7 @@ export default function CampaignsPage() {
                       onClick={openCreateForm}
                       title="Incluir campanha"
                     >
-                      Incluir
+                      + Incluir
                     </Button>
                   )}
                 </div>
@@ -526,33 +596,15 @@ export default function CampaignsPage() {
                           </td>
                           <td className="px-4 py-2 dark:text-gray-100">{c.created_at ? new Date(c.created_at).toLocaleString() : '-'}</td>
                           <td className="px-4 py-2">
-                            <div className="flex items-center space-x-2">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => router.push(`/campaigns/${c.id}`)}
-                                className="text-blue-600 hover:text-blue-700 border-blue-200 hover:border-blue-300"
-                              >
-                                <Eye className="h-3 w-3 mr-1" />
-                                Ver
-                              </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
+                            <div className="flex items-center gap-2">
+                              <button
                                 onClick={() => openImportModal(c)}
-                                className="text-green-600 hover:text-green-700 border-green-200 hover:border-green-300"
-                                title="Importar CSV"
+                                className="p-2 rounded-lg bg-gray-700 hover:bg-gray-600 text-white transition-colors"
+                                title="Importar contatos CSV"
+                                aria-label="Importar contatos CSV"
                               >
-                                <Upload className="h-3 w-3 mr-1" />
-                                Importar CSV
-                              </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="text-gray-600 hover:text-gray-700"
-                              >
-                                <MoreHorizontal className="h-3 w-3" />
-                              </Button>
+                                <Upload className="h-4 w-4" />
+                              </button>
                             </div>
                           </td>
                         </tr>
@@ -762,26 +814,37 @@ export default function CampaignsPage() {
             {!importResult && (
               <>
                 <div>
-                  <label className="block text-sm font-medium mb-2 dark:text-gray-200">
-                    Arquivo CSV/XLSX
-                  </label>
-                  <input
-                    type="file"
-                    accept=".csv,.xlsx,.xls"
+                  <label className="block text-sm mb-1 dark:text-gray-200">Arquivo CSV/XLSX</label>
+                  <div
+                    className="w-full rounded border border-dashed dark:border-gray-600 bg-gray-50 dark:bg-gray-900/60 px-4 py-8 text-center cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-900"
+                    onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      const f = e.dataTransfer.files?.[0];
+                      if (!f) return;
+                      const ext = f.name.split('.').pop()?.toLowerCase() || '';
+                      if (!['csv','xlsx','xls'].includes(ext)) { alert('Apenas CSV, XLSX ou XLS'); return; }
+                      setImportFile(f);
+                    }}
+                    onClick={() => {
+                      const input = document.getElementById('import-file-input') as HTMLInputElement | null;
+                      input?.click();
+                    }}
+                  >
+                    <div className="text-gray-600 dark:text-gray-300">
+                      <span className="text-blue-500">Arraste e solte</span> o arquivo aqui
+                      <div className="text-xs mt-1 text-gray-500 dark:text-gray-400">Tipos permitidos: CSV, XLSX, XLS • Tamanho máximo 25 MB</div>
+                    </div>
+                  </div>
+                  <input 
+                    id="import-file-input" 
+                    type="file" 
+                    accept=".csv,.xlsx,.xls" 
+                    className="hidden" 
                     onChange={handleFileSelect}
-                    className="w-full text-sm text-gray-500 dark:text-gray-300
-                      file:mr-4 file:py-2 file:px-4
-                      file:rounded-md file:border-0
-                      file:text-sm file:font-medium
-                      file:bg-blue-50 file:text-blue-700
-                      hover:file:bg-blue-100
-                      dark:file:bg-blue-900 dark:file:text-blue-300
-                      dark:hover:file:bg-blue-800"
                   />
                   {importFile && (
-                    <p className="mt-2 text-sm text-green-600 dark:text-green-400">
-                      Arquivo selecionado: {importFile.name}
-                    </p>
+                    <div className="mt-2 text-xs dark:text-gray-300">Selecionado: {importFile.name}</div>
                   )}
                 </div>
 
@@ -838,7 +901,7 @@ export default function CampaignsPage() {
                       Erros encontrados:
                     </p>
                     <div className="max-h-32 overflow-y-auto mt-1">
-                      {importResult.validationErrors.slice(0, 5).map((error: any, index: number) => (
+                      {importResult.validationErrors.slice(0, 5).map((error: { lineNumber?: number; errors?: string[]; error?: string }, index: number) => (
                         <p key={index} className="text-xs text-yellow-700 dark:text-yellow-300">
                           Linha {error.lineNumber}: {Array.isArray(error.errors) ? error.errors.join(', ') : error.error}
                         </p>

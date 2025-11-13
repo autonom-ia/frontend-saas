@@ -103,7 +103,7 @@ export default function CampaignSender({
         <DialogHeader>
           <DialogTitle>Enviar Campanha</DialogTitle>
           <DialogDescription>
-            Confirme o envio da campanha "{campaignName}" para todos os contatos.
+            Confirme o envio da campanha &ldquo;{campaignName}&rdquo; para todos os contatos.
           </DialogDescription>
         </DialogHeader>
 

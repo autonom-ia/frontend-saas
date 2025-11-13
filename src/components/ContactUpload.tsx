@@ -11,11 +11,12 @@ import { useToast } from '@/hooks/use-toast';
 
 interface ContactUploadProps {
   campaignId: string;
+  accountId: string;
   onUploadComplete?: (result: UploadResponse) => void;
   onClose?: () => void;
 }
 
-export default function ContactUpload({ campaignId, onUploadComplete, onClose }: ContactUploadProps) {
+export default function ContactUpload({ campaignId, accountId, onUploadComplete, onClose }: ContactUploadProps) {
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadResult, setUploadResult] = useState<UploadResponse | null>(null);
@@ -59,7 +60,7 @@ export default function ContactUpload({ campaignId, onUploadComplete, onClose }:
         });
       }, 200);
 
-      const result = await apiService.uploadContacts(campaignId, selectedFile);
+      const result = await apiService.uploadContacts(campaignId, selectedFile, accountId, false);
       
       clearInterval(progressInterval);
       setUploadProgress(100);
