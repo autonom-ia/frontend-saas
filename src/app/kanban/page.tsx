@@ -13,6 +13,7 @@ import {
   SESSION_SELECTED_ACCOUNT_KEY,
   SESSION_SELECTED_ACCOUNT_BUNDLE_KEY,
 } from "../../utils/sessionKeys";
+// import { apiService } from "@/lib/api"; // Removido - usando fetch direto
 
 // Types reused in a lightweight way
 type UserData = {
@@ -53,26 +54,63 @@ export default function KanbanPage() {
   // Auth/user
   const [userData, setUserData] = useState<UserData | null>(null);
   const [authToken, setAuthToken] = useState<string | undefined>(undefined);
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem("userData");
-      if (stored) setUserData(JSON.parse(stored));
-    } catch {}
-    try {
-      const stored = localStorage.getItem("userData");
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        setAuthToken(parsed.IdToken || parsed.token || parsed.AccessToken);
-      }
-    } catch {}
-  }, []);
-
+  
   // Products
   const [products, setProducts] = useState<Product[]>([]);
   const [productsLoading, setProductsLoading] = useState(false);
   const [selectedProductId, setSelectedProductId] = useState<string>("");
   const saasApiUrl = useMemo(() => process.env.NEXT_PUBLIC_SAAS_API_URL || "https://api-saas.autonomia.site", []);
   const clientsApiUrl = useMemo(() => process.env.NEXT_PUBLIC_CLIENTS_API_URL || "https://api-clients.autonomia.site", []);
+
+  // Load user and products in one go (like Settings)
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("userData");
+      if (!stored) return;
+
+      const parsed = JSON.parse(stored);
+      const tokenComputed = parsed.IdToken || parsed.token || parsed.AccessToken;
+      
+      if (!tokenComputed) return;
+
+      setUserData(parsed);
+      setAuthToken(tokenComputed);
+
+      // Buscar produtos do SaaS usando o token
+      const fetchProducts = async () => {
+        try {
+          setProductsLoading(true);
+          const url = `${saasApiUrl}/Autonomia/Saas/Products`;
+          
+          const resp = await fetch(url, {
+            headers: {
+              'Authorization': `Bearer ${tokenComputed}`
+            },
+            mode: 'cors'
+          });
+
+          if (!resp.ok) {
+            console.error('[Kanban] Falha ao buscar produtos:', resp.status, await resp.text());
+            setProducts([]);
+            return;
+          }
+
+          const json = await resp.json();
+          const list: Product[] = Array.isArray(json?.data) ? json.data : [];
+          setProducts(list);
+        } catch (err) {
+          console.error('[Kanban] Erro ao buscar produtos:', err);
+          setProducts([]);
+        } finally {
+          setProductsLoading(false);
+        }
+      };
+
+      fetchProducts();
+    } catch (error) {
+      console.error('[Kanban] Erro ao carregar sessão:', error);
+    }
+  }, [saasApiUrl]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -92,27 +130,6 @@ export default function KanbanPage() {
       sessionStorage.removeItem(SESSION_SELECTED_PRODUCT_ID_KEY);
     } catch {}
   }, [selectedProductId]);
-  useEffect(() => {
-    (async () => {
-      try {
-        setProductsLoading(true);
-        const resp = await fetch(`${saasApiUrl}/Autonomia/Saas/Products`, {
-          headers: authToken ? { Authorization: `Bearer ${authToken}` } : undefined,
-          mode: "cors",
-        });
-        if (resp.ok) {
-          const j = await resp.json();
-          setProducts(Array.isArray(j?.data) ? j.data : []);
-        } else {
-          setProducts([]);
-        }
-      } catch {
-        setProducts([]);
-      } finally {
-        setProductsLoading(false);
-      }
-    })();
-  }, [saasApiUrl, authToken]);
 
   // Accounts of selected product
   const [accounts, setAccounts] = useState<Account[]>([]);

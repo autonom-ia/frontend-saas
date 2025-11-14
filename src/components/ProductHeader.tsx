@@ -3,7 +3,15 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Plus, Pencil, Settings } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Plus, Pencil, Settings, LogOut, User } from "lucide-react";
 import Image from "next/image";
 
 export type ProductHeaderProps = {
@@ -14,10 +22,12 @@ export type ProductHeaderProps = {
   userName?: string;
   userPhotoUrl?: string;
   userInitials?: string;
+  showProductActions?: boolean;
   onChangeProduct: (productId: string) => void;
   onCreateProduct: () => void;
   onEditProduct: () => void;
   onOpenProductSettings: () => void;
+  onLogout?: () => void;
 };
 
 export default function ProductHeader(props: ProductHeaderProps) {
@@ -29,10 +39,12 @@ export default function ProductHeader(props: ProductHeaderProps) {
     userName,
     userPhotoUrl,
     userInitials,
+    showProductActions = false,
     onChangeProduct,
     onCreateProduct,
     onEditProduct,
     onOpenProductSettings,
+    onLogout,
   } = props;
 
   return (
@@ -59,7 +71,7 @@ export default function ProductHeader(props: ProductHeaderProps) {
               <option key={p.id} value={p.id}>{p.name}</option>
             ))}
           </select>
-          {isAdmin && (
+          {isAdmin && showProductActions && (
             <Button
               type="button"
               variant="secondary"
@@ -70,7 +82,7 @@ export default function ProductHeader(props: ProductHeaderProps) {
               <Plus className="h-4 w-4 mr-1" /> Incluir
             </Button>
           )}
-          {isAdmin && (
+          {isAdmin && showProductActions && (
             <>
               <Button
                 type="button"
@@ -97,15 +109,32 @@ export default function ProductHeader(props: ProductHeaderProps) {
         </div>
       </div>
 
-      <div className="flex items-center gap-2 cursor-pointer">
-        <span className="text-sm">{userName || 'Usuário'}</span>
-        <Avatar>
-          {userPhotoUrl ? (
-            <AvatarImage src={userPhotoUrl} alt={userName || 'Avatar'} />
-          ) : null}
-          <AvatarFallback>{userInitials}</AvatarFallback>
-        </Avatar>
-      </div>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <div className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity">
+            <span className="text-sm">{userName || 'Usuário'}</span>
+            <Avatar>
+              {userPhotoUrl ? (
+                <AvatarImage src={userPhotoUrl} alt={userName || 'Avatar'} />
+              ) : null}
+              <AvatarFallback>{userInitials}</AvatarFallback>
+            </Avatar>
+          </div>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-56">
+          <DropdownMenuLabel>Minha Conta</DropdownMenuLabel>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem disabled>
+            <User className="mr-2 h-4 w-4" />
+            <span>{userName || 'Usuário'}</span>
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={onLogout} className="text-red-600 focus:text-red-600">
+            <LogOut className="mr-2 h-4 w-4" />
+            <span>Sair</span>
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
     </header>
   );
 }
