@@ -540,7 +540,10 @@ export default function MonitoringPage() {
         const raw = localStorage.getItem('userData');
         if (!raw) {
           console.log('[Monitoring] Nenhum userData no localStorage');
-          if (mounted) setProfileLoading(false);
+          if (mounted) {
+            setProfileLoading(false);
+            setHeaderReady(true); // Mostrar header mesmo sem dados
+          }
           return;
         }
         
@@ -555,7 +558,10 @@ export default function MonitoringPage() {
           
           if (!userEmail || !tokenComputed) {
             console.log('[Monitoring] Sem email ou token para buscar perfil completo');
-            if (mounted) setProfileLoading(false);
+            if (mounted) {
+              setProfileLoading(false);
+              setHeaderReady(true); // Mostrar header
+            }
             return;
           }
           
@@ -584,12 +590,18 @@ export default function MonitoringPage() {
         } catch (err) {
           console.error('[Monitoring] Erro ao buscar dados completos do usuário:', err);
         } finally {
-          if (mounted) setProfileLoading(false);
-          console.log('[Monitoring] profileLoading = false');
+          if (mounted) {
+            setProfileLoading(false);
+            setHeaderReady(true); // Sempre mostrar header após carregar perfil
+            console.log('[Monitoring] profileLoading = false');
+          }
         }
       } catch (e) { 
         console.error('[Monitoring] erro ao carregar userData', e);
-        if (mounted) setProfileLoading(false);
+        if (mounted) {
+          setProfileLoading(false);
+          setHeaderReady(true); // Mostrar header mesmo com erro
+        }
       }
     })();
     
