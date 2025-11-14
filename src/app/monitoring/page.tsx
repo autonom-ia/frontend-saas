@@ -4,6 +4,15 @@ import React, { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { LogOut, User } from "lucide-react";
 import Sidebar from "@/components/Sidebar";
 import AuthGuard from "@/components/AuthGuard";
 import Image from "next/image";
@@ -749,16 +758,40 @@ export default function MonitoringPage() {
               )}
             </div>
           </div>
-          {/* User info */}
-          <div className="flex items-center gap-2 cursor-pointer">
-            <span className="text-sm">{userData?.user?.name || 'Usuário'}</span>
-            <Avatar>
-              {userData?.user?.photoUrl && (
-                <AvatarImage src={userData.user.photoUrl} alt={userData?.user?.name || 'Usuário'} />
-              )}
-              <AvatarFallback>{(userData?.user?.name || '??').split(' ').map((n: string) => n[0]).join('').toUpperCase().substring(0,2)}</AvatarFallback>
-            </Avatar>
-          </div>
+          {/* User info with dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <div className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity">
+                <span className="text-sm">{userData?.user?.name || 'Usuário'}</span>
+                <Avatar>
+                  {userData?.user?.photoUrl && (
+                    <AvatarImage src={userData.user.photoUrl} alt={userData?.user?.name || 'Usuário'} />
+                  )}
+                  <AvatarFallback>{(userData?.user?.name || '??').split(' ').map((n: string) => n[0]).join('').toUpperCase().substring(0,2)}</AvatarFallback>
+                </Avatar>
+              </div>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuLabel>Minha Conta</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem disabled>
+                <User className="mr-2 h-4 w-4" />
+                <span>{userData?.user?.name || 'Usuário'}</span>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={() => {
+                  localStorage.clear();
+                  sessionStorage.clear();
+                  router.push('/login');
+                }}
+                className="text-red-600 focus:text-red-600"
+              >
+                <LogOut className="mr-2 h-4 w-4" />
+                <span>Sair</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </header>
 
         {/* Content */}

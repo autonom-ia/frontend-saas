@@ -4,7 +4,16 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
-import { Plus, Pencil } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Plus, Pencil, LogOut, User } from "lucide-react";
 import Sidebar from "../../components/Sidebar";
 // import { apiService } from "@/lib/api"; // Removido - usando fetch direto
 
@@ -577,11 +586,37 @@ export default function ProjectsPage() {
               )}
             </div>
           </div>
-          {/* Right user info (optional) */}
-          <div className="flex items-center gap-2">
-            <span className="text-sm hidden sm:inline">{userData?.user?.name || 'Usuário'}</span>
-            <div className="h-8 w-8 rounded-full bg-white/20 text-white flex items-center justify-center text-xs">{userInitials}</div>
-          </div>
+          {/* Right user info with dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <div className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity">
+                <span className="text-sm hidden sm:inline">{userData?.user?.name || 'Usuário'}</span>
+                <Avatar>
+                  <AvatarFallback>{userInitials}</AvatarFallback>
+                </Avatar>
+              </div>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuLabel>Minha Conta</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem disabled>
+                <User className="mr-2 h-4 w-4" />
+                <span>{userData?.user?.name || 'Usuário'}</span>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={() => {
+                  localStorage.clear();
+                  sessionStorage.clear();
+                  router.push('/login');
+                }}
+                className="text-red-600 focus:text-red-600"
+              >
+                <LogOut className="mr-2 h-4 w-4" />
+                <span>Sair</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </header>
 
         {/* Content */}
