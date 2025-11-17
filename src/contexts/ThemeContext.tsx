@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { getSubdomain, getThemeBySubdomain, Theme } from '@/config/themes';
+import { getSubdomain, getDomainName, getThemeBySubdomain, Theme } from '@/config/themes';
 
 type ThemeContextType = {
   theme: Theme;
@@ -32,7 +32,9 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       });
     }
 
+    const domainName = getDomainName();
     console.log('[ThemeProvider] Subdomain:', currentSubdomain);
+    console.log('[ThemeProvider] Domain:', domainName);
     console.log('[ThemeProvider] Theme loaded:', currentTheme.name);
   }, []);
 

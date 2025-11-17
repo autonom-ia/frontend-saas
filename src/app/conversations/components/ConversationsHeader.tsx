@@ -44,7 +44,7 @@ export default function ConversationsHeader({
           {userPhotoUrl ? (
             <AvatarImage src={userPhotoUrl} alt={userName} />
           ) : null}
-          <AvatarFallback>{userInitials}</AvatarFallback>
+          <AvatarFallback className="text-white">{userInitials}</AvatarFallback>
         </Avatar>
       </div>
     </header>

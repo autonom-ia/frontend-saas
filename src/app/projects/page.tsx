@@ -615,7 +615,7 @@ export default function ProjectsPage() {
               <div className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity">
                 <span className="text-sm hidden sm:inline">{userData?.user?.name || 'Usuário'}</span>
                 <Avatar>
-                  <AvatarFallback>{userInitials}</AvatarFallback>
+                  <AvatarFallback className={theme.colors.text.primary}>{userInitials}</AvatarFallback>
                 </Avatar>
               </div>
             </DropdownMenuTrigger>
