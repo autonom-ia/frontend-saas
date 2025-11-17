@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { CheckCircle2, Loader2, AlertCircle, List } from "lucide-react";
+import { useTheme } from "@/contexts/ThemeContext";
 import { apiService } from "@/lib/api";
 
 type Product = {
@@ -22,6 +23,7 @@ type StepSelectProductProps = {
 };
 
 export default function StepSelectProduct({ onNext, onCancel }: StepSelectProductProps) {
+  const { theme } = useTheme();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>("");
@@ -90,7 +92,7 @@ export default function StepSelectProduct({ onNext, onCancel }: StepSelectProduc
     return (
       <div className="flex flex-col items-center justify-center py-16 space-y-4">
         <Loader2 className="h-12 w-12 text-blue-500 animate-spin" />
-        <p className="text-gray-400">Carregando produtos...</p>
+        <p className={theme.colors.text.muted}>Carregando produtos...</p>
       </div>
     );
   }
@@ -99,17 +101,17 @@ export default function StepSelectProduct({ onNext, onCancel }: StepSelectProduc
   if (error) {
     return (
       <div className="space-y-6">
-        <div className="bg-red-900/30 border border-red-700/50 rounded-lg p-4 flex gap-3">
-          <AlertCircle className="h-5 w-5 text-red-400 flex-shrink-0 mt-0.5" />
+        <div className={`rounded-lg p-4 flex gap-3 border ${theme.colors.accent.error}`}>
+          <AlertCircle className="h-5 w-5 flex-shrink-0 mt-0.5" />
           <div>
-            <h3 className="text-red-200 font-semibold">Erro ao carregar produtos</h3>
-            <p className="text-red-200/80 text-sm mt-1">{error}</p>
+            <h3 className="font-semibold">Erro ao carregar produtos</h3>
+            <p className="text-sm mt-1">{error}</p>
           </div>
         </div>
         <div className="flex justify-center">
           <Button
             onClick={() => window.location.reload()}
-            className="bg-blue-600 hover:bg-blue-500 text-white"
+            className={theme.colors.button.primary}
           >
             Tentar Novamente
           </Button>
@@ -123,8 +125,8 @@ export default function StepSelectProduct({ onNext, onCancel }: StepSelectProduc
     return (
       <div className="text-center py-16">
         <AlertCircle className="h-12 w-12 text-yellow-500 mx-auto mb-4" />
-        <h3 className="text-white text-lg font-semibold mb-2">Nenhum produto disponível</h3>
-        <p className="text-gray-400 text-sm">Não há produtos configurados no momento.</p>
+        <h3 className={`text-lg font-semibold mb-2 ${theme.colors.text.primary}`}>Nenhum produto disponível</h3>
+        <p className={`text-sm ${theme.colors.text.muted}`}>Não há produtos configurados no momento.</p>
       </div>
     );
   }
@@ -132,9 +134,9 @@ export default function StepSelectProduct({ onNext, onCancel }: StepSelectProduc
   return (
     <div className="space-y-6">
       {/* Instructions */}
-      <div className="bg-blue-900/30 border border-blue-700/50 rounded-lg p-4">
-        <h2 className="text-white text-lg font-semibold mb-2">Bem-vindo à Autonom.ia!</h2>
-        <p className="text-gray-300 text-sm">
+      <div className={`rounded-lg p-4 border ${theme.colors.accent.primary}`}>
+        <h2 className={`text-lg font-semibold mb-2 ${theme.colors.text.primary}`}>Bem-vindo à Autonom.ia!</h2>
+        <p className={`text-sm ${theme.colors.text.secondary}`}>
           Para começar, selecione o produto que melhor atende às suas necessidades. 
           Você poderá adicionar mais produtos posteriormente nas configurações.
         </p>
@@ -150,9 +152,10 @@ export default function StepSelectProduct({ onNext, onCancel }: StepSelectProduc
               key={product.id}
               className={`
                 relative cursor-pointer transition-all duration-300 hover:scale-105
+                ${theme.colors.background.card} ${theme.colors.border.primary}
                 ${isSelected 
-                  ? "bg-blue-900/40 border-blue-500 border-2 shadow-lg shadow-blue-500/20" 
-                  : "bg-gray-800/60 border-gray-700 hover:border-gray-600"
+                  ? "border-blue-500 border-2 shadow-lg shadow-blue-500/20" 
+                  : `hover:${theme.colors.background.hover}`
                 }
               `}
               onClick={() => handleProductSelect(product.id)}
@@ -164,8 +167,8 @@ export default function StepSelectProduct({ onNext, onCancel }: StepSelectProduc
               )}
 
               <CardHeader>
-                <CardTitle className="text-white text-lg">{product.name}</CardTitle>
-                <CardDescription className="text-gray-400 line-clamp-3">
+                <CardTitle className={`text-lg ${theme.colors.text.primary}`}>{product.name}</CardTitle>
+                <CardDescription className={`line-clamp-3 ${theme.colors.text.muted}`}>
                   {product.description || "Sem descrição disponível"}
                 </CardDescription>
               </CardHeader>
@@ -181,16 +184,16 @@ export default function StepSelectProduct({ onNext, onCancel }: StepSelectProduc
             <DialogTrigger asChild>
               <Button
                 variant="outline"
-                className="text-gray-300 border-gray-600 hover:bg-gray-700"
+                className={theme.colors.button.outline}
               >
                 <List className="h-4 w-4 mr-2" />
                 Ver Todos os Produtos ({products.length})
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto bg-gray-800 border-gray-700">
+            <DialogContent className={`max-w-4xl max-h-[80vh] overflow-y-auto ${theme.colors.background.card} ${theme.colors.border.primary}`}>
               <DialogHeader>
-                <DialogTitle className="text-white">Todos os Produtos</DialogTitle>
-                <DialogDescription className="text-gray-400">
+                <DialogTitle className={theme.colors.text.primary}>Todos os Produtos</DialogTitle>
+                <DialogDescription className={theme.colors.text.muted}>
                   Selecione um produto da lista completa
                 </DialogDescription>
               </DialogHeader>
@@ -203,10 +206,11 @@ export default function StepSelectProduct({ onNext, onCancel }: StepSelectProduc
                       key={product.id}
                       className={`
                         relative cursor-pointer transition-all duration-300 hover:scale-105
+                        ${theme.colors.background.card} ${theme.colors.border.primary}
                         ${
                           isSelected 
-                            ? "bg-blue-900/40 border-blue-500 border-2 shadow-lg shadow-blue-500/20" 
-                            : "bg-gray-900/60 border-gray-700 hover:border-gray-600"
+                            ? "border-blue-500 border-2 shadow-lg shadow-blue-500/20" 
+                            : `hover:${theme.colors.background.hover}`
                         }
                       `}
                       onClick={() => handleProductSelect(product.id)}
@@ -217,8 +221,8 @@ export default function StepSelectProduct({ onNext, onCancel }: StepSelectProduc
                         </div>
                       )}
                       <CardHeader>
-                        <CardTitle className="text-white text-sm">{product.name}</CardTitle>
-                        <CardDescription className="text-gray-400 text-xs line-clamp-2">
+                        <CardTitle className={`text-sm ${theme.colors.text.primary}`}>{product.name}</CardTitle>
+                        <CardDescription className={`text-xs line-clamp-2 ${theme.colors.text.muted}`}>
                           {product.description || "Sem descrição disponível"}
                         </CardDescription>
                       </CardHeader>
@@ -236,14 +240,14 @@ export default function StepSelectProduct({ onNext, onCancel }: StepSelectProduc
         <Button
           onClick={onCancel}
           variant="ghost"
-          className="text-gray-400 hover:text-white px-8 py-2"
+          className={`px-8 py-2 ${theme.colors.button.ghost}`}
         >
           Cancelar
         </Button>
         <Button
           onClick={handleContinue}
           disabled={!selectedProductId}
-          className="bg-blue-600 hover:bg-blue-500 text-white px-8 py-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          className={`px-8 py-2 disabled:opacity-50 disabled:cursor-not-allowed ${theme.colors.button.primary}`}
         >
           Continuar
         </Button>

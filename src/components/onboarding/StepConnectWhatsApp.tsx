@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { QrCode, Smartphone, CheckCircle2, Loader2, RefreshCw, ClipboardCheck } from "lucide-react";
+import { useTheme } from "@/contexts/ThemeContext";
 
 type StepConnectWhatsAppProps = {
   accountId: string;
@@ -12,6 +13,7 @@ type StepConnectWhatsAppProps = {
 };
 
 export default function StepConnectWhatsApp({ accountId, accountPhone, onNext }: StepConnectWhatsAppProps) {
+  const { theme } = useTheme();
   const [subStep, setSubStep] = useState<"preparation" | "connection">("preparation");
   const [connectMethod, setConnectMethod] = useState<'qrcode' | 'pairing'>('qrcode');
   const [qrCodeBase64, setQrCodeBase64] = useState<string>("");
@@ -201,22 +203,22 @@ export default function StepConnectWhatsApp({ accountId, accountPhone, onNext }:
     return (
       <div className="space-y-6">
         {/* Instructions */}
-        <div className="bg-blue-900/30 border border-blue-700/50 rounded-lg p-4">
-          <h2 className="text-white text-lg font-semibold mb-2 flex items-center gap-2">
+        <div className={`rounded-lg p-4 border ${theme.colors.accent.primary}`}>
+          <h2 className={`text-lg font-semibold mb-2 flex items-center gap-2 ${theme.colors.text.primary}`}>
             <ClipboardCheck className="h-5 w-5" />
             Preparação para Conexão WhatsApp
           </h2>
-          <p className="text-gray-300 text-sm">
+          <p className={`text-sm ${theme.colors.text.secondary}`}>
             Antes de conectar, certifique-se de ter tudo pronto. Siga as instruções abaixo para garantir uma conexão bem-sucedida.
           </p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Requirements Card */}
-          <Card className="bg-gray-800/60 border-gray-700">
+          <Card className={`${theme.colors.background.card} ${theme.colors.border.primary}`}>
             <CardHeader>
-              <CardTitle className="text-white">Requisitos</CardTitle>
-              <CardDescription className="text-gray-400">
+              <CardTitle className={theme.colors.text.primary}>Requisitos</CardTitle>
+              <CardDescription className={theme.colors.text.muted}>
                 Verifique se você tem o seguinte:
               </CardDescription>
             </CardHeader>
@@ -245,8 +247,8 @@ export default function StepConnectWhatsApp({ accountId, accountPhone, onNext }:
                       <CheckCircle2 className="h-4 w-4 text-white" />
                     </div>
                     <div>
-                      <p className="text-white font-medium text-sm">{item.title}</p>
-                      <p className="text-gray-400 text-xs mt-1">{item.description}</p>
+                      <p className={`font-medium text-sm ${theme.colors.text.primary}`}>{item.title}</p>
+                      <p className={`text-xs mt-1 ${theme.colors.text.muted}`}>{item.description}</p>
                     </div>
                   </li>
                 ))}
@@ -255,10 +257,10 @@ export default function StepConnectWhatsApp({ accountId, accountPhone, onNext }:
           </Card>
 
           {/* Instructions Card */}
-          <Card className="bg-gray-800/60 border-gray-700">
+          <Card className={`${theme.colors.background.card} ${theme.colors.border.primary}`}>
             <CardHeader>
-              <CardTitle className="text-white">Passo a Passo</CardTitle>
-              <CardDescription className="text-gray-400">
+              <CardTitle className={theme.colors.text.primary}>Passo a Passo</CardTitle>
+              <CardDescription className={theme.colors.text.muted}>
                 Como você irá conectar sua conta
               </CardDescription>
             </CardHeader>
@@ -291,8 +293,8 @@ export default function StepConnectWhatsApp({ accountId, accountPhone, onNext }:
                       {step.number}
                     </div>
                     <div>
-                      <p className="text-white font-medium text-sm">{step.title}</p>
-                      <p className="text-gray-400 text-xs mt-1">{step.description}</p>
+                      <p className={`font-medium text-sm ${theme.colors.text.primary}`}>{step.title}</p>
+                      <p className={`text-xs mt-1 ${theme.colors.text.muted}`}>{step.description}</p>
                     </div>
                   </li>
                 ))}
@@ -305,7 +307,7 @@ export default function StepConnectWhatsApp({ accountId, accountPhone, onNext }:
         <div className="flex justify-center pt-6">
           <Button
             onClick={handleReady}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-12 py-3 text-lg"
+            className={`${theme.colors.button.primary} px-12 py-3 text-lg`}
           >
             <CheckCircle2 className="h-5 w-5 mr-2" />
             Tudo Pronto - Gerar QR Code
@@ -319,12 +321,12 @@ export default function StepConnectWhatsApp({ accountId, accountPhone, onNext }:
   return (
     <div className="space-y-6">
       {/* Instructions */}
-      <div className="bg-blue-900/30 border border-blue-700/50 rounded-lg p-4">
-        <h2 className="text-white text-lg font-semibold mb-2 flex items-center gap-2">
+      <div className={`rounded-lg p-4 border ${theme.colors.accent.primary}`}>
+        <h2 className={`text-lg font-semibold mb-2 flex items-center gap-2 ${theme.colors.text.primary}`}>
           <Smartphone className="h-5 w-5" />
           Conectar ao WhatsApp
         </h2>
-        <p className="text-gray-300 text-sm">
+        <p className={`text-sm ${theme.colors.text.secondary}`}>
           {connectMethod === 'qrcode' 
             ? 'Escaneie o QR Code com o WhatsApp do seu telefone para vincular a conta.'
             : 'Digite o código de pareamento no seu WhatsApp para vincular a conta.'}
@@ -333,11 +335,11 @@ export default function StepConnectWhatsApp({ accountId, accountPhone, onNext }:
 
       {/* Error Message */}
       {error && (
-        <div className="bg-red-900/30 border border-red-700/50 rounded-lg p-4">
-          <p className="text-red-300 text-sm">{error}</p>
+        <div className={`rounded-lg p-4 border ${theme.colors.accent.error}`}>
+          <p className="text-sm">{error}</p>
           <Button
             onClick={handleReady}
-            className="mt-3 bg-red-600 hover:bg-red-500 text-white"
+            className={`mt-3 ${theme.colors.button.primary}`}
           >
             Tentar Novamente
           </Button>
@@ -346,30 +348,30 @@ export default function StepConnectWhatsApp({ accountId, accountPhone, onNext }:
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Connection Display Card */}
-        <Card className="bg-gray-800/60 border-gray-700">
+        <Card className={`${theme.colors.background.card} ${theme.colors.border.primary}`}>
           <CardHeader>
-            <CardTitle className="text-white flex items-center gap-2">
+            <CardTitle className={`flex items-center gap-2 ${theme.colors.text.primary}`}>
               {connectMethod === 'qrcode' ? (
                 <><QrCode className="h-5 w-5" /> QR Code</>
               ) : (
                 <><Smartphone className="h-5 w-5" /> Código de Pareamento</>
               )}
             </CardTitle>
-            <CardDescription className="text-gray-400">
+            <CardDescription className={theme.colors.text.muted}>
               {connectionStatus}
             </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col items-center justify-center space-y-4">
             {isLoading ? (
-              <div className="flex flex-col items-center justify-center h-[300px] w-[300px] bg-gray-900/50 rounded-lg">
+              <div className={`flex flex-col items-center justify-center h-[300px] w-[300px] rounded-lg ${theme.colors.background.secondary}`}>
                 <Loader2 className="h-12 w-12 text-blue-500 animate-spin mb-4" />
-                <p className="text-gray-400 text-sm">Aguarde...</p>
+                <p className={`text-sm ${theme.colors.text.muted}`}>Aguarde...</p>
               </div>
             ) : isConnected ? (
-              <div className="flex flex-col items-center justify-center h-[300px] w-[300px] bg-green-900/30 rounded-lg border-2 border-green-500">
+              <div className={`flex flex-col items-center justify-center h-[300px] w-[300px] rounded-lg border-2 ${theme.colors.accent.success}`}>
                 <CheckCircle2 className="h-16 w-16 text-green-500 mb-4" />
-                <p className="text-green-400 font-semibold">Conectado!</p>
-                <p className="text-gray-400 text-xs mt-2">Redirecionando...</p>
+                <p className="text-green-600 font-semibold">Conectado!</p>
+                <p className={`text-xs mt-2 ${theme.colors.text.muted}`}>Redirecionando...</p>
               </div>
             ) : connectMethod === 'qrcode' && qrCodeBase64 ? (
               <>
@@ -383,40 +385,40 @@ export default function StepConnectWhatsApp({ accountId, accountPhone, onNext }:
                 <Button
                   variant="outline"
                   onClick={handleRefreshQrCode}
-                  className="text-gray-300 border-gray-600 hover:bg-gray-700"
+                  className={theme.colors.button.outline}
                 >
                   <RefreshCw className="h-4 w-4 mr-2" />
                   Gerar Novo QR Code
                 </Button>
               </>
             ) : connectMethod === 'pairing' && pairingCode ? (
-              <div className="flex flex-col items-center justify-center h-[300px] w-[300px] bg-gray-900/50 rounded-lg">
-                <p className="text-gray-400 text-sm mb-4">Digite este código no WhatsApp:</p>
-                <div className="text-6xl tracking-widest font-mono text-white font-bold">
+              <div className={`flex flex-col items-center justify-center h-[300px] w-[300px] rounded-lg ${theme.colors.background.secondary}`}>
+                <p className={`text-sm mb-4 ${theme.colors.text.muted}`}>Digite este código no WhatsApp:</p>
+                <div className={`text-6xl tracking-widest font-mono font-bold ${theme.colors.text.primary}`}>
                   {pairingCode}
                 </div>
                 <Button
                   variant="outline"
                   onClick={handleRefreshQrCode}
-                  className="mt-6 text-gray-300 border-gray-600 hover:bg-gray-700"
+                  className={`mt-6 ${theme.colors.button.outline}`}
                 >
                   <RefreshCw className="h-4 w-4 mr-2" />
                   Gerar Novo Código
                 </Button>
               </div>
             ) : (
-              <div className="flex flex-col items-center justify-center h-[300px] w-[300px] bg-gray-900/50 rounded-lg">
-                <p className="text-gray-400 text-sm">Aguardando conexão...</p>
+              <div className={`flex flex-col items-center justify-center h-[300px] w-[300px] rounded-lg ${theme.colors.background.secondary}`}>
+                <p className={`text-sm ${theme.colors.text.muted}`}>Aguardando conexão...</p>
               </div>
             )}
           </CardContent>
         </Card>
 
         {/* Instructions Card */}
-        <Card className="bg-gray-800/60 border-gray-700">
+        <Card className={`${theme.colors.background.card} ${theme.colors.border.primary}`}>
           <CardHeader>
-            <CardTitle className="text-white">Como Conectar</CardTitle>
-            <CardDescription className="text-gray-400">
+            <CardTitle className={theme.colors.text.primary}>Como Conectar</CardTitle>
+            <CardDescription className={theme.colors.text.muted}>
               Siga os passos abaixo para conectar sua conta
             </CardDescription>
           </CardHeader>
@@ -470,8 +472,8 @@ export default function StepConnectWhatsApp({ accountId, accountPhone, onNext }:
                     {step.number}
                   </div>
                   <div>
-                    <p className="text-white font-medium text-sm">{step.title}</p>
-                    <p className="text-gray-400 text-xs mt-1">{step.description}</p>
+                    <p className={`font-medium text-sm ${theme.colors.text.primary}`}>{step.title}</p>
+                    <p className={`text-xs mt-1 ${theme.colors.text.muted}`}>{step.description}</p>
                   </div>
                 </li>
               ))}
@@ -479,11 +481,11 @@ export default function StepConnectWhatsApp({ accountId, accountPhone, onNext }:
 
             {/* Método de conexão alternativo */}
             {!isConnected && !isLoading && (qrCodeBase64 || pairingCode) && (
-              <div className="mt-6 pt-6 border-t border-gray-700">
+              <div className={`mt-6 pt-6 border-t ${theme.colors.border.secondary}`}>
                 <Button
                   variant="outline"
                   onClick={() => setConnectMethod(connectMethod === 'qrcode' ? 'pairing' : 'qrcode')}
-                  className="w-full text-gray-300 border-gray-600 hover:bg-gray-700"
+                  className={`w-full ${theme.colors.button.outline}`}
                   disabled={!(qrCodeBase64 && pairingCode)}
                 >
                   {connectMethod === 'qrcode' ? 'Usar Código de Pareamento' : 'Usar QR Code'}

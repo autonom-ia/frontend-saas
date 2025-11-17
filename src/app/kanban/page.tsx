@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTheme } from "@/contexts/ThemeContext";
 import ItemDetailsPanel from "./components/ItemDetailsPanel";
 import ConversationDrawer from "./components/ConversationDrawer";
 import Image from "next/image";
@@ -39,6 +40,9 @@ type Account = {
 };
 
 export default function KanbanPage() {
+  const { theme } = useTheme();
+  const kanban = theme.colors.kanban;
+  
   // UI staged entrance
   const [showHeader, setShowHeader] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
@@ -550,17 +554,17 @@ export default function KanbanPage() {
     : "??";
 
   return (
-    <div className="flex h-screen bg-background dark:bg-gray-900 overflow-x-hidden">
+    <div className={`flex h-screen overflow-x-hidden ${theme.colors.background.primary}`}>
       {/* Sidebar */}
       <Sidebar show={showMenu} />
 
       {/* Main area */}
       <div className="flex-1 flex flex-col min-w-0 max-w-full">
         {/* Fixed header (match ProductHeader usage) */}
-        <header className={`fixed top-0 left-0 right-0 z-[60] flex items-center h-16 bg-gray-800 text-white px-4 transition-all duration-400 ease-out ${showHeader ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-5'}`}>
+        <header className={`fixed top-0 left-0 right-0 z-[60] flex items-center h-16 px-4 transition-all duration-400 ease-out border-b ${theme.colors.background.secondary} ${theme.colors.border.primary} ${showHeader ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-5'}`}>
           {/* Logo */}
           <div className="px-2 flex items-center">
-            <Image src="/images/logo.png" alt="Autonom.ia Logo" width={28} height={28} />
+            <Image src={theme.logoSquare} alt="Logo" width={28} height={28} onError={(e) => { e.currentTarget.src = '/images/logo.png'; }} />
           </div>
           {/* ProductHeader inline consumer */}
           <div className="flex-1 px-2">
@@ -580,8 +584,8 @@ export default function KanbanPage() {
           </div>
           {/* Right user info (optional) */}
           <div className="flex items-center gap-2">
-            <span className="text-sm hidden sm:inline">{userData?.user?.name || 'Usuário'}</span>
-            <div className="h-8 w-8 rounded-full bg-white/20 text-white flex items-center justify-center text-xs">{userInitials}</div>
+            <span className={`text-sm hidden sm:inline ${theme.colors.text.primary}`}>{userData?.user?.name || 'Usuário'}</span>
+            <div className={`h-8 w-8 rounded-full flex items-center justify-center text-xs ${kanban.avatar}`}>{userInitials}</div>
           </div>
         </header>
 
@@ -602,32 +606,32 @@ export default function KanbanPage() {
           {selectedProductId && !selectedAccountId && (
             <section className="mt-6">
               <div className="flex items-center justify-between mb-3">
-                <h2 className="text-xl font-semibold dark:text-white">Selecione a conta</h2>
+                <h2 className={`text-xl font-semibold ${theme.colors.text.primary}`}>Selecione a conta</h2>
               </div>
-              <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded shadow-sm max-h-[50vh] overflow-auto">
+              <div className={`border rounded shadow-sm max-h-[50vh] overflow-auto ${theme.colors.background.card} ${theme.colors.border.primary}`}>
                 <table className="min-w-full text-sm">
-                  <thead className="bg-gray-50 dark:bg-gray-700 sticky top-0">
+                  <thead className={`sticky top-0 ${theme.colors.background.secondary}`}>
                     <tr>
-                      <th className="text-left px-4 py-2 dark:text-gray-100">Nome</th>
-                      <th className="text-left px-4 py-2 dark:text-gray-100">Email</th>
-                      <th className="text-left px-4 py-2 dark:text-gray-100">Telefone</th>
+                      <th className={`text-left px-4 py-2 ${theme.colors.text.primary}`}>Nome</th>
+                      <th className={`text-left px-4 py-2 ${theme.colors.text.primary}`}>Email</th>
+                      <th className={`text-left px-4 py-2 ${theme.colors.text.primary}`}>Telefone</th>
                     </tr>
                   </thead>
                   <tbody>
                     {accountsLoading ? (
-                      <tr><td className="px-4 py-3 dark:text-gray-200" colSpan={3}>Carregando...</td></tr>
+                      <tr><td className={`px-4 py-3 ${theme.colors.text.primary}`} colSpan={3}>Carregando...</td></tr>
                     ) : accounts.length === 0 ? (
-                      <tr><td className="px-4 py-3 dark:text-gray-200" colSpan={3}>Nenhuma conta encontrada.</td></tr>
+                      <tr><td className={`px-4 py-3 ${theme.colors.text.primary}`} colSpan={3}>Nenhuma conta encontrada.</td></tr>
                     ) : (
                       accounts.map(acc => (
                         <tr
                           key={acc.id}
-                          className={`border-t border-gray-100 dark:border-gray-700 cursor-pointer ${selectedAccountId === acc.id ? 'bg-blue-50 dark:bg-gray-700/50' : ''}`}
+                          className={`border-t cursor-pointer ${theme.colors.border.secondary} ${selectedAccountId === acc.id ? theme.colors.accent.primary : theme.colors.background.hover}`}
                           onClick={() => setSelectedAccountId(acc.id)}
                         >
-                          <td className="px-4 py-2 dark:text-gray-100">{acc.name}</td>
-                          <td className="px-4 py-2 dark:text-gray-100">{acc.email || '-'}</td>
-                          <td className="px-4 py-2 dark:text-gray-100">{acc.phone || '-'}</td>
+                          <td className={`px-4 py-2 ${theme.colors.text.primary}`}>{acc.name}</td>
+                          <td className={`px-4 py-2 ${theme.colors.text.primary}`}>{acc.email || '-'}</td>
+                          <td className={`px-4 py-2 ${theme.colors.text.primary}`}>{acc.phone || '-'}</td>
                         </tr>
                       ))
                     )}
@@ -642,16 +646,16 @@ export default function KanbanPage() {
             <section className="mt-4 flex-1 min-h-0 min-w-0 overflow-hidden">
               {/* Funnel title */}
               {funnelName && (
-                <div className="relative top-5 mb-3 text-2xl font-semibold text-white dark:text-white">{funnelName}</div>
+                <div className={`relative top-5 mb-3 text-2xl font-semibold ${theme.colors.text.primary}`}>{funnelName}</div>
               )}
 
               {!kanbanLoading && kanbanError && (
-                <div className="mb-3 text-sm text-neutral-400">{kanbanError}</div>
+                <div className={`mb-3 text-sm ${theme.colors.text.muted}`}>{kanbanError}</div>
               )}
 
               {/* Empty state */}
               {!kanbanLoading && !stepsLoading && columns.length === 0 && (
-                <div className="mt-2 text-sm text-neutral-400">Nenhum item encontrado para esta conta.</div>
+                <div className={`mt-2 text-sm ${theme.colors.text.muted}`}>Nenhum item encontrado para esta conta.</div>
               )}
 
               <div className="flex-1 min-h-0 min-w-0 relative">
@@ -675,16 +679,16 @@ export default function KanbanPage() {
                         key={col.key} 
                         className={`w-80 shrink-0 rounded-lg border transition-all duration-500 ${
                           dragOverStepId === col.key 
-                            ? 'border-blue-500 bg-blue-900/20' 
-                            : 'border-neutral-800/60 bg-neutral-900/40'
+                            ? kanban.columnDragOver
+                            : kanban.column
                         } ${loadingSteps[col.key] ? 'opacity-50 animate-pulse' : 'opacity-100'}`}
                         onDragOver={(e) => handleDragOver(e, col.key)}
                         onDragLeave={handleDragLeave}
                         onDrop={(e) => handleDrop(e, col.key)}
                       >
-                        <div className="px-4 py-3 border-b border-neutral-800/60 flex items-center justify-between">
-                          <div className="text-sm font-medium lowercase tracking-wide text-neutral-100">{col.title}</div>
-                          <div className="text-xs text-neutral-400">
+                        <div className={`px-4 py-3 border-b flex items-center justify-between ${theme.colors.border.primary}`}>
+                          <div className={`text-sm font-medium lowercase tracking-wide ${theme.colors.text.primary}`}>{col.title}</div>
+                          <div className={`text-xs ${theme.colors.text.muted}`}>
                             {loadingSteps[col.key] ? (
                               <span className="inline-block animate-spin">⟳</span>
                             ) : (
@@ -712,7 +716,9 @@ export default function KanbanPage() {
                                   draggable={true}
                                   onDragStart={() => handleDragStart(it, col.key)}
                                   onDragEnd={handleDragEnd}
-                                  className={`rounded-md border border-neutral-800/60 bg-neutral-900/60 p-3 cursor-move hover:bg-neutral-900/80 transition-all ${
+                                  className={`rounded-md border p-3 cursor-move transition-all ${
+                                    kanban.card
+                                  } ${
                                     draggedItem?.item.id === it.id ? 'opacity-50 scale-95' : 'opacity-100'
                                   }`}
                                   role="button"
@@ -721,32 +727,32 @@ export default function KanbanPage() {
                                   onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedItem(it); } }}
                                 >
                                   <div className="flex items-start justify-between gap-2">
-                                    <div className="text-sm font-semibold text-white truncate flex-1" title={title}>{title}</div>
+                                    <div className={`text-sm font-semibold truncate flex-1 ${theme.colors.text.primary}`} title={title}>{title}</div>
                                     <div className="flex items-center gap-1.5 shrink-0">
                                       <button
                                         onClick={(e) => {
                                           e.stopPropagation();
                                           openConversation(it);
                                         }}
-                                        className="p-1 hover:bg-neutral-700/50 rounded transition-colors"
+                                        className={`p-1 rounded transition-colors ${theme.colors.background.hover}`}
                                         title="Abrir conversas"
                                       >
                                         <MessageCircle className="w-4 h-4 text-blue-400" />
                                       </button>
-                                      <span className="text-[11px] text-neutral-300 bg-neutral-800 rounded px-2 py-0.5">{status}</span>
+                                      <span className={`text-[11px] rounded px-2 py-0.5 ${kanban.statusBadge}`}>{status}</span>
                                     </div>
                                   </div>
-                                  <div className="text-xs text-neutral-400 mt-1 line-clamp-6 break-words whitespace-pre-wrap">{formatSummary(summary)}</div>
+                                  <div className={`text-xs mt-1 line-clamp-6 break-words whitespace-pre-wrap ${kanban.cardTextMuted}`}>{formatSummary(summary)}</div>
                                   <div className="flex flex-wrap gap-1 mt-2">
                                     {safeTags.map((t, idx) => (
-                                      <span key={idx} className="text-[11px] text-blue-300 bg-blue-900/30 border border-blue-900/40 rounded px-1.5 py-0.5">{t.name}</span>
+                                      <span key={idx} className={`text-[11px] border rounded px-1.5 py-0.5 ${kanban.tag}`}>{t.name}</span>
                                     ))}
                                   </div>
-                                  <div className="mt-3 flex items-center justify-between text-[11px] text-neutral-400">
+                                  <div className={`mt-3 flex items-center justify-between text-[11px] ${kanban.cardTextMuted}`}>
                                     <div className="flex items-center gap-2">
                                       <span>Último Contato</span>
                                       {typeof unread === 'number' && (
-                                        <span className="ml-1 text-[11px] text-rose-300 bg-rose-900/40 rounded px-1.5 py-0.5">{unread}</span>
+                                        <span className={`ml-1 text-[11px] rounded px-1.5 py-0.5 ${kanban.tagUnread}`}>{unread}</span>
                                       )}
                                     </div>
                                     <div>{since}</div>
@@ -759,7 +765,7 @@ export default function KanbanPage() {
                             <button
                               onClick={() => loadMoreForStep(col.key)}
                               disabled={loadingMoreForStep === col.key}
-                              className="w-full py-2 px-3 text-xs text-neutral-300 bg-neutral-800/40 hover:bg-neutral-800/60 border border-neutral-700/50 rounded-md transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                              className={`w-full py-2 px-3 text-xs border rounded-md transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed ${kanban.card}`}
                             >
                               {loadingMoreForStep === col.key ? (
                                 <span className="flex items-center justify-center gap-2">

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Search, Filter, MoreHorizontal, Phone, User, Calendar, AlertCircle } from 'lucide-react';
+import { useTheme } from '@/contexts/ThemeContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
@@ -38,13 +39,14 @@ const statusLabels = {
 };
 
 export default function ContactList({ campaignId, refreshTrigger }: ContactListProps) {
+  const { theme } = useTheme();
+  const { toast } = useToast();
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [totalContacts, setTotalContacts] = useState(0);
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
-  const { toast } = useToast();
 
   const itemsPerPage = 20;
 
@@ -163,7 +165,17 @@ export default function ContactList({ campaignId, refreshTrigger }: ContactListP
           <select
             value={selectedStatus}
             onChange={(e) => setSelectedStatus(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className={`px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${theme.colors.background.secondary} ${theme.colors.text.primary} ${theme.colors.border.secondary}`}
+            style={{
+              WebkitAppearance: 'none',
+              MozAppearance: 'none',
+              appearance: 'none',
+              backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='currentColor'%3E%3Cpath d='M4 6l4 4 4-4'/%3E%3C/svg%3E")`,
+              backgroundRepeat: 'no-repeat',
+              backgroundPosition: 'right 0.75rem center',
+              backgroundSize: '16px 16px',
+              paddingRight: '2.5rem'
+            }}
           >
             <option value="all">Todos os status</option>
             <option value="pending">Pendente</option>

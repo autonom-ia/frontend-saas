@@ -3,6 +3,7 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useTheme } from "@/contexts/ThemeContext";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -50,12 +51,25 @@ export default function ProductHeader(props: ProductHeaderProps) {
     onLogout,
     onStartOnboarding,
   } = props;
+  
+  const { theme } = useTheme();
 
   return (
-    <header className={`fixed top-0 left-0 right-0 z-[60] flex items-center h-16 bg-gray-800 text-white px-4 transition-all duration-400 ease-out opacity-100 translate-y-0`}>
+    <header className={`fixed top-0 left-0 right-0 z-[60] flex items-center h-16 ${theme.colors.background.secondary} ${theme.colors.border.primary} border-b px-4 transition-all duration-400 ease-out opacity-100 translate-y-0`}>
       {/* Logo */}
       <div className="px-2 flex items-center">
-        <Image src="/images/logo.png" alt="Autonom.ia Logo" width={42} height={42} priority fetchPriority="high" sizes="42px" />
+        <Image 
+          src={theme.logoSquare} 
+          alt="Logo" 
+          width={42} 
+          height={42} 
+          priority 
+          fetchPriority="high" 
+          sizes="42px"
+          onError={(e) => {
+            e.currentTarget.src = '/images/logo.png';
+          }}
+        />
       </div>
       {/* Seletor de produtos */}
       <div className="flex-1 px-2">
@@ -63,7 +77,17 @@ export default function ProductHeader(props: ProductHeaderProps) {
           <label htmlFor="products-select" className="sr-only">Produtos</label>
           <select
             id="products-select"
-            className="select-clean w-full"
+            className={`w-full rounded-md px-3 py-2 text-sm border ${theme.colors.background.secondary} ${theme.colors.text.primary} ${theme.colors.border.secondary} focus:outline-none focus:ring-2 focus:ring-blue-500`}
+            style={{
+              WebkitAppearance: 'none',
+              MozAppearance: 'none',
+              appearance: 'none',
+              backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='currentColor'%3E%3Cpath d='M4 6l4 4 4-4'/%3E%3C/svg%3E")`,
+              backgroundRepeat: 'no-repeat',
+              backgroundPosition: 'right 0.75rem center',
+              backgroundSize: '16px 16px',
+              paddingRight: '2.5rem'
+            }}
             disabled={productsLoading}
             value={selectedProductId || ''}
             onChange={(e) => onChangeProduct(e.target.value)}
@@ -79,7 +103,7 @@ export default function ProductHeader(props: ProductHeaderProps) {
             <Button
               type="button"
               variant="secondary"
-              className="bg-blue-600 hover:bg-blue-500 text-white"
+              className={theme.colors.button.primary}
               onClick={onCreateProduct}
               title="Incluir produto"
             >
@@ -91,7 +115,7 @@ export default function ProductHeader(props: ProductHeaderProps) {
               <Button
                 type="button"
                 variant="secondary"
-                className="bg-gray-700 hover:bg-gray-600 text-white"
+                className={theme.colors.button.secondary}
                 onClick={onEditProduct}
                 disabled={!selectedProductId}
                 title="Editar produto selecionado"
@@ -101,7 +125,7 @@ export default function ProductHeader(props: ProductHeaderProps) {
               <Button
                 type="button"
                 variant="secondary"
-                className="bg-gray-700 hover:bg-gray-600 text-white"
+                className={theme.colors.button.secondary}
                 onClick={onOpenProductSettings}
                 disabled={!selectedProductId}
                 title="Settings do produto (parâmetros)"
@@ -130,7 +154,7 @@ export default function ProductHeader(props: ProductHeaderProps) {
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <div className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity">
-            <span className="text-sm">{userName || 'Usuário'}</span>
+            <span className={`text-sm ${theme.colors.text.primary}`}>{userName || 'Usuário'}</span>
             <Avatar>
               {userPhotoUrl ? (
                 <AvatarImage src={userPhotoUrl} alt={userName || 'Avatar'} />

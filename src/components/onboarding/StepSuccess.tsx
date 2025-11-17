@@ -3,12 +3,14 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { CheckCircle2, Rocket } from "lucide-react";
+import { useTheme } from "@/contexts/ThemeContext";
 
 type StepSuccessProps = {
   onFinish: () => void;
 };
 
 export default function StepSuccess({ onFinish }: StepSuccessProps) {
+  const { theme } = useTheme();
 
   return (
     <div className="space-y-8">
@@ -20,25 +22,25 @@ export default function StepSuccess({ onFinish }: StepSuccessProps) {
             <CheckCircle2 className="h-16 w-16 text-white" />
           </div>
         </div>
-        <h2 className="text-white text-3xl font-bold mt-6 mb-2">Configuração Concluída!</h2>
-        <p className="text-gray-400 text-center max-w-md">
+        <h2 className={`text-3xl font-bold mt-6 mb-2 ${theme.colors.text.primary}`}>Configuração Concluída!</h2>
+        <p className={`text-center max-w-md ${theme.colors.text.muted}`}>
           Sua conta WhatsApp foi configurada com sucesso e está pronta para uso. 
           Agora você pode começar a automatizar suas comunicações via WhatsApp.
         </p>
       </div>
 
       {/* Summary Card */}
-      <Card className="bg-gray-800/60 border-gray-700">
+      <Card className={`${theme.colors.background.card} ${theme.colors.border.primary}`}>
         <CardContent className="pt-6">
           <div className="flex items-start gap-4">
             <div className="bg-green-600 rounded-lg p-3">
               <Rocket className="h-6 w-6 text-white" />
             </div>
             <div className="flex-1">
-              <h3 className="text-white text-lg font-semibold mb-2">
+              <h3 className={`text-lg font-semibold mb-2 ${theme.colors.text.primary}`}>
                 Tudo Pronto para Começar!
               </h3>
-              <p className="text-gray-300 text-sm mb-4">
+              <p className={`text-sm mb-4 ${theme.colors.text.secondary}`}>
                 Sua conta está ativa e conectada. Você já pode começar a explorar todos os recursos da plataforma.
               </p>
               <div className="flex flex-wrap gap-2">
@@ -62,7 +64,7 @@ export default function StepSuccess({ onFinish }: StepSuccessProps) {
       <div className="flex justify-center pt-6">
         <Button
           onClick={onFinish}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-12 py-3 text-lg"
+          className={`${theme.colors.button.primary} px-12 py-3 text-lg`}
         >
           <Rocket className="h-5 w-5 mr-2" />
           Começar a Usar

@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { useTheme } from "@/contexts/ThemeContext";
 import { Button } from "@/components/ui/button";
 
 export type StepMessage = {
@@ -31,6 +32,8 @@ export type StepMessagesPanelProps = {
 };
 
 export default function StepMessagesPanel(props: StepMessagesPanelProps) {
+  const { theme } = useTheme();
+  const settings = theme.colors.settings;
   const {
     open,
     isAdmin,
@@ -57,52 +60,52 @@ export default function StepMessagesPanel(props: StepMessagesPanelProps) {
         onClick={onClose}
       />
       <div
-        className={`fixed right-0 top-0 h-full w-full max-w-2xl bg-white dark:bg-gray-800 shadow-xl z-50 transform transition-transform duration-300 ease-out ${open ? 'translate-x-0' : 'translate-x-full'}`}
+        className={`fixed right-0 top-0 h-full w-full max-w-2xl shadow-xl z-50 transform transition-transform duration-300 ease-out ${settings.form} ${open ? 'translate-x-0' : 'translate-x-full'}`}
         aria-hidden={!open}
       >
-        <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-          <h2 className="text-lg font-semibold dark:text-white">Mensagens da Etapa</h2>
-          <button className="text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-white" onClick={onClose} aria-label="Fechar">✕</button>
+        <div className={`p-4 border-b flex items-center justify-between ${settings.formBorder}`}>
+          <h2 className={`text-lg font-semibold ${theme.colors.text.primary}`}>Mensagens da Etapa</h2>
+          <button className={`${theme.colors.text.muted} ${theme.colors.background.hover}`} onClick={onClose} aria-label="Fechar">✕</button>
         </div>
         <div className="p-4">
-          <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded shadow-sm max-h-[75vh] overflow-auto">
+          <div className={`border rounded shadow-sm max-h-[75vh] overflow-auto ${settings.table}`}>
             <table className="min-w-full text-sm">
-              <thead className="bg-gray-50 dark:bg-gray-700 sticky top-0">
+              <thead className={`sticky top-0 ${settings.tableHeader}`}>
                 <tr>
-                  <th className="text-left px-4 py-2 dark:text-gray-100">Tempo de envio</th>
-                  <th className="text-left px-4 py-2 dark:text-gray-100">Ordem de envio</th>
-                  <th className="text-left px-4 py-2 dark:text-gray-100">Instruções da Mensagem</th>
+                  <th className={`text-left px-4 py-2 ${theme.colors.text.primary}`}>Tempo de envio</th>
+                  <th className={`text-left px-4 py-2 ${theme.colors.text.primary}`}>Ordem de envio</th>
+                  <th className={`text-left px-4 py-2 ${theme.colors.text.primary}`}>Instruções da Mensagem</th>
                 </tr>
               </thead>
               <tbody>
                 {isCreating && (
-                  <tr className="border-t border-gray-100 dark:border-gray-700 bg-blue-50/40 dark:bg-gray-700/30 align-top">
-                    <td className="px-4 py-2 dark:text-gray-100 w-40">
-                      <input type="text" className="w-full rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-2 py-1 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Ex: 10m, 2h, 1d" value={newShippingTime} onChange={(e) => onChangeNew({ shipping_time: e.target.value })} />
+                  <tr className={`border-t ${settings.tableRow} ${settings.tableRowSelected} align-top`}>
+                    <td className="px-4 py-2 w-40">
+                      <input type="text" className={`w-full rounded border px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${settings.input}`} placeholder="Ex: 10m, 2h, 1d" value={newShippingTime} onChange={(e) => onChangeNew({ shipping_time: e.target.value })} />
                     </td>
-                    <td className="px-4 py-2 dark:text-gray-100 w-40">
-                      <input type="number" className="w-full rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-2 py-1 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Ex: 1, 2, 3" value={newShippingOrder} onChange={(e) => onChangeNew({ shipping_order: e.target.value === '' ? '' : Number(e.target.value) })} />
+                    <td className="px-4 py-2 w-40">
+                      <input type="number" className={`w-full rounded border px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${settings.input}`} placeholder="Ex: 1, 2, 3" value={newShippingOrder} onChange={(e) => onChangeNew({ shipping_order: e.target.value === '' ? '' : Number(e.target.value) })} />
                     </td>
-                    <td className="px-4 py-2 dark:text-gray-100">
-                      <textarea className="w-full rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-2 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y min-h-[100px]" placeholder="Descreva as instruções da mensagem" value={newInstruction} onChange={(e) => onChangeNew({ message_instruction: e.target.value })} />
+                    <td className="px-4 py-2">
+                      <textarea className={`w-full rounded border px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y min-h-[100px] ${settings.input}`} placeholder="Descreva as instruções da mensagem" value={newInstruction} onChange={(e) => onChangeNew({ message_instruction: e.target.value })} />
                     </td>
                   </tr>
                 )}
                 {loading ? (
-                  <tr><td className="px-4 py-3 dark:text-gray-200" colSpan={3}>Carregando...</td></tr>
+                  <tr><td className={`px-4 py-3 ${theme.colors.text.primary}`} colSpan={3}>Carregando...</td></tr>
                 ) : messages.length === 0 ? (
-                  <tr><td className="px-4 py-3 dark:text-gray-200" colSpan={3}>Nenhuma mensagem encontrada.</td></tr>
+                  <tr><td className={`px-4 py-3 ${theme.colors.text.primary}`} colSpan={3}>Nenhuma mensagem encontrada.</td></tr>
                 ) : (
                   messages.map((m) => (
-                    <tr key={String(m.id)} className="border-t border-gray-100 dark:border-gray-700 align-top">
-                      <td className="px-4 py-2 dark:text-gray-100 w-40">
-                        <input type="text" className="w-full rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-2 py-1 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500" value={m.shipping_time ?? ''} onChange={(e) => onChangeMessage(m.id!, { shipping_time: e.target.value })} onBlur={(e) => onBlurMessageField(m.id!, { shipping_time: e.target.value })} placeholder="Ex: 10m, 2h, 1d" />
+                    <tr key={String(m.id)} className={`border-t ${settings.tableRow} align-top`}>
+                      <td className="px-4 py-2 w-40">
+                        <input type="text" className={`w-full rounded border px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${settings.input}`} value={m.shipping_time ?? ''} onChange={(e) => onChangeMessage(m.id!, { shipping_time: e.target.value })} onBlur={(e) => onBlurMessageField(m.id!, { shipping_time: e.target.value })} placeholder="Ex: 10m, 2h, 1d" />
                       </td>
-                      <td className="px-4 py-2 dark:text-gray-100 w-40">
-                        <input type="number" className="w-full rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-2 py-1 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500" value={m.shipping_order ?? ''} onChange={(e) => onChangeMessage(m.id!, { shipping_order: Number(e.target.value) })} onBlur={(e) => onBlurMessageField(m.id!, { shipping_order: Number(e.target.value) })} placeholder="Ex: 1, 2, 3" />
+                      <td className="px-4 py-2 w-40">
+                        <input type="number" className={`w-full rounded border px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${settings.input}`} value={m.shipping_order ?? ''} onChange={(e) => onChangeMessage(m.id!, { shipping_order: Number(e.target.value) })} onBlur={(e) => onBlurMessageField(m.id!, { shipping_order: Number(e.target.value) })} placeholder="Ex: 1, 2, 3" />
                       </td>
-                      <td className="px-4 py-2 dark:text-gray-100">
-                        <textarea className="w-full rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-2 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y min-h-[100px]" value={m.message_instruction ?? ''} onChange={(e) => onChangeMessage(m.id!, { message_instruction: e.target.value })} onBlur={(e) => onBlurMessageField(m.id!, { message_instruction: e.target.value })} placeholder="Descreva as instruções da mensagem" />
+                      <td className="px-4 py-2">
+                        <textarea className={`w-full rounded border px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y min-h-[100px] ${settings.input}`} value={m.message_instruction ?? ''} onChange={(e) => onChangeMessage(m.id!, { message_instruction: e.target.value })} onBlur={(e) => onBlurMessageField(m.id!, { message_instruction: e.target.value })} placeholder="Descreva as instruções da mensagem" />
                       </td>
                     </tr>
                   ))
@@ -112,19 +115,19 @@ export default function StepMessagesPanel(props: StepMessagesPanelProps) {
           </div>
           {isAdmin && !isCreating && (
             <div className="mt-3 flex justify-end">
-              <Button className="bg-blue-600 hover:bg-blue-500 text-white" size="sm" onClick={onStartCreate} title="Incluir mensagem">Incluir mensagem</Button>
+              <Button className={theme.colors.button.primary} size="sm" onClick={onStartCreate} title="Incluir mensagem">Incluir mensagem</Button>
             </div>
           )}
         </div>
-        <div className="p-4 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between gap-2">
+        <div className={`p-4 border-t flex items-center justify-between gap-2 ${settings.formBorder}`}>
           {isCreating ? (
             <div className="flex items-center gap-2">
-              <Button className="bg-blue-600 hover:bg-blue-500 text-white" onClick={onSaveCreate} disabled={!!savingNew} title="Salvar">Salvar</Button>
-              <Button variant="secondary" className="bg-gray-700 hover:bg-gray-600 text-white" onClick={onCancelCreate} disabled={!!savingNew}>Cancelar</Button>
+              <Button className={theme.colors.button.primary} onClick={onSaveCreate} disabled={!!savingNew} title="Salvar">Salvar</Button>
+              <Button variant="secondary" className={theme.colors.button.secondary} onClick={onCancelCreate} disabled={!!savingNew}>Cancelar</Button>
             </div>
           ) : <span />}
           <div className="flex items-center gap-2">
-            <Button variant="secondary" className="bg-gray-700 hover:bg-gray-600 text-white" onClick={onClose}>Fechar</Button>
+            <Button variant="secondary" className={theme.colors.button.secondary} onClick={onClose}>Fechar</Button>
           </div>
         </div>
       </div>

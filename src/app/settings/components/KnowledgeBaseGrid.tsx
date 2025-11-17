@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
+import { useTheme } from "@/contexts/ThemeContext";
 import { Button } from "@/components/ui/button";
 import { Eye, Trash2, Upload, RefreshCw } from "lucide-react";
 
@@ -26,6 +27,8 @@ type Props = {
 };
 
 export default function KnowledgeBaseGrid({ accountId, authToken, isAdmin, refreshKey = 0 }: Props) {
+  const { theme } = useTheme();
+  const settings = theme.colors.settings;
   const [loading, setLoading] = useState(false);
   const [items, setItems] = useState<KnowledgeDocument[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -205,7 +208,7 @@ export default function KnowledgeBaseGrid({ accountId, authToken, isAdmin, refre
         </div>
         {isAdmin && (
           <Button
-            className="bg-blue-600 hover:bg-blue-500 text-white"
+            className={theme.colors.button.primary}
             size="sm"
             onClick={() => setOpenCreate(true)}
             title="Incluir documento"
@@ -216,31 +219,31 @@ export default function KnowledgeBaseGrid({ accountId, authToken, isAdmin, refre
       </div>
 
       <div className="h-3" />
-      <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded shadow-sm max-h-[50vh] overflow-auto">
+      <div className={`border rounded shadow-sm max-h-[50vh] overflow-auto ${settings.table}`}>
         <table className="min-w-full text-sm">
-          <thead className="bg-gray-50 dark:bg-gray-700 sticky top-0">
+          <thead className={`sticky top-0 ${settings.tableHeader}`}>
             <tr>
-              <th className="text-left px-4 py-2 dark:text-gray-100">Nome</th>
-              <th className="text-left px-4 py-2 dark:text-gray-100">Categoria</th>
-              <th className="text-right px-4 py-2 dark:text-gray-100">Ações</th>
+              <th className={`text-left px-4 py-2 ${theme.colors.text.primary}`}>Nome</th>
+              <th className={`text-left px-4 py-2 ${theme.colors.text.primary}`}>Categoria</th>
+              <th className={`text-right px-4 py-2 ${theme.colors.text.primary}`}>Ações</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td className="px-4 py-3 dark:text-gray-200" colSpan={3}>Carregando...</td></tr>
+              <tr><td className={`px-4 py-3 ${theme.colors.text.primary}`} colSpan={3}>Carregando...</td></tr>
             ) : items.length === 0 ? (
-              <tr><td className="px-4 py-3 dark:text-gray-200" colSpan={3}>Nenhum documento selecionado</td></tr>
+              <tr><td className={`px-4 py-3 ${theme.colors.text.primary}`} colSpan={3}>Nenhum documento selecionado</td></tr>
             ) : (
               items.map((doc) => (
-                <tr key={doc.id} className="border-t border-gray-100 dark:border-gray-700">
-                  <td className="px-4 py-2 dark:text-gray-100">{doc.filename}</td>
-                  <td className="px-4 py-2 dark:text-gray-100">{doc.category || '-'}</td>
+                <tr key={doc.id} className={`border-t ${settings.tableRow}`}>
+                  <td className={`px-4 py-2 ${theme.colors.text.primary}`}>{doc.filename}</td>
+                  <td className={`px-4 py-2 ${theme.colors.text.primary}`}>{doc.category || '-'}</td>
                   <td className="px-4 py-2 text-right">
                     <div className="flex justify-end gap-2">
                       <Button
                         size="sm"
                         variant="secondary"
-                        className="bg-gray-700 hover:bg-gray-600 text-white"
+                        className={theme.colors.button.secondary}
                         title="Visualizar"
                         onClick={() => { setSelected(doc); setOpenView(true); }}
                       >
@@ -249,7 +252,7 @@ export default function KnowledgeBaseGrid({ accountId, authToken, isAdmin, refre
                       <Button
                         size="sm"
                         variant="secondary"
-                        className="bg-gray-700 hover:bg-gray-600 text-white"
+                        className={theme.colors.button.secondary}
                         title="Sincronizar"
                         onClick={() => handleSync(doc.id)}
                         disabled={syncingId === doc.id}
@@ -260,7 +263,7 @@ export default function KnowledgeBaseGrid({ accountId, authToken, isAdmin, refre
                         <Button
                           size="sm"
                           variant="secondary"
-                          className="bg-gray-700 hover:bg-gray-600 text-white"
+                          className={theme.colors.button.secondary}
                           title="Excluir"
                           onClick={() => handleDelete(doc.id)}
                         >
@@ -281,47 +284,47 @@ export default function KnowledgeBaseGrid({ accountId, authToken, isAdmin, refre
         className={`fixed inset-0 bg-black/50 z-40 transition-opacity duration-300 ${openView ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
         onClick={() => setOpenView(false)}
       />
-      <div className={`fixed top-0 right-0 h-full w-full max-w-md bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 z-50 transform transition-transform duration-300 ${openView ? 'translate-x-0' : 'translate-x-full'}`}>
+      <div className={`fixed top-0 right-0 h-full w-full max-w-md border-l z-50 transform transition-transform duration-300 ${settings.form} ${settings.formBorder} ${openView ? 'translate-x-0' : 'translate-x-full'}`}>
         <div className="p-4">
-          <h3 className="text-lg font-semibold dark:text-white">Documento</h3>
+          <h3 className={`text-lg font-semibold ${theme.colors.text.primary}`}>Documento</h3>
           {selected ? (
             <div className="mt-4 text-sm">
               <div className="divide-y divide-gray-200 dark:divide-gray-700 rounded-md overflow-hidden border border-gray-200 dark:border-gray-700">
-                <div className="flex items-start justify-between px-4 py-2 bg-gray-50 dark:bg-gray-700/50">
-                  <span className="text-gray-400">Nome</span>
-                  <span className="dark:text-gray-100 text-right ml-4 break-words">{selected.filename}</span>
+                <div className={`flex items-start justify-between px-4 py-2 ${settings.tableHeader}`}>
+                  <span className={theme.colors.text.muted}>Nome</span>
+                  <span className={`text-right ml-4 break-words ${theme.colors.text.primary}`}>{selected.filename}</span>
                 </div>
                 <div className="flex items-start justify-between px-4 py-2">
-                  <span className="text-gray-400">Categoria</span>
-                  <span className="dark:text-gray-100 text-right ml-4 break-words">{selected.category || '—'}</span>
+                  <span className={theme.colors.text.muted}>Categoria</span>
+                  <span className={`text-right ml-4 break-words ${theme.colors.text.primary}`}>{selected.category || '—'}</span>
                 </div>
                 <div className="flex items-start justify-between px-4 py-2">
-                  <span className="text-gray-400">Extensão</span>
-                  <span className="dark:text-gray-100 text-right ml-4">{selected.file_extension || '—'}</span>
+                  <span className={theme.colors.text.muted}>Extensão</span>
+                  <span className={`text-right ml-4 ${theme.colors.text.primary}`}>{selected.file_extension || '—'}</span>
                 </div>
                 <div className="flex items-start justify-between px-4 py-2">
-                  <span className="text-gray-400">Conta</span>
-                  <span className="dark:text-gray-100 text-right ml-4 break-words">{selected.account_name || selected.account_id}</span>
+                  <span className={theme.colors.text.muted}>Conta</span>
+                  <span className={`text-right ml-4 break-words ${theme.colors.text.primary}`}>{selected.account_name || selected.account_id}</span>
                 </div>
                 {selected.created_at && (
                   <div className="flex items-start justify-between px-4 py-2">
-                    <span className="text-gray-400">Criado em</span>
-                    <span className="dark:text-gray-100 text-right ml-4">{new Date(selected.created_at).toLocaleString()}</span>
+                    <span className={theme.colors.text.muted}>Criado em</span>
+                    <span className={`text-right ml-4 ${theme.colors.text.primary}`}>{new Date(selected.created_at).toLocaleString()}</span>
                   </div>
                 )}
                 {selected.updated_at && (
                   <div className="flex items-start justify-between px-4 py-2">
-                    <span className="text-gray-400">Atualizado em</span>
-                    <span className="dark:text-gray-100 text-right ml-4">{new Date(selected.updated_at).toLocaleString()}</span>
+                    <span className={theme.colors.text.muted}>Atualizado em</span>
+                    <span className={`text-right ml-4 ${theme.colors.text.primary}`}>{new Date(selected.updated_at).toLocaleString()}</span>
                   </div>
                 )}
                 <div className="flex items-start justify-between px-4 py-2">
-                  <span className="text-gray-400">Link</span>
+                  <span className={theme.colors.text.muted}>Link</span>
                   <span className="text-right ml-4 truncate max-w-[55%]">
                     {selected.document_url ? (
                       <a className="text-blue-500 hover:underline" href={selected.document_url} target="_blank" rel="noreferrer">Abrir documento</a>
                     ) : (
-                      <span className="dark:text-gray-100">—</span>
+                      <span className={theme.colors.text.primary}>—</span>
                     )}
                   </span>
                 </div>
@@ -330,7 +333,7 @@ export default function KnowledgeBaseGrid({ accountId, authToken, isAdmin, refre
               <div className="mt-4 flex justify-end">
                 <Button
                   variant="secondary"
-                  className="bg-gray-700 hover:bg-gray-600 text-white"
+                  className={theme.colors.button.secondary}
                   onClick={() => setOpenView(false)}
                 >
                   Fechar
@@ -338,7 +341,7 @@ export default function KnowledgeBaseGrid({ accountId, authToken, isAdmin, refre
               </div>
             </div>
           ) : (
-            <p className="mt-4 text-sm dark:text-gray-300">Nenhum documento selecionado</p>
+            <p className={`mt-4 text-sm ${theme.colors.text.secondary}`}>Nenhum documento selecionado</p>
           )}
         </div>
       </div>
@@ -348,15 +351,15 @@ export default function KnowledgeBaseGrid({ accountId, authToken, isAdmin, refre
         className={`fixed inset-0 bg-black/50 z-40 transition-opacity duration-300 ${openCreate ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
         onClick={() => setOpenCreate(false)}
       />
-      <div className={`fixed top-0 right-0 h-full w-full max-w-md bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 z-50 transform transition-transform duration-300 ${openCreate ? 'translate-x-0' : 'translate-x-full'}`}>
+      <div className={`fixed top-0 right-0 h-full w-full max-w-md border-l z-50 transform transition-transform duration-300 ${settings.form} ${settings.formBorder} ${openCreate ? 'translate-x-0' : 'translate-x-full'}`}>
         <div className="p-4">
-          <h3 className="text-lg font-semibold dark:text-white">Incluir Documento</h3>
+          <h3 className={`text-lg font-semibold ${theme.colors.text.primary}`}>Incluir Documento</h3>
           <div className="mt-4 space-y-3 text-sm">
             {/* Upload - drag and drop area */}
             <div>
-              <label className="block text-sm mb-1 dark:text-gray-200">Arquivo</label>
+              <label className={`block text-sm mb-1 ${theme.colors.text.primary}`}>Arquivo</label>
               <div
-                className="w-full rounded border border-dashed dark:border-gray-600 bg-gray-50 dark:bg-gray-900/60 px-4 py-8 text-center cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-900"
+                className={`w-full rounded border border-dashed px-4 py-8 text-center cursor-pointer ${settings.input} ${theme.colors.background.hover}`}
                 onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
                 onDrop={(e) => {
                   e.preventDefault();
@@ -373,9 +376,9 @@ export default function KnowledgeBaseGrid({ accountId, authToken, isAdmin, refre
                   input?.click();
                 }}
               >
-                <div className="text-gray-600 dark:text-gray-300">
+                <div className={theme.colors.text.secondary}>
                   <span className="text-blue-500">Arraste e solte</span> o arquivo aqui
-                  <div className="text-xs mt-1 text-gray-500 dark:text-gray-400">Tipos permitidos: PDF, DOCX • Tamanho máximo 25 MB</div>
+                  <div className={`text-xs mt-1 ${theme.colors.text.muted}`}>Tipos permitidos: PDF, DOCX • Tamanho máximo 25 MB</div>
                 </div>
               </div>
               <input id="kb-file-input" type="file" accept=".pdf,.docx" className="hidden" onChange={(e) => {
@@ -388,37 +391,37 @@ export default function KnowledgeBaseGrid({ accountId, authToken, isAdmin, refre
                 setFileExt(`.${ext}`);
               }} />
               {file && (
-                <div className="mt-2 text-xs dark:text-gray-300">Selecionado: {file.name}</div>
+                <div className={`mt-2 text-xs ${theme.colors.text.primary}`}>Selecionado: {file.name}</div>
               )}
             </div>
 
             {/* Nome do Documento */}
             <div>
-              <label className="block text-sm mb-1 dark:text-gray-200">Nome do Documento</label>
+              <label className={`block text-sm mb-1 ${theme.colors.text.primary}`}>Nome do Documento</label>
               <input
                 type="text"
                 value={documentName}
                 onChange={(e) => setDocumentName(e.target.value)}
-                className="w-full rounded border dark:bg-gray-700 dark:text-white dark:border-gray-600 px-3 py-2"
+                className={`w-full rounded border px-3 py-2 ${settings.input}`}
                 placeholder="nome-do-arquivo.pdf"
               />
             </div>
 
             {/* Extensão do Arquivo */}
             <div>
-              <label className="block text-sm mb-1 dark:text-gray-200">Extensão do Arquivo</label>
+              <label className={`block text-sm mb-1 ${theme.colors.text.primary}`}>Extensão do Arquivo</label>
               <input
                 type="text"
                 value={fileExt}
                 readOnly
-                className="w-full rounded border dark:bg-gray-700 dark:text-white dark:border-gray-600 px-3 py-2 opacity-80"
+                className={`w-full rounded border px-3 py-2 opacity-80 ${settings.input}`}
                 placeholder=".pdf"
               />
             </div>
 
-            <div className="border-t border-gray-200 dark:border-gray-700 mt-4 pt-4 flex justify-end gap-2">
-              <Button variant="secondary" className="bg-gray-700 hover:bg-gray-600 text-white" onClick={() => { setOpenCreate(false); resetCreateForm(); }} disabled={saving}>Cancelar</Button>
-              <Button className="bg-blue-600 hover:bg-blue-500 text-white" onClick={handleCreate} disabled={saving}>{saving ? 'Salvando...' : 'Salvar'}</Button>
+            <div className={`border-t mt-4 pt-4 flex justify-end gap-2 ${settings.formBorder}`}>
+              <Button variant="secondary" className={theme.colors.button.secondary} onClick={() => { setOpenCreate(false); resetCreateForm(); }} disabled={saving}>Cancelar</Button>
+              <Button className={theme.colors.button.primary} onClick={handleCreate} disabled={saving}>{saving ? 'Salvando...' : 'Salvar'}</Button>
             </div>
           </div>
         </div>

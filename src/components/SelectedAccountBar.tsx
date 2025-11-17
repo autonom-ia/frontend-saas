@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { useTheme } from "@/contexts/ThemeContext";
 import { Button } from "@/components/ui/button";
 import { Pencil, Phone, Settings } from "lucide-react";
 
@@ -14,13 +15,14 @@ export type SelectedAccountBarProps = {
 };
 
 export default function SelectedAccountBar(props: SelectedAccountBarProps) {
+  const { theme } = useTheme();
   const { name, isAdmin, onEdit, onInbox, onSettings, onChangeAccount } = props;
   return (
-    <div className="sticky top-5 z-[30] w-full max-w-full bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm border-b border-gray-200 dark:border-gray-700 py-2 px-3 rounded">
+    <div className={`sticky top-5 z-[30] w-full max-w-full backdrop-blur-sm border-b py-2 px-3 rounded ${theme.colors.background.card} ${theme.colors.border.primary}`}>
       <div className="flex items-center justify-between">
         <div>
-          <span className="text-sm text-gray-500 dark:text-gray-300">Conta selecionada</span>
-          <div className="text-base font-semibold dark:text-white">{name || 'Conta'}</div>
+          <span className={`text-sm ${theme.colors.text.muted}`}>Conta selecionada</span>
+          <div className={`text-base font-semibold ${theme.colors.text.primary}`}>{name || 'Conta'}</div>
         </div>
         <div className="flex items-center gap-2">
           {isAdmin && (
@@ -28,7 +30,7 @@ export default function SelectedAccountBar(props: SelectedAccountBarProps) {
               <Button
                 size="sm"
                 variant="secondary"
-                className="bg-gray-700 hover:bg-gray-600 text-white"
+                className={theme.colors.button.secondary}
                 onClick={onEdit}
                 title="Editar conta"
               >
@@ -37,7 +39,7 @@ export default function SelectedAccountBar(props: SelectedAccountBarProps) {
               <Button
                 size="sm"
                 variant="secondary"
-                className="bg-gray-700 hover:bg-gray-600 text-white"
+                className={theme.colors.button.secondary}
                 onClick={onInbox}
                 title="Inboxes e WhatsApp"
               >
@@ -46,7 +48,7 @@ export default function SelectedAccountBar(props: SelectedAccountBarProps) {
               <Button
                 size="sm"
                 variant="secondary"
-                className="bg-gray-700 hover:bg-gray-600 text-white"
+                className={theme.colors.button.secondary}
                 onClick={onSettings}
                 title="Parâmetros da conta"
               >
@@ -57,7 +59,7 @@ export default function SelectedAccountBar(props: SelectedAccountBarProps) {
           <Button
             size="sm"
             variant="secondary"
-            className="bg-gray-700 hover:bg-gray-600 text-white"
+            className={theme.colors.button.secondary}
             onClick={onChangeAccount}
           >
             Trocar conta

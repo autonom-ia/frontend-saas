@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { useTheme } from "@/contexts/ThemeContext";
 import { Button } from "@/components/ui/button";
 import { RefreshCw, Link2 } from "lucide-react";
 
@@ -21,6 +22,8 @@ export type InboxPanelProps = {
 };
 
 export default function InboxPanel(props: InboxPanelProps) {
+  const { theme } = useTheme();
+  const settings = theme.colors.settings;
   const {
     open,
     inboxes,
@@ -49,13 +52,13 @@ export default function InboxPanel(props: InboxPanelProps) {
         onClick={onClose}
       />
       <div
-        className={`fixed right-0 top-0 h-full w-full max-w-lg bg-white dark:bg-gray-800 shadow-xl z-50 transform transition-transform duration-300 ease-out ${open ? 'translate-x-0' : 'translate-x-full'}`}
+        className={`fixed right-0 top-0 h-full w-full max-w-lg shadow-xl z-50 transform transition-transform duration-300 ease-out ${settings.form} ${open ? 'translate-x-0' : 'translate-x-full'}`}
         aria-hidden={!open}
       >
-        <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-          <h2 className="text-lg font-semibold dark:text-white">Inboxes e WhatsApp</h2>
+        <div className={`p-4 border-b flex items-center justify-between ${settings.formBorder}`}>
+          <h2 className={`text-lg font-semibold ${theme.colors.text.primary}`}>Inboxes e WhatsApp</h2>
           <button
-            className="text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-white"
+            className={`${theme.colors.text.muted} ${theme.colors.background.hover}`}
             onClick={onClose}
             aria-label="Fechar"
           >
@@ -63,25 +66,25 @@ export default function InboxPanel(props: InboxPanelProps) {
           </button>
         </div>
         <div className="p-4">
-          <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded shadow-sm max-h-[75vh] overflow-auto">
+          <div className={`border rounded shadow-sm max-h-[75vh] overflow-auto ${settings.table}`}>
             <table className="min-w-full text-sm">
-              <thead className="bg-gray-50 dark:bg-gray-700 sticky top-0">
+              <thead className={`sticky top-0 ${settings.tableHeader}`}>
                 <tr>
-                  <th className="text-left px-4 py-2 dark:text-gray-100">Instância</th>
-                  <th className="text-left px-4 py-2 dark:text-gray-100">Status</th>
-                  <th className="text-right px-4 py-2 dark:text-gray-100">Ações</th>
+                  <th className={`text-left px-4 py-2 ${theme.colors.text.primary}`}>Instância</th>
+                  <th className={`text-left px-4 py-2 ${theme.colors.text.primary}`}>Status</th>
+                  <th className={`text-right px-4 py-2 ${theme.colors.text.primary}`}>Ações</th>
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
-                  <tr><td className="px-4 py-3 dark:text-gray-200" colSpan={3}>Carregando...</td></tr>
+                  <tr><td className={`px-4 py-3 ${theme.colors.text.primary}`} colSpan={3}>Carregando...</td></tr>
                 ) : inboxes.length === 0 ? (
-                  <tr><td className="px-4 py-3 dark:text-gray-200" colSpan={3}>Nenhum inbox encontrado.</td></tr>
+                  <tr><td className={`px-4 py-3 ${theme.colors.text.primary}`} colSpan={3}>Nenhum inbox encontrado.</td></tr>
                 ) : (
                   inboxes.map(it => (
                     <tr key={it.name}>
-                      <td className="px-4 py-2 dark:text-gray-100">{it.name}</td>
-                      <td className="px-4 py-2 dark:text-gray-100">
+                      <td className={`px-4 py-2 ${theme.colors.text.primary}`}>{it.name}</td>
+                      <td className={`px-4 py-2 ${theme.colors.text.primary}`}>
                         {it.status === 'open' && <span className="text-green-600">Conectado</span>}
                         {it.status === 'close' && <span className="text-red-500">Desconectado</span>}
                         {it.status === 'connecting' && <span className="text-yellow-600">Conectando</span>}
@@ -93,7 +96,7 @@ export default function InboxPanel(props: InboxPanelProps) {
                             <Button
                               size="sm"
                               variant="secondary"
-                              className="bg-gray-700 hover:bg-gray-600 text-white"
+                              className={theme.colors.button.secondary}
                               onClick={() => onSyncInstance(it.name)}
                               disabled={syncingInstance === it.name}
                               title="Sincronizar"
@@ -104,7 +107,7 @@ export default function InboxPanel(props: InboxPanelProps) {
                           {chatwootAccountEmpty && it.status === 'open' && (
                             <Button
                               size="sm"
-                              className="bg-blue-600 hover:bg-blue-500 text-white"
+                              className={theme.colors.button.primary}
                               onClick={() => onConnectChatwoot && onConnectChatwoot(it.name)}
                               title="Conectar Chatwoot"
                             >

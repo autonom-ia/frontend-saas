@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, AlertCircle, Info } from "lucide-react";
+import { useTheme } from "@/contexts/ThemeContext";
 import { apiService } from "@/lib/api";
 
 type Parameter = {
@@ -32,6 +33,7 @@ type StepConfigureAccountProps = {
 };
 
 export default function StepConfigureAccount({ productId, onNext, onBack }: StepConfigureAccountProps) {
+  const { theme } = useTheme();
   const [parameters, setParameters] = useState<Parameter[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -204,27 +206,27 @@ export default function StepConfigureAccount({ productId, onNext, onBack }: Step
       return (
         <div key={param.id} className="space-y-4">
           <div className="space-y-2">
-            <Label className="text-sm font-medium text-white">{label}</Label>
+            <Label className={`text-sm font-medium ${theme.colors.text.primary}`}>{label}</Label>
             {param.help_text && (
-              <p className="text-xs text-gray-400 flex items-start gap-2">
+              <p className={`text-xs ${theme.colors.text.muted} flex items-start gap-2`}>
                 <Info className="h-3 w-3 mt-0.5 flex-shrink-0" />
                 <span>{param.help_text}</span>
               </p>
             )}
           </div>
           
-          <Card className="bg-gray-800/50 border-gray-700">
+          <Card className={`${theme.colors.background.card} ${theme.colors.border.primary}`}>
             <CardContent className="pt-6 space-y-4">
               {jsonFields[param.name].map((field, idx) => (
                 <div key={idx} className="space-y-2">
-                  <Label htmlFor={`${param.name}_${field.key}`} className="text-sm text-gray-300">
+                  <Label htmlFor={`${param.name}_${field.key}`} className={`text-sm ${theme.colors.text.secondary}`}>
                     {field.label}
                   </Label>
                   <Input
                     id={`${param.name}_${field.key}`}
                     value={field.value}
                     onChange={(e) => handleJsonFieldChange(param.name, field.key, e.target.value)}
-                    className="bg-gray-900/50 border-gray-600 text-white"
+                    className={`${theme.colors.background.secondary} ${theme.colors.border.secondary} ${theme.colors.text.primary}`}
                     autoComplete="off"
                   />
                 </div>
@@ -240,11 +242,11 @@ export default function StepConfigureAccount({ productId, onNext, onBack }: Step
     
     return (
       <div key={param.id} className="space-y-2">
-        <Label htmlFor={param.name} className="text-sm font-medium text-white">
+        <Label htmlFor={param.name} className={`text-sm font-medium ${theme.colors.text.primary}`}>
           {label}
         </Label>
         {param.help_text && (
-          <p className="text-xs text-gray-400 flex items-start gap-2">
+          <p className={`text-xs ${theme.colors.text.muted} flex items-start gap-2`}>
             <Info className="h-3 w-3 mt-0.5 flex-shrink-0" />
             <span>{param.help_text}</span>
           </p>
@@ -255,7 +257,7 @@ export default function StepConfigureAccount({ productId, onNext, onBack }: Step
             value={value}
             onChange={(e) => handleInputChange(param.name, e.target.value)}
             placeholder={placeholder}
-            className="bg-gray-900/50 border-gray-600 text-white min-h-[100px]"
+            className={`${theme.colors.background.secondary} ${theme.colors.border.secondary} ${theme.colors.text.primary} min-h-[100px]`}
             rows={4}
             autoComplete="off"
           />
@@ -265,7 +267,7 @@ export default function StepConfigureAccount({ productId, onNext, onBack }: Step
             value={value}
             onChange={(e) => handleInputChange(param.name, e.target.value)}
             placeholder={placeholder}
-            className="bg-gray-900/50 border-gray-600 text-white"
+            className={`${theme.colors.background.secondary} ${theme.colors.border.secondary} ${theme.colors.text.primary}`}
             autoComplete="off"
           />
         )}
@@ -278,7 +280,7 @@ export default function StepConfigureAccount({ productId, onNext, onBack }: Step
     return (
       <div className="flex flex-col items-center justify-center py-16 space-y-4">
         <Loader2 className="h-12 w-12 text-blue-500 animate-spin" />
-        <p className="text-gray-400">Carregando configurações...</p>
+        <p className={theme.colors.text.muted}>Carregando configurações...</p>
       </div>
     );
   }
@@ -287,20 +289,20 @@ export default function StepConfigureAccount({ productId, onNext, onBack }: Step
   if (error) {
     return (
       <div className="flex flex-col items-center justify-center py-16 space-y-4">
-        <div className="bg-red-500/10 border border-red-500/50 rounded-lg p-6 max-w-md">
+        <div className={`rounded-lg p-6 max-w-md border ${theme.colors.accent.error}`}>
           <div className="flex items-start gap-3">
-            <AlertCircle className="h-6 w-6 text-red-500 flex-shrink-0 mt-0.5" />
+            <AlertCircle className="h-6 w-6 flex-shrink-0 mt-0.5" />
             <div className="space-y-2">
-              <h3 className="font-semibold text-red-500">Erro ao carregar parâmetros</h3>
-              <p className="text-sm text-gray-300">{error}</p>
+              <h3 className="font-semibold">Erro ao carregar parâmetros</h3>
+              <p className="text-sm">{error}</p>
             </div>
           </div>
         </div>
         <div className="flex gap-3">
-          <Button variant="outline" onClick={onBack}>
+          <Button variant="outline" onClick={onBack} className={theme.colors.button.outline}>
             Voltar
           </Button>
-          <Button onClick={loadParameters}>
+          <Button onClick={loadParameters} className={theme.colors.button.primary}>
             Tentar Novamente
           </Button>
         </div>
@@ -312,12 +314,12 @@ export default function StepConfigureAccount({ productId, onNext, onBack }: Step
   if (parameters.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-16 space-y-4">
-        <p className="text-gray-400">Nenhum parâmetro configurável encontrado</p>
+        <p className={theme.colors.text.muted}>Nenhum parâmetro configurável encontrado</p>
         <div className="flex gap-3">
-          <Button variant="outline" onClick={onBack}>
+          <Button variant="outline" onClick={onBack} className={theme.colors.button.outline}>
             Voltar
           </Button>
-          <Button onClick={handleContinue}>
+          <Button onClick={handleContinue} className={theme.colors.button.primary}>
             Continuar
           </Button>
         </div>
@@ -329,24 +331,24 @@ export default function StepConfigureAccount({ productId, onNext, onBack }: Step
     <div className="space-y-8 max-w-2xl mx-auto">
       {/* Header */}
       <div className="text-center space-y-2">
-        <h2 className="text-2xl font-bold text-white">Configure sua Conta</h2>
-        <p className="text-gray-400">
+        <h2 className={`text-2xl font-bold ${theme.colors.text.primary}`}>Configure sua Conta</h2>
+        <p className={theme.colors.text.muted}>
           Preencha as informações para personalizar sua experiência
         </p>
       </div>
 
       {/* Campos Fixos da Conta */}
-      <Card className="bg-gray-800/50 border-gray-700">
+      <Card className={`${theme.colors.background.card} ${theme.colors.border.primary}`}>
         <CardHeader>
-          <CardTitle className="text-white">Dados da Conta</CardTitle>
-          <CardDescription className="text-gray-400">
+          <CardTitle className={theme.colors.text.primary}>Dados da Conta</CardTitle>
+          <CardDescription className={theme.colors.text.muted}>
             Informações básicas obrigatórias
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           {/* Nome da Conta */}
           <div className="space-y-2">
-            <Label htmlFor="accountName" className="text-sm font-medium text-white">
+            <Label htmlFor="accountName" className={`text-sm font-medium ${theme.colors.text.primary}`}>
               Nome da Conta *
             </Label>
             <Input
@@ -354,7 +356,7 @@ export default function StepConfigureAccount({ productId, onNext, onBack }: Step
               value={accountName}
               onChange={(e) => setAccountName(e.target.value)}
               placeholder="Ex: Nome da Empresa"
-              className={`bg-gray-900/50 border-gray-600 text-white ${
+              className={`${theme.colors.background.secondary} ${theme.colors.border.secondary} ${theme.colors.text.primary} ${
                 validationErrors.accountName ? "border-red-500" : ""
               }`}
               autoComplete="off"
@@ -362,7 +364,7 @@ export default function StepConfigureAccount({ productId, onNext, onBack }: Step
             {validationErrors.accountName && (
               <p className="text-red-400 text-xs">{validationErrors.accountName}</p>
             )}
-            <p className="text-xs text-gray-400 flex items-start gap-2">
+            <p className={`text-xs ${theme.colors.text.muted} flex items-start gap-2`}>
               <Info className="h-3 w-3 mt-0.5 flex-shrink-0" />
               <span>Escolha um nome descritivo para identificar esta conta</span>
             </p>
@@ -370,7 +372,7 @@ export default function StepConfigureAccount({ productId, onNext, onBack }: Step
 
           {/* Email */}
           <div className="space-y-2">
-            <Label htmlFor="accountEmail" className="text-sm font-medium text-white">
+            <Label htmlFor="accountEmail" className={`text-sm font-medium ${theme.colors.text.primary}`}>
               Email *
             </Label>
             <Input
@@ -379,7 +381,7 @@ export default function StepConfigureAccount({ productId, onNext, onBack }: Step
               value={accountEmail}
               onChange={(e) => setAccountEmail(e.target.value)}
               placeholder="Ex: contato@empresa.com"
-              className={`bg-gray-900/50 border-gray-600 text-white ${
+              className={`${theme.colors.background.secondary} ${theme.colors.border.secondary} ${theme.colors.text.primary} ${
                 validationErrors.accountEmail ? "border-red-500" : ""
               }`}
               autoComplete="off"
@@ -387,7 +389,7 @@ export default function StepConfigureAccount({ productId, onNext, onBack }: Step
             {validationErrors.accountEmail && (
               <p className="text-red-400 text-xs">{validationErrors.accountEmail}</p>
             )}
-            <p className="text-xs text-gray-400 flex items-start gap-2">
+            <p className={`text-xs ${theme.colors.text.muted} flex items-start gap-2`}>
               <Info className="h-3 w-3 mt-0.5 flex-shrink-0" />
               <span>Email para notificações e recuperação de acesso</span>
             </p>
@@ -395,7 +397,7 @@ export default function StepConfigureAccount({ productId, onNext, onBack }: Step
 
           {/* Telefone */}
           <div className="space-y-2">
-            <Label htmlFor="accountPhone" className="text-sm font-medium text-white">
+            <Label htmlFor="accountPhone" className={`text-sm font-medium ${theme.colors.text.primary}`}>
               Número de Telefone *
             </Label>
             <Input
@@ -404,7 +406,7 @@ export default function StepConfigureAccount({ productId, onNext, onBack }: Step
               value={accountPhone}
               onChange={(e) => handlePhoneChange(e.target.value)}
               placeholder="Ex: 5511999999999"
-              className={`bg-gray-900/50 border-gray-600 text-white ${
+              className={`${theme.colors.background.secondary} ${theme.colors.border.secondary} ${theme.colors.text.primary} ${
                 validationErrors.accountPhone ? "border-red-500" : ""
               }`}
               autoComplete="off"
@@ -412,19 +414,19 @@ export default function StepConfigureAccount({ productId, onNext, onBack }: Step
             {validationErrors.accountPhone && (
               <p className="text-red-400 text-xs">{validationErrors.accountPhone}</p>
             )}
-            <p className="text-xs text-gray-400 flex items-start gap-2">
+            <p className={`text-xs ${theme.colors.text.muted} flex items-start gap-2`}>
               <Info className="h-3 w-3 mt-0.5 flex-shrink-0" />
               <span>Formato: Código do país + DDD + Número (apenas números)</span>
             </p>
             
             {/* Warning */}
-            <div className="bg-orange-900/20 border-2 border-orange-600/50 rounded-lg p-3 flex gap-3">
-              <AlertCircle className="h-5 w-5 text-orange-400 flex-shrink-0 mt-0.5" />
+            <div className={`rounded-lg p-3 flex gap-3 border ${theme.colors.accent.warning}`}>
+              <AlertCircle className="h-5 w-5 flex-shrink-0 mt-0.5" />
               <div>
-                <p className="text-orange-200 text-sm font-semibold">⚠️ Número Exclusivo</p>
-                <p className="text-orange-200/90 text-xs mt-1">
+                <p className="text-sm font-semibold">⚠️ Número Exclusivo</p>
+                <p className="text-xs mt-1">
                   Use um número <strong>dedicado exclusivamente</strong> ao atendimento virtual.
-                  <strong className="text-orange-100"> NÃO use um número já vinculado a outro WhatsApp.</strong>
+                  <strong> NÃO use um número já vinculado a outro WhatsApp.</strong>
                   Recomendamos adquirir um chip novo.
                 </p>
               </div>
@@ -435,10 +437,10 @@ export default function StepConfigureAccount({ productId, onNext, onBack }: Step
 
       {/* Parâmetros Dinâmicos */}
       {parameters.length > 0 && (
-        <Card className="bg-gray-800/50 border-gray-700">
+        <Card className={`${theme.colors.background.card} ${theme.colors.border.primary}`}>
           <CardHeader>
-            <CardTitle className="text-white">Configurações Adicionais</CardTitle>
-            <CardDescription className="text-gray-400">
+            <CardTitle className={theme.colors.text.primary}>Configurações Adicionais</CardTitle>
+            <CardDescription className={theme.colors.text.muted}>
               Parâmetros específicos do produto selecionado
             </CardDescription>
           </CardHeader>
@@ -453,14 +455,14 @@ export default function StepConfigureAccount({ productId, onNext, onBack }: Step
         <Button 
           variant="outline" 
           onClick={onBack}
-          className="border-gray-600 text-gray-300 hover:bg-gray-800"
+          className={theme.colors.button.outline}
         >
           Voltar
         </Button>
         <Button 
           onClick={handleContinue}
           disabled={submitting}
-          className="bg-blue-600 hover:bg-blue-700 text-white"
+          className={theme.colors.button.primary}
         >
           {submitting ? (
             <>

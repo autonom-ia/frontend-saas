@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
+import { useTheme } from "@/contexts/ThemeContext";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -628,14 +629,16 @@ export default function MonitoringPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [range]);
 
+  const { theme } = useTheme();
+
   // Tela de loading enquanto o perfil é carregado
   if (profileLoading) {
     return (
       <AuthGuard>
-        <div className="flex h-screen bg-background dark:bg-gray-900 items-center justify-center">
+        <div className={`flex h-screen items-center justify-center ${theme.colors.background.primary}`}>
           <div className="flex flex-col items-center gap-4">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-            <p className="text-gray-400 text-sm">Carregando perfil do usuário...</p>
+            <p className={`text-sm ${theme.colors.text.muted}`}>Carregando perfil do usuário...</p>
           </div>
         </div>
       </AuthGuard>
@@ -644,16 +647,24 @@ export default function MonitoringPage() {
 
   return (
     <AuthGuard>
-      <div className="flex h-screen bg-background dark:bg-gray-900">
+      <div className={`flex h-screen ${theme.colors.background.primary}`}>
         {/* Sidebar */}
         <Sidebar show={showMenu} />
 
       <div className="flex-1 flex flex-col">
         {/* Header (same visual pattern and animation as Settings) */}
-        <header className={`fixed top-0 left-0 right-0 z-[60] flex items-center h-16 bg-gray-800 text-white px-4 transition-all duration-400 ease-out ${showHeader ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-5'}`}>
+        <header className={`fixed top-0 left-0 right-0 z-[60] flex items-center h-16 ${theme.colors.background.secondary} ${theme.colors.border.primary} border-b px-4 transition-all duration-400 ease-out ${showHeader ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-5'}`}>
           {/* Logo */}
           <div className="px-2 flex items-center">
-            <Image src="/images/logo.png" alt="Autonom.ia Logo" width={42} height={42} />
+            <Image 
+              src={theme.logoSquare} 
+              alt="Logo" 
+              width={42} 
+              height={42}
+              onError={(e) => {
+                e.currentTarget.src = '/images/logo.png';
+              }}
+            />
           </div>
           {/* Range controls in header */}
           <div className="flex-1 px-2 relative">
@@ -663,9 +674,19 @@ export default function MonitoringPage() {
               {userData?.user?.isAdmin && (
                 <div className="flex flex-col gap-1 min-w-[220px]">
                   <div className="flex items-center gap-2">
-                    <span className="text-sm whitespace-nowrap">Cliente</span>
+                    <span className={`text-sm whitespace-nowrap ${theme.colors.text.primary}`}>Cliente</span>
                     <select
-                      className="select-clean min-w-[160px]"
+                      className={`min-w-[160px] rounded-md px-3 py-2 text-sm border ${theme.colors.background.secondary} ${theme.colors.text.primary} ${theme.colors.border.secondary} focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                      style={{
+                        WebkitAppearance: 'none',
+                        MozAppearance: 'none',
+                        appearance: 'none',
+                        backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='currentColor'%3E%3Cpath d='M4 6l4 4 4-4'/%3E%3C/svg%3E")`,
+                        backgroundRepeat: 'no-repeat',
+                        backgroundPosition: 'right 0.75rem center',
+                        backgroundSize: '16px 16px',
+                        paddingRight: '2.5rem'
+                      }}
                       value={selectedDomain}
                       onChange={(event) => setSelectedDomain(event.target.value)}
                       disabled={domainLoading || (!domainLoading && domains.length === 0)}
@@ -692,10 +713,20 @@ export default function MonitoringPage() {
               )}
               {/* Tabs removed from header; rendered in main below */}
               <div className="flex items-center gap-2">
-                <span className="text-sm whitespace-nowrap">Informe o período</span>
+                <span className={`text-sm whitespace-nowrap ${theme.colors.text.primary}`}>Informe o período</span>
                 <select
                   id="range"
-                  className="select-clean"
+                  className={`rounded-md px-3 py-2 text-sm border ${theme.colors.background.secondary} ${theme.colors.text.primary} ${theme.colors.border.secondary} focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                  style={{
+                    WebkitAppearance: 'none',
+                    MozAppearance: 'none',
+                    appearance: 'none',
+                    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='currentColor'%3E%3Cpath d='M4 6l4 4 4-4'/%3E%3C/svg%3E")`,
+                    backgroundRepeat: 'no-repeat',
+                    backgroundPosition: 'right 0.75rem center',
+                    backgroundSize: '16px 16px',
+                    paddingRight: '2.5rem'
+                  }}
                   value={range}
                   onChange={(e) => {
                     const val = e.target.value;
@@ -720,7 +751,7 @@ export default function MonitoringPage() {
                   {/* Single visible component (no native placeholder) */}
                   <button
                     type="button"
-                    className="bg-gray-700 text-white rounded px-3 py-2 hover:bg-gray-600"
+                    className={`rounded px-3 py-2 ${theme.colors.button.secondary}`}
                     onClick={() => setShowCustomPicker((v) => !v)}
                     aria-expanded={showCustomPicker}
                     aria-controls="custom-range-panel"
@@ -734,32 +765,32 @@ export default function MonitoringPage() {
                   {showCustomPicker && (
                     <div
                       id="custom-range-panel"
-                      className="absolute top-11 left-0 z-50 bg-gray-800 text-white border border-gray-700 rounded p-3 shadow-xl flex items-center gap-3"
+                      className={`absolute top-11 left-0 z-50 border rounded p-3 shadow-xl flex items-center gap-3 ${theme.colors.background.card} ${theme.colors.border.primary}`}
                     >
                       <div className="flex items-center gap-2">
-                        <label htmlFor="start" className="text-sm">Início</label>
+                        <label htmlFor="start" className={`text-sm ${theme.colors.text.primary}`}>Ínicio</label>
                         <input
                           id="start"
                           type="date"
                           lang="pt-BR"
-                          className="bg-gray-700 text-white rounded px-3 py-2"
+                          className={`rounded px-3 py-2 ${theme.colors.background.secondary} ${theme.colors.text.primary}`}
                           value={customStart}
                           onChange={(e) => setCustomStart(e.target.value)}
                         />
                       </div>
                       <div className="flex items-center gap-2">
-                        <label htmlFor="end" className="text-sm">Fim</label>
+                        <label htmlFor="end" className={`text-sm ${theme.colors.text.primary}`}>Fim</label>
                         <input
                           id="end"
                           type="date"
                           lang="pt-BR"
-                          className="bg-gray-700 text-white rounded px-3 py-2"
+                          className={`rounded px-3 py-2 ${theme.colors.background.secondary} ${theme.colors.text.primary}`}
                           value={customEnd}
                           onChange={(e) => setCustomEnd(e.target.value)}
                         />
                       </div>
                       <Button
-                        className="bg-blue-600 hover:bg-blue-500 text-white"
+                        className={theme.colors.button.primary}
                         onClick={() => setShowCustomPicker(false)}
                       >
                         Aplicar
@@ -774,7 +805,7 @@ export default function MonitoringPage() {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <div className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity">
-                <span className="text-sm">{userData?.user?.name || 'Usuário'}</span>
+                <span className={`text-sm ${theme.colors.text.primary}`}>{userData?.user?.name || 'Usuário'}</span>
                 <Avatar>
                   {userData?.user?.photoUrl && (
                     <AvatarImage src={userData.user.photoUrl} alt={userData?.user?.name || 'Usuário'} />
@@ -813,17 +844,17 @@ export default function MonitoringPage() {
 
           {/* Tabs - underline style (match Settings) */}
           <div className="mt-1 mb-4">
-            <div className="inline-flex items-center gap-6 border-b border-gray-200 dark:border-gray-700">
+            <div className={`inline-flex items-center gap-6 border-b ${theme.colors.border.primary}`}>
               <button
                 type="button"
-                className={`px-2 py-2 text-lg font-semibold ${selectedTab === 'atendimentos' ? 'text-white border-b-2 border-blue-500' : 'text-gray-400 hover:text-gray-200'}`}
+                className={`px-2 py-2 text-lg font-semibold ${selectedTab === 'atendimentos' ? `${theme.colors.text.primary} border-b-2 border-blue-500` : `${theme.colors.text.muted} hover:${theme.colors.text.secondary}`}`}
                 onClick={() => setSelectedTab('atendimentos')}
               >
                 Atendimentos
               </button>
               <button
                 type="button"
-                className={`px-2 py-2 text-lg font-semibold ${selectedTab === 'indicadores' ? 'text-white border-b-2 border-blue-500' : 'text-gray-400 hover:text-gray-200'}`}
+                className={`px-2 py-2 text-lg font-semibold ${selectedTab === 'indicadores' ? `${theme.colors.text.primary} border-b-2 border-blue-500` : `${theme.colors.text.muted} hover:${theme.colors.text.secondary}`}`}
                 onClick={() => setSelectedTab('indicadores')}
               >
                 Indicadores Tempo
@@ -837,7 +868,7 @@ export default function MonitoringPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {/* Total de Conversas - sempre azul */}
             <div
-              className={`rounded-lg border border-blue-700/60 bg-blue-900/20 p-4 shadow transition-all duration-500 ${showHeader ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-3'}`}
+              className={`rounded-lg border border-blue-700/60 bg-blue-900/20 p-4 shadow transition-all duration-500 ${theme.colors.background.card} ${showHeader ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-3'}`}
               style={{ transitionDelay: '80ms' }}
             >
               <div className="text-sm text-blue-300">Total de Conversas</div>
@@ -872,7 +903,7 @@ export default function MonitoringPage() {
               return (
                 <div
                   onClick={() => { setPanelMode('unassigned'); setPanelOpen(true); }}
-                  className={`cursor-pointer rounded-lg p-4 border bg-gray-800/60 ${p.border} ${p.bg} ${p.text} transform transition-all duration-500 hover:scale-[1.01] ${showHeader ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
+                  className={`cursor-pointer rounded-lg p-4 border ${theme.colors.background.card} ${p.border} ${p.bg} ${p.text} transform transition-all duration-500 hover:scale-[1.01] ${showHeader ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
                   style={{ transitionDelay: '150ms' }}
                 >
                   <div className={`text-sm ${p.label}`}>Conversas não atribuídas</div>
@@ -909,7 +940,7 @@ export default function MonitoringPage() {
               return (
                 <div
                   onClick={() => { setPanelMode('stale'); setPanelOpen(true); }}
-                  className={`cursor-pointer rounded-lg p-4 border bg-gray-800/60 ${p.border} ${p.bg} ${p.text} transform transition-all duration-500 hover:scale-[1.01] ${showHeader ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
+                  className={`cursor-pointer rounded-lg p-4 border ${theme.colors.background.card} ${p.border} ${p.bg} ${p.text} transform transition-all duration-500 hover:scale-[1.01] ${showHeader ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
                   style={{ transitionDelay: '240ms' }}
                 >
                   <div className={`text-sm ${p.label}`}>Conversas sem iteração (&gt; 24h)</div>
@@ -923,10 +954,10 @@ export default function MonitoringPage() {
           <div className="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Pie chart - Conversas por status */}
             <section>
-              <div className="mb-2 text-sm text-gray-300">Total de conversas por status</div>
-              <div className="rounded-md border border-gray-700 bg-gray-900/60 p-6">
+              <div className={`mb-2 text-sm ${theme.colors.text.secondary}`}>Total de conversas por status</div>
+              <div className={`rounded-md border p-6 ${theme.colors.background.card} ${theme.colors.border.primary}`}>
                 {statusCounts.length === 0 ? (
-                  <div className="h-56 flex items-center justify-center text-sm text-gray-400">Sem dados para exibir.</div>
+                  <div className={`h-56 flex items-center justify-center text-sm ${theme.colors.text.muted}`}>Sem dados para exibir.</div>
                 ) : (
                   <div className="h-56 w-full flex flex-col items-center justify-center gap-3">
                     <svg width="220" height="220" viewBox="0 0 220 220" className="mx-auto">
@@ -971,13 +1002,13 @@ export default function MonitoringPage() {
                         return nodes;
                       })()}
                       {/* inner circle to make donut */}
-                      <circle cx="110" cy="110" r="55" fill="#0B1220"/>
+                      <circle cx="110" cy="110" r="55" fill={theme.name === 'hub2you' ? '#FFFFFF' : '#0B1220'}/>
                     </svg>
                     <div className="grid grid-cols-1 gap-1">
                       {statusCounts.map((s, i) => (
                         <div key={i} className="flex items-center justify-center gap-3 text-sm">
                           <span className="inline-block w-3 h-3 rounded-sm" style={{ backgroundColor: s.color }} />
-                          <span className="text-gray-200">{s.label}</span>
+                          <span className={theme.colors.text.primary}>{s.label}</span>
                         </div>
                       ))}
                     </div>
@@ -988,10 +1019,10 @@ export default function MonitoringPage() {
 
             {/* Bar chart (vertical) - Atendimentos por dia ou hora */}
             <section>
-              <div className="mb-2 text-sm text-gray-300">{isHoje ? 'Atendimentos por hora (Hoje)' : 'Atendimentos por dia'}</div>
-              <div className="rounded-md border border-gray-700 bg-gray-900/60 p-6">
+              <div className={`mb-2 text-sm ${theme.colors.text.secondary}`}>{isHoje ? 'Atendimentos por hora (Hoje)' : 'Atendimentos por dia'}</div>
+              <div className={`rounded-md border p-6 ${theme.colors.background.card} ${theme.colors.border.primary}`}>
                 {timeSeries.length === 0 ? (
-                  <div className="h-56 flex items-center justify-center text-sm text-gray-400">Sem dados para exibir.</div>
+                  <div className={`h-56 flex items-center justify-center text-sm ${theme.colors.text.muted}`}>Sem dados para exibir.</div>
                 ) : (
                   <div className="h-56 w-full overflow-x-auto">
                     <div
@@ -1008,14 +1039,14 @@ export default function MonitoringPage() {
                             <div key={idx} className="flex-1 flex flex-col items-center" style={{ minWidth: 56 }}>
                               <div className="w-full h-44 relative">
                                 <div
-                                  className="absolute left-1/2 -translate-x-1/2 text-[10px] text-gray-200"
+                                  className={`absolute left-1/2 -translate-x-1/2 text-[10px] ${theme.colors.text.primary}`}
                                   style={{ bottom: `calc(${h}% + 4px)` }}
                                 >
                                   {t.value}
                                 </div>
                                 <div className="absolute bottom-0 w-full bg-blue-500 rounded-sm" style={{ height: `${h}%` }} />
                               </div>
-                              <div className="mt-1 text-[10px] text-gray-300 truncate w-full text-center" title={t.label}>{t.label}</div>
+                              <div className={`mt-1 text-[10px] truncate w-full text-center ${theme.colors.text.secondary}`} title={t.label}>{t.label}</div>
                             </div>
                           );
                         });
@@ -1032,13 +1063,13 @@ export default function MonitoringPage() {
             {/* Logged users (top 5 as table) */}
             <section>
               <div className="flex items-center justify-between mb-2">
-                <h2 className="text-sm text-gray-300">Usuários logados</h2>
+                <h2 className={`text-sm ${theme.colors.text.secondary}`}>Usuários logados</h2>
                 {loggedError && <span className="text-xs text-red-400">{loggedError}</span>}
               </div>
-              <div className="flex flex-col h-72 overflow-hidden border border-gray-700 rounded-md">
+              <div className={`flex flex-col h-72 overflow-hidden border rounded-md ${theme.colors.border.primary}`}>
                 <div className="flex-1 overflow-auto">
                 <table className="w-full text-sm">
-                  <thead className="bg-gray-800 text-gray-300">
+                  <thead className={`${theme.colors.background.secondary} ${theme.colors.text.secondary}`}>
                     <tr>
                       <th className="text-left px-3 py-2">Usuário</th>
                       <th className="text-right px-3 py-2">Conversas abertas</th>
@@ -1050,26 +1081,26 @@ export default function MonitoringPage() {
                       const top5: LoggedUserRow[] = list.slice(0,5);
                       if (loggedLoading) {
                         return Array.from({ length: 5 }).map((_, idx) => (
-                          <tr key={idx} className="odd:bg-gray-900 even:bg-gray-800 text-gray-100">
-                            <td className="px-3 py-2" colSpan={2}><div className="h-4 animate-pulse bg-gray-700 rounded" /></td>
+                          <tr key={idx} className={theme.colors.text.primary}>
+                            <td className="px-3 py-2" colSpan={2}><div className="h-4 animate-pulse bg-gray-300 rounded" /></td>
                           </tr>
                         ));
                       }
                       return top5.length > 0 ? top5.map((u, idx) => (
-                        <tr key={idx} className="odd:bg-gray-900 even:bg-gray-800 text-gray-100">
+                        <tr key={idx} className={theme.colors.text.primary}>
                           <td className="px-3 py-2 truncate">{u.name || '—'}</td>
                           <td className="px-3 py-2 text-right">{u.open_conversations ?? 0}</td>
                         </tr>
                       )) : (
                         <tr>
-                          <td className="px-3 py-3 text-gray-400" colSpan={2}>Nenhum usuário logado.</td>
+                          <td className={`px-3 py-3 ${theme.colors.text.muted}`} colSpan={2}>Nenhum usuário logado.</td>
                         </tr>
                       );
                     })()}
                   </tbody>
                 </table>
                 </div>
-                <div className="px-3 py-2 text-right bg-gray-800 border-t border-gray-700">
+                <div className={`px-3 py-2 text-right border-t ${theme.colors.background.secondary} ${theme.colors.border.primary}`}>
                   <button
                     className="text-xs text-blue-400 hover:text-blue-300 underline"
                     onClick={() => { setPanelMode('logged'); setPanelOpen(true); }}
@@ -1083,12 +1114,12 @@ export default function MonitoringPage() {
             {/* Workloads by user from conversations (period) as table */}
             <section>
               <div className="flex items-center justify-between mb-2">
-                <h2 className="text-sm text-gray-300">Atendimentos por usuário (período)</h2>
+                <h2 className={`text-sm ${theme.colors.text.secondary}`}>Atendimentos por usuário (período)</h2>
               </div>
-              <div className="flex flex-col h-72 overflow-hidden border border-gray-700 rounded-md">
+              <div className={`flex flex-col h-72 overflow-hidden border rounded-md ${theme.colors.border.primary}`}>
                 <div className="flex-1 overflow-auto">
                 <table className="w-full text-sm">
-                  <thead className="bg-gray-800 text-gray-300">
+                  <thead className={`${theme.colors.background.secondary} ${theme.colors.text.secondary}`}>
                     <tr>
                       <th className="text-left px-3 py-2">Usuário</th>
                       <th className="text-right px-3 py-2">Quantidade</th>
@@ -1108,20 +1139,20 @@ export default function MonitoringPage() {
                       const list = Array.from(map.values()).sort((a,b)=> b.count - a.count);
                       const top5 = list.slice(0,5);
                       return top5.length > 0 ? top5.map((u) => (
-                        <tr key={u.id} className="odd:bg-gray-900 even:bg-gray-800 text-gray-100">
+                        <tr key={u.id} className={theme.colors.text.primary}>
                           <td className="px-3 py-2 truncate">{u.name}</td>
                           <td className="px-3 py-2 text-right">{u.count}</td>
                         </tr>
                       )) : (
                         <tr>
-                          <td className="px-3 py-3 text-gray-400" colSpan={2}>Sem atendimentos no período.</td>
+                          <td className={`px-3 py-3 ${theme.colors.text.muted}`} colSpan={2}>Sem atendimentos no período.</td>
                         </tr>
                       );
                     })()}
                   </tbody>
                 </table>
                 </div>
-                <div className="px-3 py-2 text-right bg-gray-800 border-t border-gray-700">
+                <div className={`px-3 py-2 text-right border-t ${theme.colors.background.secondary} ${theme.colors.border.primary}`}>
                   <button
                     className="text-xs text-blue-400 hover:text-blue-300 underline"
                     onClick={() => { setPanelMode('workloads'); setPanelOpen(true); }}
@@ -1135,12 +1166,12 @@ export default function MonitoringPage() {
             {/* Workloads by team from conversations (period) as table */}
             <section>
               <div className="flex items-center justify-between mb-2">
-                <h2 className="text-sm text-gray-300">Atendimentos por time (período)</h2>
+                <h2 className={`text-sm ${theme.colors.text.secondary}`}>Atendimentos por time (período)</h2>
               </div>
-              <div className="flex flex-col h-72 overflow-hidden border border-gray-700 rounded-md">
+              <div className={`flex flex-col h-72 overflow-hidden border rounded-md ${theme.colors.border.primary}`}>
                 <div className="flex-1 overflow-auto">
                 <table className="w-full text-sm">
-                  <thead className="bg-gray-800 text-gray-300">
+                  <thead className={`${theme.colors.background.secondary} ${theme.colors.text.secondary}`}>
                     <tr>
                       <th className="text-left px-3 py-2">Time</th>
                       <th className="text-right px-3 py-2">Quantidade</th>
@@ -1161,20 +1192,20 @@ export default function MonitoringPage() {
                       const list = Array.from(map.values()).sort((a,b)=> b.count - a.count);
                       const top5 = list.slice(0,5);
                       return top5.length > 0 ? top5.map((t) => (
-                        <tr key={t.id + t.name} className="odd:bg-gray-900 even:bg-gray-800 text-gray-100">
+                        <tr key={t.id + t.name} className={theme.colors.text.primary}>
                           <td className="px-3 py-2 truncate">{t.name}</td>
                           <td className="px-3 py-2 text-right">{t.count}</td>
                         </tr>
                       )) : (
                         <tr>
-                          <td className="px-3 py-3 text-gray-400" colSpan={2}>Sem atendimentos no período.</td>
+                          <td className={`px-3 py-3 ${theme.colors.text.muted}`} colSpan={2}>Sem atendimentos no período.</td>
                         </tr>
                       );
                     })()}
                   </tbody>
                 </table>
                 </div>
-                <div className="px-3 py-2 text-right bg-gray-800 border-t border-gray-700">
+                <div className={`px-3 py-2 text-right border-t ${theme.colors.background.secondary} ${theme.colors.border.primary}`}>
                   <button
                     className="text-xs text-blue-400 hover:text-blue-300 underline"
                     onClick={() => { setPanelMode('teams'); setPanelOpen(true); }}
@@ -1187,17 +1218,17 @@ export default function MonitoringPage() {
           </div>
 
           {/* Slide-over right panel */}
-          <div className={`fixed top-16 right-0 bottom-0 w-full sm:w-[28rem] bg-gray-900/95 backdrop-blur border-l border-gray-700 z-[70] transform transition-transform duration-300 ${panelOpen ? 'translate-x-0' : 'translate-x-full'}`}>
+          <div className={`fixed top-16 right-0 bottom-0 w-full sm:w-[28rem] backdrop-blur border-l z-[70] transform transition-transform duration-300 ${theme.colors.background.card} ${theme.colors.border.primary} ${panelOpen ? 'translate-x-0' : 'translate-x-full'}`}>
             <div className="h-full flex flex-col">
-              <div className="p-4 border-b border-gray-800 flex items-center justify-between">
-                <div className="text-white text-sm font-medium">
+              <div className={`p-4 border-b flex items-center justify-between ${theme.colors.border.secondary}`}>
+                <div className={`text-sm font-medium ${theme.colors.text.primary}`}>
                   {panelMode === 'logged' && 'Todos os usuários logados'}
                   {panelMode === 'workloads' && 'Atendimentos por usuário (completo)'}
                   {panelMode === 'teams' && 'Atendimentos por time (completo)'}
                   {panelMode === 'stale' && 'Conversas sem iteração (> 24h)'}
                   {panelMode === 'unassigned' && 'Conversas não atribuídas'}
                 </div>
-                <button className="text-gray-300 hover:text-white" onClick={()=> setPanelOpen(false)}>Fechar</button>
+                <button className={`${theme.colors.text.secondary} hover:${theme.colors.text.primary}`} onClick={()=> setPanelOpen(false)}>Fechar</button>
               </div>
               <div className="flex-1 overflow-auto p-4">
                 {panelMode === 'logged' ? (
@@ -1210,27 +1241,27 @@ export default function MonitoringPage() {
                           .filter(Boolean)
                       )).sort((a, b) => a.localeCompare(b));
                       return (
-                        <div key={u.id} className="rounded-md border border-gray-700 bg-gray-800/60 p-3">
-                          <div className="text-sm text-white font-medium">{u.name || '—'}</div>
-                          <div className="text-xs text-gray-400">{u.email || '—'}</div>
-                          <div className="mt-2 text-xs text-blue-300">Abertas: {u.open_conversations ?? 0}</div>
-                          <div className="mt-2 text-xs text-gray-300">
-                            <span className="text-gray-400">Caixas de entrada:</span>
+                        <div key={u.id} className={`rounded-md border p-3 ${theme.colors.background.card} ${theme.colors.border.primary}`}>
+                          <div className={`text-sm font-medium ${theme.colors.text.primary}`}>{u.name || '—'}</div>
+                          <div className={`text-xs ${theme.colors.text.muted}`}>{u.email || '—'}</div>
+                          <div className="mt-2 text-xs text-blue-500">Abertas: {u.open_conversations ?? 0}</div>
+                          <div className={`mt-2 text-xs ${theme.colors.text.secondary}`}>
+                            <span className={theme.colors.text.muted}>Caixas de entrada:</span>
                             {inboxes.length > 0 ? (
                               <div className="mt-1 flex flex-wrap gap-2">
                                 {inboxes.map((name) => (
-                                  <span key={name} className="inline-block bg-gray-700 text-gray-100 px-2 py-0.5 rounded text-[11px]">{name}</span>
+                                  <span key={name} className={`inline-block px-2 py-0.5 rounded text-[11px] ${theme.colors.background.secondary} ${theme.colors.text.primary}`}>{name}</span>
                                 ))}
                               </div>
                             ) : (
-                              <span className="ml-1 text-gray-500">—</span>
+                              <span className={`ml-1 ${theme.colors.text.muted}`}>—</span>
                             )}
                           </div>
                         </div>
                       );
                     })}
                     {(!loggedUsers || loggedUsers.length === 0) && (
-                      <div className="text-sm text-gray-400">Nenhum usuário logado.</div>
+                      <div className={`text-sm ${theme.colors.text.muted}`}>Nenhum usuário logado.</div>
                     )}
                   </div>
                 ) : panelMode === 'workloads' ? (
@@ -1248,22 +1279,22 @@ export default function MonitoringPage() {
                     return (
                       <div className="grid grid-cols-1 gap-3">
                         {list.map((u) => (
-                          <div key={u.id} className="rounded-md border border-gray-700 bg-gray-800/60 p-3">
-                            <div className="text-sm text-white font-medium">{u.name}</div>
-                            <div className="mt-1 text-xs text-gray-400">ID: {u.id}</div>
-                            <div className="mt-2 text-2xl text-blue-400 font-semibold">{u.count}</div>
+                          <div key={u.id} className={`rounded-md border p-3 ${theme.colors.background.card} ${theme.colors.border.primary}`}>
+                            <div className={`text-sm font-medium ${theme.colors.text.primary}`}>{u.name}</div>
+                            <div className={`mt-1 text-xs ${theme.colors.text.muted}`}>ID: {u.id}</div>
+                            <div className="mt-2 text-2xl text-blue-500 font-semibold">{u.count}</div>
                           </div>
                         ))}
                         {list.length === 0 && (
-                          <div className="text-sm text-gray-400">Selecione uma opção.</div>
+                          <div className={`text-sm ${theme.colors.text.muted}`}>Selecione uma opção.</div>
                         )}
                       </div>
                     );
                   })()
                 ) : panelMode === 'stale' ? (
-                  <div className="overflow-hidden border border-gray-700 rounded-md">
+                  <div className={`overflow-hidden border rounded-md ${theme.colors.border.primary}`}>
                     <table className="w-full text-sm">
-                      <thead className="bg-gray-800 text-gray-300">
+                      <thead className={`${theme.colors.background.secondary} ${theme.colors.text.secondary}`}>
                         <tr>
                           <th className="text-left px-3 py-2">Contato</th>
                           <th className="text-left px-3 py-2">Telefone</th>
@@ -1276,7 +1307,7 @@ export default function MonitoringPage() {
                           const phone = c.contact_phone || c.phone_number || c.contact?.phone_number || c.contact?.phone || c.phone;
                           const last = c.last_activity_at || c.lastActivityAt || c.last_activity || c.updated_at;
                           return (
-                            <tr key={idx} className="odd:bg-gray-900 even:bg-gray-800 text-gray-100">
+                            <tr key={idx} className={theme.colors.text.primary}>
                               <td className="px-3 py-2 truncate max-w-[160px]" title={name || '—'}>{name || '—'}</td>
                               <td className="px-3 py-2 truncate">{formatPhone(phone)}</td>
                               <td className="px-3 py-2 whitespace-nowrap min-w-[110px]">{daysFromNow(last)}</td>
@@ -1284,15 +1315,15 @@ export default function MonitoringPage() {
                           );
                         })}
                         {staleConversations.length === 0 && (
-                          <tr><td className="px-3 py-3 text-gray-400" colSpan={3}>Nenhuma conversa encontrada.</td></tr>
+                          <tr><td className={`px-3 py-3 ${theme.colors.text.muted}`} colSpan={3}>Nenhuma conversa encontrada.</td></tr>
                         )}
                       </tbody>
                     </table>
                   </div>
                 ) : (
-                  <div className="overflow-hidden border border-gray-700 rounded-md">
+                  <div className={`overflow-hidden border rounded-md ${theme.colors.border.primary}`}>
                     <table className="w-full text-sm">
-                      <thead className="bg-gray-800 text-gray-300">
+                      <thead className={`${theme.colors.background.secondary} ${theme.colors.text.secondary}`}>
                         <tr>
                           <th className="text-left px-3 py-2">Contato</th>
                           <th className="text-left px-3 py-2">Telefone</th>
@@ -1305,7 +1336,7 @@ export default function MonitoringPage() {
                           const phone = c.contact_phone || c.phone_number || c.contact?.phone_number || c.contact?.phone || c.phone;
                           const last = c.last_activity_at || c.lastActivityAt || c.last_activity || c.updated_at;
                           return (
-                            <tr key={idx} className="odd:bg-gray-900 even:bg-gray-800 text-gray-100">
+                            <tr key={idx} className={theme.colors.text.primary}>
                               <td className="px-3 py-2 truncate max-w-[160px]" title={name}>{name}</td>
                               <td className="px-3 py-2 truncate">{formatPhone(phone)}</td>
                               <td className="px-3 py-2 whitespace-nowrap min-w-[110px]">{daysFromNow(last)}</td>
@@ -1313,7 +1344,7 @@ export default function MonitoringPage() {
                           );
                         })}
                         {unassignedConversations.length === 0 && (
-                          <tr><td className="px-3 py-3 text-gray-400" colSpan={3}>Nenhuma conversa encontrada.</td></tr>
+                          <tr><td className={`px-3 py-3 ${theme.colors.text.muted}`} colSpan={3}>Nenhuma conversa encontrada.</td></tr>
                         )}
                       </tbody>
                     </table>

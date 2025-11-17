@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useTheme } from "@/contexts/ThemeContext";
 import StepBreadcrumb from "@/components/onboarding/StepBreadcrumb";
 import StepSelectProduct from "@/components/onboarding/StepSelectProduct";
 import StepConfigureAccount from "@/components/onboarding/StepConfigureAccount";
@@ -15,6 +16,7 @@ const TOTAL_STEPS = 4;
 
 export default function OnboardingPage() {
   const router = useRouter();
+  const { theme } = useTheme();
   const [currentStep, setCurrentStep] = useState(1);
   const [selectedProduct, setSelectedProduct] = useState<string>("");
   const [accountData, setAccountData] = useState<Record<string, any> | null>(null);
@@ -47,8 +49,8 @@ export default function OnboardingPage() {
   };
 
   const handleFinish = () => {
-    // Redirect to main application
-    router.push("/campaigns");
+    // Redirect to monitoring page
+    router.push("/monitoring");
   };
 
   const handleCancel = () => {
@@ -56,21 +58,30 @@ export default function OnboardingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
+    <div className={`min-h-screen ${theme.colors.background.primary}`}>
       {/* Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 flex items-center h-16 bg-gray-800/95 backdrop-blur-sm border-b border-gray-700 px-6">
+      <header className={`fixed top-0 left-0 right-0 z-50 flex items-center h-16 ${theme.colors.background.secondary} backdrop-blur-sm border-b ${theme.colors.border.primary} px-6`}>
         <div className="flex items-center gap-4">
-          <Image src="/images/logo.png" alt="Autonom.ia Logo" width={42} height={42} priority />
+          <Image 
+            src={theme.logoSquare} 
+            alt="Logo" 
+            width={42} 
+            height={42} 
+            priority
+            onError={(e) => {
+              e.currentTarget.src = '/images/logo.png';
+            }}
+          />
           <div>
-            <h1 className="text-white text-lg font-semibold">Configuração Inicial</h1>
-            <p className="text-gray-400 text-xs">Configure sua conta WhatsApp para começar</p>
+            <h1 className={`text-lg font-semibold ${theme.colors.text.primary}`}>Configuração Inicial</h1>
+            <p className={`text-xs ${theme.colors.text.muted}`}>Configure sua conta WhatsApp para começar</p>
           </div>
         </div>
         {currentStep > 1 && currentStep < TOTAL_STEPS && (
           <Button
             variant="ghost"
             onClick={handlePreviousStep}
-            className="ml-auto text-gray-300 hover:text-white"
+            className={`ml-auto ${theme.colors.button.ghost}`}
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Voltar
