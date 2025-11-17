@@ -159,7 +159,7 @@ export default function ProductHeader(props: ProductHeaderProps) {
               {userPhotoUrl ? (
                 <AvatarImage src={userPhotoUrl} alt={userName || 'Avatar'} />
               ) : null}
-              <AvatarFallback>{userInitials}</AvatarFallback>
+              <AvatarFallback className={theme.colors.text.primary}>{userInitials}</AvatarFallback>
             </Avatar>
           </div>
         </DropdownMenuTrigger>

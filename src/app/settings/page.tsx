@@ -845,8 +845,19 @@ export default function SettingsPage() {
     }
   };
 
-  // Abrir formulário de criação de account
+  // Redirecionar para onboarding ao incluir conta
   const openAccountCreateForm = () => {
+    if (!selectedProductId) {
+      showToast('Selecione um produto primeiro', 'error');
+      return;
+    }
+    // Redirecionar para onboarding com produto selecionado, iniciando no step 2 (configurar conta)
+    // returnTo=settings para voltar para settings após concluir
+    router.push(`/onboarding?product=${selectedProductId}&step=2&returnTo=settings`);
+  };
+
+  // Abrir formulário de criação de account (função antiga, mantida caso seja usada em outro lugar)
+  const openAccountCreateFormLegacy = () => {
     setAccountFormMode('create');
     setSelectedAccountId('');
     setAccountFormName('');

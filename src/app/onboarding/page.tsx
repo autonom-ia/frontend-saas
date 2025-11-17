@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -14,13 +14,31 @@ import StepSuccess from "@/components/onboarding/StepSuccess";
 
 const TOTAL_STEPS = 4;
 
-export default function OnboardingPage() {
+function OnboardingContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { theme } = useTheme();
   const [currentStep, setCurrentStep] = useState(1);
   const [selectedProduct, setSelectedProduct] = useState<string>("");
   const [accountData, setAccountData] = useState<Record<string, string> | null>(null);
   const [qrCode] = useState<string>("");
+
+  // Inicializar com query params se existirem
+  useEffect(() => {
+    const productParam = searchParams.get('product');
+    const stepParam = searchParams.get('step');
+    
+    if (productParam) {
+      setSelectedProduct(productParam);
+    }
+    
+    if (stepParam) {
+      const step = parseInt(stepParam, 10);
+      if (step >= 1 && step <= TOTAL_STEPS) {
+        setCurrentStep(step);
+      }
+    }
+  }, [searchParams]);
 
   const handleNextStep = () => {
     if (currentStep < TOTAL_STEPS) {
@@ -49,8 +67,14 @@ export default function OnboardingPage() {
   };
 
   const handleFinish = () => {
-    // Redirect to monitoring page
-    router.push("/monitoring");
+    // Se veio de settings (via query param), redirecionar de volta para settings
+    const returnTo = searchParams.get('returnTo');
+    if (returnTo === 'settings') {
+      router.push('/settings');
+    } else {
+      // Caso contrário, ir para monitoring (fluxo onboarding completo)
+      router.push('/monitoring');
+    }
   };
 
   const handleCancel = () => {
@@ -117,5 +141,13 @@ export default function OnboardingPage() {
         </div>
       </main>
     </div>
+  );
+}
+
+export default function OnboardingPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Carregando...</div>}>
+      <OnboardingContent />
+    </Suspense>
   );
 }

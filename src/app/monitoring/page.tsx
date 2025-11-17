@@ -810,7 +810,7 @@ export default function MonitoringPage() {
                   {userData?.user?.photoUrl && (
                     <AvatarImage src={userData.user.photoUrl} alt={userData?.user?.name || 'Usuário'} />
                   )}
-                  <AvatarFallback>{(userData?.user?.name || '??').split(' ').map((n: string) => n[0]).join('').toUpperCase().substring(0,2)}</AvatarFallback>
+                  <AvatarFallback className={theme.colors.text.primary}>{(userData?.user?.name || '??').split(' ').map((n: string) => n[0]).join('').toUpperCase().substring(0,2)}</AvatarFallback>
                 </Avatar>
               </div>
             </DropdownMenuTrigger>
