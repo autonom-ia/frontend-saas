@@ -117,16 +117,16 @@ class ApiService {
 
   private getAuthToken(): string | undefined {
     try {
-      // Try direct authToken first
-      const directToken = localStorage.getItem('authToken');
-      if (directToken) return directToken;
-      
-      // Fallback to userData
+      // Pegar token do userData no localStorage (mesmo padrão da página de campanhas)
       const userData = localStorage.getItem('userData');
       if (userData) {
         const parsed = JSON.parse(userData);
         return parsed.IdToken || parsed.token || parsed.AccessToken;
       }
+      
+      // Fallback para authToken direto
+      const directToken = localStorage.getItem('authToken');
+      if (directToken) return directToken;
     } catch (e) {
       console.error('Error getting auth token:', e);
     }
@@ -282,34 +282,170 @@ class ApiService {
     const SAAS_API_URL = process.env.NEXT_PUBLIC_SAAS_API_URL || 'https://api-saas.autonomia.site';
     const url = `${SAAS_API_URL}/Autonomia/Saas/Products`;
     
+    // Pega o token mais recente do localStorage (sem renovação automática)
+    const token = this.getAuthToken();
+    
+    if (!token) {
+      throw new Error('Token de autenticação não encontrado');
+    }
+    
     const response = await fetch(url, {
-      headers: await this.getAuthHeaders(),
+      headers: {
+        'Authorization': `Bearer ${token}`
+      },
       mode: 'cors',
     });
 
     if (!response.ok) {
+      const errorText = await response.text();
+      console.error('[API] Erro ao buscar produtos:', response.status, errorText);
       throw new Error('Erro ao buscar produtos');
     }
 
     const data = await response.json();
-    return Array.isArray(data) ? data : (data.data || data.products || []);
+    // A API retorna { success: true, data: [...] }
+    return Array.isArray(data?.data) ? data.data : (Array.isArray(data) ? data : []);
   }
 
   async getAccounts(productId: string): Promise<Array<{ id: string; name: string; email?: string }>> {
     const SAAS_API_URL = process.env.NEXT_PUBLIC_SAAS_API_URL || 'https://api-saas.autonomia.site';
     const url = `${SAAS_API_URL}/Autonomia/Saas/Accounts?productId=${encodeURIComponent(productId)}`;
     
+    // Pega o token mais recente do localStorage (sem renovação automática)
+    const token = this.getAuthToken();
+    
+    if (!token) {
+      throw new Error('Token de autenticação não encontrado');
+    }
+    
     const response = await fetch(url, {
-      headers: await this.getAuthHeaders(),
+      headers: {
+        'Authorization': `Bearer ${token}`
+      },
       mode: 'cors',
     });
 
     if (!response.ok) {
+      const errorText = await response.text();
+      console.error('[API] Erro ao buscar contas:', response.status, errorText);
       throw new Error('Erro ao buscar contas');
     }
 
     const data = await response.json();
-    return Array.isArray(data) ? data : (data.data || data.accounts || []);
+    return Array.isArray(data?.data) ? data.data : (Array.isArray(data) ? data : []);
+  }
+
+  async getProductParametersForOnboarding(productId: string): Promise<Array<{
+    id: string;
+    name: string;
+    value: string;
+    short_description?: string;
+    help_text?: string;
+    default_value?: string;
+    visible_onboarding: boolean;
+  }>> {
+    const SAAS_API_URL = process.env.NEXT_PUBLIC_SAAS_API_URL || 'https://api-saas.autonomia.site';
+    const url = `${SAAS_API_URL}/Autonomia/Saas/Products/${encodeURIComponent(productId)}/ParametersOnboarding`;
+    
+    const token = this.getAuthToken();
+    
+    if (!token) {
+      throw new Error('Token de autenticação não encontrado');
+    }
+    
+    const response = await fetch(url, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      },
+      mode: 'cors',
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('[API] Erro ao buscar parâmetros do produto para onboarding:', response.status, errorText);
+      throw new Error('Erro ao buscar parâmetros do produto');
+    }
+
+    const data = await response.json();
+    return Array.isArray(data?.data) ? data.data : [];
+  }
+
+  async getAccountParametersForOnboarding(accountId: string): Promise<Array<{
+    id: string;
+    name: string;
+    value: string;
+    short_description?: string;
+    help_text?: string;
+    default_value?: string;
+    visible_onboarding: boolean;
+  }>> {
+    const SAAS_API_URL = process.env.NEXT_PUBLIC_SAAS_API_URL || 'https://api-saas.autonomia.site';
+    const url = `${SAAS_API_URL}/Autonomia/Saas/Accounts/${encodeURIComponent(accountId)}/ParametersOnboarding`;
+    
+    const token = this.getAuthToken();
+    
+    if (!token) {
+      throw new Error('Token de autenticação não encontrado');
+    }
+    
+    const response = await fetch(url, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      },
+      mode: 'cors',
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('[API] Erro ao buscar parâmetros da conta para onboarding:', response.status, errorText);
+      throw new Error('Erro ao buscar parâmetros da conta');
+    }
+
+    const data = await response.json();
+    return Array.isArray(data?.data) ? data.data : [];
+  }
+
+  async createAccountOnboarding(accountData: {
+    accountName: string;
+    accountEmail: string;
+    accountPhone: string;
+    productId: string;
+    parameters?: Record<string, any>;
+    user_id?: string;
+  }): Promise<{ id: string; name: string; [key: string]: any }> {
+    const SAAS_API_URL = process.env.NEXT_PUBLIC_SAAS_API_URL || 'https://api-saas.autonomia.site';
+    const url = `${SAAS_API_URL}/Autonomia/Saas/Onboarding/Accounts`;
+    
+    const token = this.getAuthToken();
+    
+    if (!token) {
+      throw new Error('Token de autenticação não encontrado');
+    }
+    
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      mode: 'cors',
+      body: JSON.stringify(accountData)
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('[API] Erro ao criar conta (onboarding):', response.status, errorText);
+      
+      try {
+        const errorJson = JSON.parse(errorText);
+        throw new Error(errorJson.message || 'Erro ao criar conta');
+      } catch {
+        throw new Error('Erro ao criar conta');
+      }
+    }
+
+    const data = await response.json();
+    return data.data || data;
   }
 }
 

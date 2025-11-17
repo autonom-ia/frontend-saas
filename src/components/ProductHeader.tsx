@@ -11,7 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Plus, Pencil, Settings, LogOut, User } from "lucide-react";
+import { Plus, Pencil, Settings, LogOut, User, Rocket } from "lucide-react";
 import Image from "next/image";
 
 export type ProductHeaderProps = {
@@ -23,11 +23,13 @@ export type ProductHeaderProps = {
   userPhotoUrl?: string;
   userInitials?: string;
   showProductActions?: boolean;
+  showOnboardingButton?: boolean;
   onChangeProduct: (productId: string) => void;
   onCreateProduct: () => void;
   onEditProduct: () => void;
   onOpenProductSettings: () => void;
   onLogout?: () => void;
+  onStartOnboarding?: () => void;
 };
 
 export default function ProductHeader(props: ProductHeaderProps) {
@@ -40,11 +42,13 @@ export default function ProductHeader(props: ProductHeaderProps) {
     userPhotoUrl,
     userInitials,
     showProductActions = false,
+    showOnboardingButton = false,
     onChangeProduct,
     onCreateProduct,
     onEditProduct,
     onOpenProductSettings,
     onLogout,
+    onStartOnboarding,
   } = props;
 
   return (
@@ -109,6 +113,20 @@ export default function ProductHeader(props: ProductHeaderProps) {
         </div>
       </div>
 
+      {/* Temporary Onboarding Button */}
+      {showOnboardingButton && onStartOnboarding && (
+        <Button
+          type="button"
+          variant="secondary"
+          className="bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-500 hover:to-blue-500 text-white mr-4"
+          onClick={onStartOnboarding}
+          title="Iniciar configuração Evolution"
+        >
+          <Rocket className="h-4 w-4 mr-2" />
+          Configurar Evolution
+        </Button>
+      )}
+
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <div className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity">
@@ -121,7 +139,7 @@ export default function ProductHeader(props: ProductHeaderProps) {
             </Avatar>
           </div>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-56">
+        <DropdownMenuContent align="end" className="w-56 z-[70]">
           <DropdownMenuLabel>Minha Conta</DropdownMenuLabel>
           <DropdownMenuSeparator />
           <DropdownMenuItem disabled>

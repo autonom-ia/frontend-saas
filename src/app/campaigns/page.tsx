@@ -533,6 +533,7 @@ export default function CampaignsPage() {
           userName={userData?.user?.name}
           userPhotoUrl={userData?.user?.photoUrl}
           userInitials={userInitials}
+          showOnboardingButton={false}
           onChangeProduct={handleSelectProduct}
           onCreateProduct={() => {}}
           onEditProduct={() => {}}
