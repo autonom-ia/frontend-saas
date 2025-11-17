@@ -153,9 +153,9 @@ export default function StepConnectWhatsApp({ accountId, accountPhone, onNext }:
       
       setIsLoading(false);
       startPolling();
-    } catch (err: any) {
+    } catch (err) {
       console.error('Erro ao criar instância:', err);
-      setError(err.message || 'Erro ao criar instância');
+      setError(err instanceof Error ? err.message : 'Erro ao criar instância');
       setConnectionStatus('Erro na criação da instância');
       setIsLoading(false);
     }

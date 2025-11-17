@@ -19,8 +19,8 @@ export default function OnboardingPage() {
   const { theme } = useTheme();
   const [currentStep, setCurrentStep] = useState(1);
   const [selectedProduct, setSelectedProduct] = useState<string>("");
-  const [accountData, setAccountData] = useState<Record<string, any> | null>(null);
-  const [qrCode, setQrCode] = useState<string>("");
+  const [accountData, setAccountData] = useState<Record<string, string> | null>(null);
+  const [qrCode] = useState<string>("");
 
   const handleNextStep = () => {
     if (currentStep < TOTAL_STEPS) {
@@ -39,7 +39,7 @@ export default function OnboardingPage() {
     handleNextStep();
   };
 
-  const handleAccountAdd = (data: Record<string, any>) => {
+  const handleAccountAdd = (data: Record<string, string>) => {
     setAccountData(data);
     handleNextStep();
   };

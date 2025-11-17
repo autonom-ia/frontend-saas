@@ -28,7 +28,7 @@ type JsonField = {
 
 type StepConfigureAccountProps = {
   productId: string;
-  onNext: (accountData: Record<string, any>) => void;
+  onNext: (accountData: Record<string, string>) => void;
   onBack: () => void;
 };
 
@@ -38,7 +38,7 @@ export default function StepConfigureAccount({ productId, onNext, onBack }: Step
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [formData, setFormData] = useState<Record<string, any>>({});
+  const [formData, setFormData] = useState<Record<string, string>>({});
   const [jsonFields, setJsonFields] = useState<Record<string, JsonField[]>>({});
   
   // Campos fixos da conta
@@ -60,7 +60,7 @@ export default function StepConfigureAccount({ productId, onNext, onBack }: Step
       setParameters(params);
       
       // Inicializar formData com valores padrão ou existentes
-      const initialData: Record<string, any> = {};
+      const initialData: Record<string, string> = {};
       const initialJsonFields: Record<string, JsonField[]> = {};
       
       params.forEach(param => {
@@ -92,9 +92,9 @@ export default function StepConfigureAccount({ productId, onNext, onBack }: Step
       
       setFormData(initialData);
       setJsonFields(initialJsonFields);
-    } catch (err: any) {
+    } catch (err) {
       console.error('Erro ao carregar parâmetros:', err);
-      setError(err.message || 'Erro ao carregar parâmetros do produto');
+      setError(err instanceof Error ? err.message : 'Erro ao carregar parâmetros do produto');
     } finally {
       setLoading(false);
     }
@@ -183,9 +183,9 @@ export default function StepConfigureAccount({ productId, onNext, onBack }: Step
         accountPhone,
         ...formData
       });
-    } catch (err: any) {
+    } catch (err) {
       console.error('[StepConfigureAccount] Erro ao criar conta:', err);
-      setError(err.message || 'Erro ao criar conta. Tente novamente.');
+      setError(err instanceof Error ? err.message : 'Erro ao criar conta. Tente novamente.');
     } finally {
       setSubmitting(false);
     }

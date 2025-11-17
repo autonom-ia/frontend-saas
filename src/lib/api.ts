@@ -410,9 +410,9 @@ class ApiService {
     accountEmail: string;
     accountPhone: string;
     productId: string;
-    parameters?: Record<string, any>;
+    parameters?: Record<string, string>;
     user_id?: string;
-  }): Promise<{ id: string; name: string; [key: string]: any }> {
+  }): Promise<{ id: string; name: string; [key: string]: string }> {
     const SAAS_API_URL = process.env.NEXT_PUBLIC_SAAS_API_URL || 'https://api-saas.autonomia.site';
     const url = `${SAAS_API_URL}/Autonomia/Saas/Onboarding/Accounts`;
     
