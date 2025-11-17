@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useTheme } from '@/contexts/ThemeContext';
 
 // Função para log no console com identificação visual clara
 function debugLog(message: string, data: unknown = undefined) {
@@ -20,6 +21,7 @@ const AUTH_BASE = process.env.NEXT_PUBLIC_AUTH_API_URL;
 
 export default function LoginPage() {
   const router = useRouter();
+  const { theme } = useTheme();
   const hasInitialized = useRef(false);
   
   useEffect(() => {
@@ -115,41 +117,77 @@ export default function LoginPage() {
         localStorage.setItem('authToken', authToken);
       }
 
-      // Armazenar dados do usuário e tokens no localStorage
-      // O backend não inclui os dados do usuário, apenas tokens de autenticação
-      // Vamos armazenar o email usado no login para buscar os dados depois
+      // Armazenar tokens temporariamente
       const now = Date.now();
       const isDev = process.env.NODE_ENV === 'development';
       localStorage.setItem('userData', JSON.stringify({
-        // Em desenvolvimento, já marcamos o usuário como admin para liberar recursos de teste
         user: { email, ...(isDev ? { isAdmin: true } : {}) },
-        email: email, // Também armazenando o email em primeiro nível
-        // Armazenando tokens separadamente para uso adequado em diferentes APIs
-        AccessToken: data.AccessToken, // Para chamar APIs do próprio Cognito
-        IdToken: data.IdToken, // Para API Gateway com Cognito Authorizer
-        RefreshToken: data.RefreshToken, // Para renovar tokens
-        // Mantendo token para compatibilidade, mas usando IdToken como padrão
+        email: email,
+        AccessToken: data.AccessToken,
+        IdToken: data.IdToken,
+        RefreshToken: data.RefreshToken,
         token: authToken,
         isAuthenticated: true,
         loginAt: now,
         refreshedAt: now
       }));
-      
-      console.log('Tokens armazenados:', {
-        IdToken: data.IdToken?.substring(0, 20) + '...' || 'não disponível',
-        AccessToken: data.AccessToken?.substring(0, 20) + '...' || 'não disponível'
-      });
+
+      console.log('Tokens armazenados, buscando dados do usuário...');
+
+      // Buscar dados completos do usuário (incluindo isFirstLogin) via API Profile
       try {
-        const snapshot = localStorage.getItem('userData');
-        console.log('[Login] userData snapshot after store', snapshot ? JSON.parse(snapshot) : null);
-      } catch (e) { console.warn('[Login] failed to read back userData', e); }
-      
-      // Redirecionar para a página de monitoramento
-      console.log('[Login] navigating to /monitoring from', window.location.pathname);
-      router.replace('/monitoring');
-      setTimeout(() => {
-        console.log('[Login] after router.replace, current path is', window.location.pathname);
-      }, 300);
+        const profileResponse = await fetch(
+          `${process.env.NEXT_PUBLIC_PROFILE_API_URL}/Autonomia/Profile/Users/email?email=${encodeURIComponent(email)}`,
+          {
+            headers: {
+              'Authorization': `Bearer ${authToken}`,
+              'Content-Type': 'application/json'
+            }
+          }
+        );
+
+        if (!profileResponse.ok) {
+          throw new Error(`Profile API returned ${profileResponse.status}`);
+        }
+
+        const profileData = await profileResponse.json();
+        console.log('[Login] Profile data:', profileData);
+
+        const userData = profileData.user;
+        const isFirstLogin = userData?.isFirstLogin || false;
+        
+        // Atualizar localStorage com dados completos do usuário
+        localStorage.setItem('userData', JSON.stringify({
+          user: { 
+            ...userData,
+            ...(isDev ? { isAdmin: true } : {}) 
+          },
+          email: email,
+          AccessToken: data.AccessToken,
+          IdToken: data.IdToken,
+          RefreshToken: data.RefreshToken,
+          token: authToken,
+          isAuthenticated: true,
+          loginAt: now,
+          refreshedAt: now
+        }));
+
+        console.log('[Login] User data updated with profile info:', {
+          isFirstLogin,
+          isAdmin: userData?.isAdmin
+        });
+
+        // Redirecionar: primeiro login vai para onboarding, senão vai para monitoring
+        const redirectPath = isFirstLogin ? '/onboarding' : '/monitoring';
+        console.log(`[Login] navigating to ${redirectPath}`);
+        router.replace(redirectPath);
+
+      } catch (profileError) {
+        console.error('[Login] Error fetching profile:', profileError);
+        // Se falhar ao buscar perfil, redirecionar para monitoring (fallback)
+        console.log('[Login] Fallback: navigating to /monitoring');
+        router.replace('/monitoring');
+      }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Falha no login';
       setError(msg);
@@ -218,11 +256,19 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-background dark:bg-gray-900">
-      <Card className="w-full max-w-md mx-auto overflow-hidden dark:bg-gray-800 dark:border-gray-700">
+    <div className={`flex items-center justify-center min-h-screen ${theme.colors.background.primary}`}>
+      <Card className={`w-full max-w-md mx-auto overflow-hidden ${theme.colors.background.card} ${theme.colors.border.primary}`}>
         <div className="p-6">
           <div className="flex justify-center mb-6">
-            <Image src="/images/logo.png" alt="Autonom.ia Logo" width={150} height={150} />
+            <Image 
+              src={theme.logo} 
+              alt="Logo" 
+              width={150} 
+              height={150}
+              onError={(e) => {
+                e.currentTarget.src = '/images/logo.png';
+              }}
+            />
           </div>
           <AnimatePresence mode="wait">
             {!isRegister ? (
@@ -236,25 +282,25 @@ export default function LoginPage() {
               >
                 <form onSubmit={handleLogin}>
                   <CardHeader className="space-y-1 text-center">
-                    <CardTitle className="text-2xl font-bold dark:text-white">Login</CardTitle>
-                    <CardDescription className="dark:text-gray-400">Digite seu email e senha para acessar sua conta</CardDescription>
+                    <CardTitle className={`text-2xl font-bold ${theme.colors.text.primary}`}>Login</CardTitle>
+                    <CardDescription className={theme.colors.text.muted}>Digite seu email e senha para acessar sua conta</CardDescription>
                   </CardHeader>
                   <CardContent className="grid gap-4">
                     <div className="grid gap-2">
-                      <Label htmlFor="email" className="block text-sm font-medium text-foreground dark:text-gray-300">Email</Label>
-                      <Input id="email" type="email" placeholder="m@exemplo.com" value={email} onChange={(e) => setEmail(e.target.value)}  disabled={isLoading} className="dark:bg-gray-700 dark:text-white dark:border-gray-600" />
+                      <Label htmlFor="email" className={`block text-sm font-medium ${theme.colors.text.secondary}`}>Email</Label>
+                      <Input id="email" type="email" placeholder="m@exemplo.com" value={email} onChange={(e) => setEmail(e.target.value)}  disabled={isLoading} className={`${theme.colors.background.secondary} ${theme.colors.text.primary} ${theme.colors.border.secondary}`} />
                       {formSubmitted && !email && (
                         <p className="text-sm font-medium text-red-500 mt-1">Email é obrigatório</p>
                       )}
                     </div>
                     <div className="grid gap-2">
-                      <Label htmlFor="password" className="block text-sm font-medium text-foreground dark:text-gray-300">Senha</Label>
-                      <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)}  disabled={isLoading} className="dark:bg-gray-700 dark:text-white dark:border-gray-600" />
+                      <Label htmlFor="password" className={`block text-sm font-medium ${theme.colors.text.secondary}`}>Senha</Label>
+                      <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)}  disabled={isLoading} className={`${theme.colors.background.secondary} ${theme.colors.text.primary} ${theme.colors.border.secondary}`} />
                       {formSubmitted && !password && (
                         <p className="text-sm font-medium text-red-500 mt-1">Senha é obrigatória</p>
                       )}
                       <div className="text-right -mt-2">
-                          <Button variant="link" asChild className="p-0 h-auto text-xs font-normal text-muted-foreground dark:text-gray-400 hover:dark:text-blue-400">
+                          <Button variant="link" asChild className={`p-0 h-auto text-xs font-normal ${theme.colors.text.muted} ${theme.colors.button.ghost}`}>
                               <Link href="/forgot-password">Esqueceu a sua senha?</Link>
                           </Button>
                       </div>
@@ -262,7 +308,7 @@ export default function LoginPage() {
                     {error && <p className="text-sm font-medium text-red-500 text-center">{error}</p>}
                   </CardContent>
                   <CardFooter className="flex flex-col gap-4">
-                    <Button className="w-full dark:bg-blue-600 dark:hover:bg-blue-700 dark:text-white" type="submit" disabled={isLoading}>
+                    <Button className={`w-full ${theme.colors.button.primary}`} type="submit" disabled={isLoading}>
                       {isLoading ? 'Entrando...' : 'Entrar'}
                     </Button>
                     <div className="text-center">
@@ -284,7 +330,7 @@ export default function LoginPage() {
                               setConfirmPassword('');
                               debugLog('Mudança para registro concluída');
                             });
-                        }} className="text-sm font-normal text-muted-foreground dark:text-gray-400 hover:dark:text-blue-400">
+                        }} className={`text-sm font-normal ${theme.colors.text.muted} ${theme.colors.button.ghost}`}>
                             Não tem uma conta? Cadastre-se
                         </Button>
                     </div>

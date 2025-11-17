@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { useTheme } from "@/contexts/ThemeContext";
 
 type TagType = string | { name?: string; key?: string };
 type KanbanItemLite = {
@@ -25,6 +26,9 @@ type Props = {
 };
 
 export default function ItemDetailsPanel({ item, onClose }: Props) {
+  const { theme } = useTheme();
+  const kanban = theme.colors.kanban;
+  
   // Close with ESC
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -82,18 +86,18 @@ export default function ItemDetailsPanel({ item, onClose }: Props) {
       />
 
       {/* Panel */}
-      <aside className="w-[520px] max-w-[95vw] h-full bg-[#111827]/95 dark:bg-[#111827]/95 text-gray-100 border-l border-gray-700 shadow-2xl overflow-y-auto backdrop-blur" aria-label="Detalhes do item">
+      <aside className={`w-[520px] max-w-[95vw] h-full border-l shadow-2xl overflow-y-auto backdrop-blur ${kanban.panel} ${theme.colors.text.primary}`} aria-label="Detalhes do item">
         {/* Header */}
-        <header className="sticky top-0 z-10 px-6 py-4 border-b border-gray-700 bg-[#111827]/95 backdrop-blur">
+        <header className={`sticky top-0 z-10 px-6 py-4 border-b backdrop-blur ${kanban.panel}`}>
           <div className="flex items-center justify-between">
             <div className="min-w-0">
               {person ? (
-                <div className="text-sm text-gray-300">{person}</div>
+                <div className={`text-sm ${theme.colors.text.secondary}`}>{person}</div>
               ) : null}
-              <h3 className="mt-0.5 text-lg font-semibold truncate" title={title}>{title}</h3>
+              <h3 className={`mt-0.5 text-lg font-semibold truncate ${theme.colors.text.primary}`} title={title}>{title}</h3>
             </div>
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-gray-700 text-white flex items-center justify-center text-sm">
+              <div className={`h-10 w-10 rounded-full flex items-center justify-center text-sm ${kanban.avatar}`}>
                 {initials}
               </div>
             </div>
@@ -102,35 +106,35 @@ export default function ItemDetailsPanel({ item, onClose }: Props) {
 
         {/* Body as definition list with dividers */}
         <div className="px-6 py-5">
-          <div className="divide-y divide-gray-700 text-sm">
+          <div className={`divide-y text-sm ${theme.colors.border.primary}`}>
             <div className="py-3 grid grid-cols-3 gap-4">
-              <div className="col-span-1 text-gray-400">Resumo</div>
-              <div className="col-span-2 text-gray-100 whitespace-pre-wrap break-words">
+              <div className={`col-span-1 ${theme.colors.text.muted}`}>Resumo</div>
+              <div className={`col-span-2 whitespace-pre-wrap break-words ${theme.colors.text.primary}`}>
                 {summary ? formatSummary(summary) : "—"}
               </div>
             </div>
             <div className="py-3 grid grid-cols-3 gap-4">
-              <div className="col-span-1 text-gray-400">Status</div>
-              <div className="col-span-2 text-gray-100">{status}</div>
+              <div className={`col-span-1 ${theme.colors.text.muted}`}>Status</div>
+              <div className={`col-span-2 ${theme.colors.text.primary}`}>{status}</div>
             </div>
             <div className="py-3 grid grid-cols-3 gap-4">
-              <div className="col-span-1 text-gray-400">Prioridade</div>
-              <div className="col-span-2 text-gray-100">{priority}</div>
+              <div className={`col-span-1 ${theme.colors.text.muted}`}>Prioridade</div>
+              <div className={`col-span-2 ${theme.colors.text.primary}`}>{priority}</div>
             </div>
             <div className="py-3 grid grid-cols-3 gap-4">
-              <div className="col-span-1 text-gray-400">Atualizado em</div>
-              <div className="col-span-2 text-gray-100">{updatedAt || "—"}</div>
+              <div className={`col-span-1 ${theme.colors.text.muted}`}>Atualizado em</div>
+              <div className={`col-span-2 ${theme.colors.text.primary}`}>{updatedAt || "—"}</div>
             </div>
           </div>
         </div>
 
         {/* Footer */}
-        <div className="sticky bottom-0 z-10 px-6 py-4 border-t border-gray-700 bg-[#111827]/95 backdrop-blur flex justify-end">
+        <div className={`sticky bottom-0 z-10 px-6 py-4 border-t backdrop-blur flex justify-end ${kanban.panel}`}>
           <button
             type="button"
             title="Fechar"
             onClick={onClose}
-            className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive shadow-xs h-9 px-4 py-2 has-[>svg]:px-3 bg-gray-700 hover:bg-gray-600 text-white"
+            className={`inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50 shadow-xs h-9 px-4 py-2 ${theme.colors.button.secondary}`}
           >
             Fechar
           </button>

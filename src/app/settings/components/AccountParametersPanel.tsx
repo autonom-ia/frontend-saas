@@ -1,9 +1,17 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
+import { useTheme } from "@/contexts/ThemeContext";
 import { Button } from "@/components/ui/button";
+import { HelpCircle } from "lucide-react";
 
-export type AccountParameter = { id: string; name: string; value?: string };
+export type AccountParameter = { 
+  id: string; 
+  name: string; 
+  value?: string;
+  short_description?: string | null;
+  help_text?: string | null;
+};
 
 export type AccountParametersPanelProps = {
   open: boolean;
@@ -12,6 +20,8 @@ export type AccountParametersPanelProps = {
   items: AccountParameter[];
   isCreating: boolean;
   newName: string;
+  newShortDescription: string;
+  newHelpText: string;
   newValue: string;
   savingNew?: boolean;
   unsavedCount: number;
@@ -23,11 +33,17 @@ export type AccountParametersPanelProps = {
   onSaveBulk: () => void;
   onCancelBulk: () => void;
   onChangeNewName: (v: string) => void;
+  onChangeNewShortDescription: (v: string) => void;
+  onChangeNewHelpText: (v: string) => void;
   onChangeNewValue: (v: string) => void;
   onChangeItemValue: (id: string, v: string) => void;
 };
 
 export default function AccountParametersPanel(props: AccountParametersPanelProps) {
+  const { theme } = useTheme();
+  const settings = theme.colors.settings;
+  const [showHelpId, setShowHelpId] = useState<string | null>(null);
+  
   const {
     open,
     isAdmin,
@@ -35,6 +51,8 @@ export default function AccountParametersPanel(props: AccountParametersPanelProp
     items,
     isCreating,
     newName,
+    newShortDescription,
+    newHelpText,
     newValue,
     savingNew,
     unsavedCount,
@@ -46,19 +64,21 @@ export default function AccountParametersPanel(props: AccountParametersPanelProp
     onSaveBulk,
     onCancelBulk,
     onChangeNewName,
+    onChangeNewShortDescription,
+    onChangeNewHelpText,
     onChangeNewValue,
     onChangeItemValue,
   } = props;
 
   return (
     <div
-      className={`fixed right-0 top-0 h-full w-full max-w-md bg-white dark:bg-gray-800 shadow-xl z-50 transform transition-transform duration-300 ease-out ${open ? 'translate-x-0' : 'translate-x-full'}`}
+      className={`fixed right-0 top-0 h-full w-full max-w-md shadow-xl z-50 transform transition-transform duration-300 ease-out ${settings.form} ${open ? 'translate-x-0' : 'translate-x-full'}`}
       aria-hidden={!open}
     >
-      <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-        <h2 className="text-lg font-semibold dark:text-white">Parâmetros da Conta</h2>
+      <div className={`p-4 border-b flex items-center justify-between ${settings.formBorder}`}>
+        <h2 className={`text-lg font-semibold ${theme.colors.text.primary}`}>Parâmetros da Conta</h2>
         <button
-          className="text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-white"
+          className={`${theme.colors.text.muted} ${theme.colors.background.hover}`}
           onClick={onClose}
           aria-label="Fechar"
         >
@@ -66,30 +86,45 @@ export default function AccountParametersPanel(props: AccountParametersPanelProp
         </button>
       </div>
       <div className="p-4">
-        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded shadow-sm max-h-[75vh] overflow-auto">
+        <div className={`border rounded shadow-sm max-h-[75vh] overflow-auto ${settings.table}`}>
           <table className="min-w-full text-sm">
-            <thead className="bg-gray-50 dark:bg-gray-700 sticky top-0">
+            <thead className={`sticky top-0 ${settings.tableHeader}`}>
               <tr>
-                <th className="text-left px-4 py-2 dark:text-gray-100">Nome</th>
-                <th className="text-left px-4 py-2 dark:text-gray-100">Valor</th>
+                <th className={`text-left px-4 py-2 ${theme.colors.text.primary}`}>Parâmetro</th>
+                <th className={`text-left px-4 py-2 ${theme.colors.text.primary}`}>Valor</th>
               </tr>
             </thead>
             <tbody>
               {isCreating && (
-                <tr className="border-t border-gray-100 dark:border-gray-700 bg-blue-50/40 dark:bg-gray-700/30">
+                <tr className={`border-t ${settings.tableRow} ${settings.tableRowSelected}`}>
                   <td className="px-4 py-2">
-                    <input
-                      type="text"
-                      className="w-full rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-2 py-1 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="Nome do parâmetro"
-                      value={newName}
-                      onChange={(e) => onChangeNewName(e.target.value)}
-                    />
+                    <div className="space-y-2">
+                      <input
+                        type="text"
+                        className={`w-full rounded border px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${settings.input}`}
+                        placeholder="Label (ex: Chave API)"
+                        value={newShortDescription}
+                        onChange={(e) => onChangeNewShortDescription(e.target.value)}
+                      />
+                      <input
+                        type="text"
+                        className={`w-full rounded border px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 ${settings.input}`}
+                        placeholder="Código (ex: api-key)"
+                        value={newName}
+                        onChange={(e) => onChangeNewName(e.target.value)}
+                      />
+                      <textarea
+                        className={`w-full rounded border px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y min-h-[60px] ${settings.input}`}
+                        placeholder="Texto de ajuda"
+                        value={newHelpText}
+                        onChange={(e) => onChangeNewHelpText(e.target.value)}
+                      />
+                    </div>
                   </td>
                   <td className="px-4 py-2">
                     <input
                       type="text"
-                      className="w-full rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-2 py-1 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className={`w-full rounded border px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${settings.input}`}
                       placeholder="Valor"
                       value={newValue}
                       onChange={(e) => onChangeNewValue(e.target.value)}
@@ -99,17 +134,48 @@ export default function AccountParametersPanel(props: AccountParametersPanelProp
                 </tr>
               )}
               {loading ? (
-                <tr><td className="px-4 py-3 dark:text-gray-200" colSpan={2}>Carregando...</td></tr>
+                <tr><td className={`px-4 py-3 ${theme.colors.text.primary}`} colSpan={2}>Carregando...</td></tr>
               ) : items.length === 0 ? (
-                <tr><td className="px-4 py-3 dark:text-gray-200" colSpan={2}>Nenhum parâmetro encontrado.</td></tr>
+                <tr><td className={`px-4 py-3 ${theme.colors.text.primary}`} colSpan={2}>Nenhum parâmetro encontrado.</td></tr>
               ) : (
                 items.map(item => (
-                  <tr key={item.id} className="border-t border-gray-100 dark:border-gray-700">
-                    <td className="px-4 py-2 dark:text-gray-100">{item.name}</td>
-                    <td className="px-4 py-2 dark:text-gray-100">
+                  <tr key={item.id} className={`border-t ${settings.tableRow}`}>
+                    <td className="px-4 py-2">
+                      <div className="flex items-start gap-2">
+                        <div className="flex-1">
+                          <div className={`text-sm font-medium ${theme.colors.text.primary}`}>
+                            {item.short_description || item.name}
+                          </div>
+                          <div className={`text-[10px] ${theme.colors.text.muted} mt-0.5`}>
+                            {item.name}
+                          </div>
+                        </div>
+                        {item.help_text && (
+                          <div className="relative">
+                            <button
+                              type="button"
+                              className={`mt-0.5 ${theme.colors.text.muted} hover:${theme.colors.text.primary} transition-colors`}
+                              onClick={() => setShowHelpId(showHelpId === item.id ? null : item.id)}
+                              title="Ajuda"
+                            >
+                              <HelpCircle className="h-4 w-4" />
+                            </button>
+                            {showHelpId === item.id && (
+                              <>
+                                <div className="fixed inset-0 z-[100]" onClick={() => setShowHelpId(null)} />
+                                <div className={`absolute left-1/2 -translate-x-1/2 top-full mt-2 z-[101] w-80 max-w-[90vw] p-4 rounded-lg shadow-2xl border ${settings.form} ${settings.formBorder}`}>
+                                  <div className={`text-sm leading-relaxed ${theme.colors.text.primary}`}>{item.help_text}</div>
+                                </div>
+                              </>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </td>
+                    <td className={`px-4 py-2 ${theme.colors.text.primary}`}>
                       {(item.value ?? '').length > 60 ? (
                         <textarea
-                          className="w-full rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-2 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y min-h-[80px]"
+                          className={`w-full rounded border px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y min-h-[80px] ${settings.input}`}
                           rows={Math.min(8, Math.max(3, Math.ceil(((item.value ?? '').length) / 60)))}
                           value={item.value ?? ''}
                           onChange={(e) => onChangeItemValue(item.id, e.target.value)}
@@ -118,7 +184,7 @@ export default function AccountParametersPanel(props: AccountParametersPanelProp
                       ) : (
                         <input
                           type="text"
-                          className="w-full rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-2 py-1 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className={`w-full rounded border px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${settings.input}`}
                           value={item.value ?? ''}
                           onChange={(e) => onChangeItemValue(item.id, e.target.value)}
                           placeholder="Defina o valor"
@@ -132,12 +198,12 @@ export default function AccountParametersPanel(props: AccountParametersPanelProp
           </table>
         </div>
       </div>
-      <div className="p-4 border-t border-gray-200 dark:border-gray-700 flex flex-col gap-3">
+      <div className={`p-4 border-t flex flex-col gap-3 ${settings.formBorder}`}>
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             {isAdmin && unsavedCount > 0 && (
               <Button
-                className="bg-green-600 hover:bg-green-500 text-white"
+                className={theme.colors.button.primary}
                 onClick={onSaveBulk}
                 disabled={!!savingBulk}
                 title="Salvar alterações nos parâmetros"
@@ -148,7 +214,7 @@ export default function AccountParametersPanel(props: AccountParametersPanelProp
             {isAdmin && unsavedCount > 0 && (
               <Button
                 variant="secondary"
-                className="bg-gray-700 hover:bg-gray-600 text-white"
+                className={theme.colors.button.secondary}
                 onClick={onCancelBulk}
                 disabled={!!savingBulk}
                 title="Cancelar alterações"
@@ -159,17 +225,17 @@ export default function AccountParametersPanel(props: AccountParametersPanelProp
           </div>
           <div className="flex items-center gap-2">
             {!isCreating && isAdmin && unsavedCount === 0 && (
-              <Button className="bg-blue-600 hover:bg-blue-500 text-white" size="sm" onClick={onStartCreate} title="Incluir parâmetro">Incluir nos parâmetros</Button>
+              <Button className={theme.colors.button.primary} size="sm" onClick={onStartCreate} title="Incluir parâmetro">Incluir nos parâmetros</Button>
             )}
             {unsavedCount === 0 && (
-              <Button variant="secondary" className="bg-gray-700 hover:bg-gray-600 text-white" onClick={onClose}>Fechar</Button>
+              <Button variant="secondary" className={theme.colors.button.secondary} onClick={onClose}>Fechar</Button>
             )}
           </div>
         </div>
         {isCreating && (
           <div className="flex items-center gap-2">
-            <Button className="bg-blue-600 hover:bg-blue-500 text-white" onClick={onSaveCreate} disabled={!!savingNew} title="Salvar parâmetro">Salvar parâmetro</Button>
-            <Button variant="secondary" className="bg-gray-700 hover:bg-gray-600 text-white" onClick={onCancelCreate} disabled={!!savingNew}>Cancelar</Button>
+            <Button className={theme.colors.button.primary} onClick={onSaveCreate} disabled={!!savingNew} title="Salvar parâmetro">Salvar parâmetro</Button>
+            <Button variant="secondary" className={theme.colors.button.secondary} onClick={onCancelCreate} disabled={!!savingNew}>Cancelar</Button>
           </div>
         )}
       </div>

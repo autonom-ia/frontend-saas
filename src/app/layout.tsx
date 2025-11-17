@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { SessionProvider } from "./providers/SessionProvider";
+import { ThemeProvider } from "@/contexts/ThemeContext";
+import { DynamicFavicon } from "@/components/DynamicFavicon";
 import { Toaster } from "@/components/ui/toaster";
 // Global navigation handled per-page (ellipse menu)
 
@@ -30,10 +32,13 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <SessionProvider>
-          {children}
-          <Toaster />
-        </SessionProvider>
+        <ThemeProvider>
+          <DynamicFavicon />
+          <SessionProvider>
+            {children}
+            <Toaster />
+          </SessionProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { useTheme } from "@/contexts/ThemeContext";
 import { X, Send, Users, Loader2, FileText, Download, Play, Image as ImageIcon, User, Tag } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -21,6 +22,9 @@ interface ConversationDrawerProps {
 }
 
 function MessageBubble({ message }: { message: ChatwootMessage }) {
+  const { theme } = useTheme();
+  const kanban = theme.colors.kanban;
+  
   // message_type: 0=incoming, 1=outgoing, 2=activity
   const isOutgoing = message.message_type === 1;
   const isActivity = message.message_type === 2;
@@ -36,7 +40,7 @@ function MessageBubble({ message }: { message: ChatwootMessage }) {
   if (isActivity) {
     return (
       <div className="flex justify-center mb-4">
-        <div className="bg-neutral-800/50 text-neutral-400 text-xs px-4 py-2 rounded-full">
+        <div className={`text-xs px-4 py-2 rounded-full ${theme.colors.background.secondary} ${theme.colors.text.muted}`}>
           {message.content}
         </div>
       </div>
@@ -77,7 +81,7 @@ function MessageBubble({ message }: { message: ChatwootMessage }) {
     // Audio
     if (fileType.includes('audio')) {
       return (
-        <div className="bg-neutral-700/50 rounded-lg p-3 min-w-[280px]">
+        <div className={`rounded-lg p-3 min-w-[280px] ${theme.colors.background.secondary}`}>
           <audio src={attachment.data_url} controls className="w-full">
             Seu navegador não suporta áudio.
           </audio>
@@ -92,14 +96,14 @@ function MessageBubble({ message }: { message: ChatwootMessage }) {
         href={attachment.data_url}
         target="_blank"
         rel="noopener noreferrer"
-        className="flex items-center gap-3 bg-neutral-700/50 hover:bg-neutral-700 transition-colors rounded-lg p-3"
+        className={`flex items-center gap-3 transition-colors rounded-lg p-3 ${theme.colors.background.secondary} ${theme.colors.background.hover}`}
       >
-        <FileText className="w-8 h-8 text-neutral-300 flex-shrink-0" />
+        <FileText className={`w-8 h-8 flex-shrink-0 ${theme.colors.text.secondary}`} />
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium text-white truncate">{fileName}</p>
-          <p className="text-xs text-neutral-400">{fileType.toUpperCase()}</p>
+          <p className={`text-sm font-medium truncate ${theme.colors.text.primary}`}>{fileName}</p>
+          <p className={`text-xs ${theme.colors.text.muted}`}>{fileType.toUpperCase()}</p>
         </div>
-        <Download className="w-5 h-5 text-neutral-300 flex-shrink-0" />
+        <Download className={`w-5 h-5 flex-shrink-0 ${theme.colors.text.secondary}`} />
       </a>
     );
   };
@@ -122,8 +126,8 @@ function MessageBubble({ message }: { message: ChatwootMessage }) {
           <div
             className={`rounded-2xl px-4 py-2 break-words ${
               isOutgoing
-                ? "bg-blue-600 text-white rounded-br-sm"
-                : "bg-neutral-800 text-neutral-100 rounded-bl-sm"
+                ? `${kanban.messageOutgoing} rounded-br-sm`
+                : `${kanban.messageIncoming} rounded-bl-sm`
             } ${hasAttachments ? 'mb-2' : ''}`}
           >
             <p className="text-sm whitespace-pre-wrap">{message.content}</p>
@@ -134,14 +138,14 @@ function MessageBubble({ message }: { message: ChatwootMessage }) {
         {hasAttachments && (
           <div className="flex flex-col gap-2 w-full">
             {message.attachments?.map((attachment) => (
-              <div key={attachment.id} className={`${!hasContent && isOutgoing ? 'bg-blue-600' : !hasContent && !isOutgoing ? 'bg-neutral-800' : ''} ${!hasContent ? 'rounded-2xl p-2' : ''}`}>
+              <div key={attachment.id} className={`${!hasContent && isOutgoing ? kanban.messageOutgoing : !hasContent && !isOutgoing ? kanban.messageIncoming : ''} ${!hasContent ? 'rounded-2xl p-2' : ''}`}>
                 {renderAttachment(attachment)}
               </div>
             ))}
           </div>
         )}
 
-        <span className="text-xs text-neutral-400 mt-1">{formatTime(message.created_at)}</span>
+        <span className={`text-xs mt-1 ${theme.colors.text.muted}`}>{formatTime(message.created_at)}</span>
       </div>
 
       {isOutgoing && (
@@ -161,6 +165,9 @@ export default function ConversationDrawer({
   proxyUrl,
   accountId
 }: ConversationDrawerProps) {
+  const { theme } = useTheme();
+  const kanban = theme.colors.kanban;
+  
   const [messageInput, setMessageInput] = useState("");
   const [showContactSidebar, setShowContactSidebar] = useState(true);
   const [messages, setMessages] = useState<ChatwootMessage[]>([]);
@@ -289,22 +296,24 @@ export default function ConversationDrawer({
 
       {/* Drawer */}
       <div
-        className={`fixed top-0 right-0 h-full bg-neutral-900 border-l border-neutral-800 z-[80] transition-transform duration-300 ease-out flex ${
+        className={`fixed top-0 right-0 h-full border-l z-[80] transition-transform duration-300 ease-out flex ${
+          kanban.drawer
+        } ${
           isOpen ? "translate-x-0" : "translate-x-full"
         } ${showContactSidebar ? "w-[75vw]" : "w-[60vw]"}`}
       >
         {/* Main Conversation Area */}
         <div className="flex-1 flex flex-col min-w-0">
           {/* Header */}
-          <div className="flex items-center justify-between p-4 border-b border-neutral-800 bg-neutral-900/95 backdrop-blur">
+          <div className={`flex items-center justify-between p-4 border-b backdrop-blur ${kanban.drawer}`}>
             <div className="flex items-center gap-3">
               <Avatar className="h-10 w-10">
                 <AvatarImage src={contactAvatar} alt={contactName} />
                 <AvatarFallback className="bg-blue-600 text-white font-semibold text-lg">{contactName[0]}</AvatarFallback>
               </Avatar>
               <div>
-                <h3 className="font-semibold text-white">{contactName}</h3>
-                <p className="text-xs text-neutral-400">{channelLabel} • {statusLabel}</p>
+                <h3 className={`font-semibold ${theme.colors.text.primary}`}>{contactName}</h3>
+                <p className={`text-xs ${theme.colors.text.muted}`}>{channelLabel} • {statusLabel}</p>
               </div>
             </div>
 
@@ -312,26 +321,26 @@ export default function ConversationDrawer({
               <Button
                 variant="ghost"
                 size="icon"
-                className="hover:bg-neutral-800"
+                className={theme.colors.button.ghost}
                 onClick={() => setShowContactSidebar(!showContactSidebar)}
                 title="Informações do contato"
               >
-                <Users className="w-5 h-5 text-neutral-300" />
+                <Users className="w-5 h-5" />
               </Button>
               <Button
                 variant="ghost"
                 size="icon"
-                className="hover:bg-neutral-800"
+                className={theme.colors.button.ghost}
                 onClick={onClose}
                 title="Fechar"
               >
-                <X className="w-5 h-5 text-neutral-300" />
+                <X className="w-5 h-5" />
               </Button>
             </div>
           </div>
 
           {/* Messages Area */}
-          <div className="flex-1 overflow-y-auto p-4 bg-neutral-950">
+          <div className={`flex-1 overflow-y-auto p-4 ${kanban.drawerMessages}`}>
             <div className="max-w-4xl mx-auto">
               {loading ? (
                 <div className="flex items-center justify-center h-full">
@@ -341,11 +350,11 @@ export default function ConversationDrawer({
                 <div className="flex items-center justify-center h-full">
                   <div className="text-center">
                     <p className="text-red-400 mb-2">{error}</p>
-                    <Button onClick={onClose} variant="outline">Fechar</Button>
+                    <Button onClick={onClose} variant="outline" className={theme.colors.button.outline}>Fechar</Button>
                   </div>
                 </div>
               ) : messages.length === 0 ? (
-                <div className="flex items-center justify-center h-full text-neutral-400">
+                <div className={`flex items-center justify-center h-full ${theme.colors.text.muted}`}>
                   Nenhuma mensagem nesta conversa
                 </div>
               ) : (
@@ -358,7 +367,7 @@ export default function ConversationDrawer({
           </div>
 
           {/* Input Area */}
-          <div className="p-4 border-t border-neutral-800 bg-neutral-900">
+          <div className={`p-4 border-t ${kanban.drawer}`}>
             <div className="max-w-4xl mx-auto">
               <div className="flex items-center gap-2">
                 <textarea
@@ -367,7 +376,7 @@ export default function ConversationDrawer({
                   onKeyPress={handleKeyPress}
                   placeholder="Digite sua mensagem..."
                   rows={1}
-                  className="flex-1 px-4 py-3 rounded-lg bg-neutral-800 border border-neutral-700 text-white placeholder:text-neutral-500 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 h-12"
+                  className={`flex-1 px-4 py-3 rounded-lg border resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 h-12 ${kanban.input}`}
                   style={{ minHeight: '48px', maxHeight: '120px' }}
                 />
 
@@ -386,37 +395,37 @@ export default function ConversationDrawer({
 
         {/* Contact Sidebar */}
         {showContactSidebar && (
-          <div className="w-80 border-l border-neutral-800 bg-neutral-900 overflow-y-auto">
-            <div className="p-6 border-b border-neutral-800 text-center">
+          <div className={`w-80 border-l overflow-y-auto ${kanban.drawer}`}>
+            <div className={`p-6 border-b text-center ${theme.colors.border.primary}`}>
               <Avatar className="h-20 w-20 mx-auto mb-3">
                 <AvatarImage src={contactAvatar} alt={contactName} />
                 <AvatarFallback className="bg-blue-600 text-white font-semibold text-2xl">{contactName[0]}</AvatarFallback>
               </Avatar>
-              <h3 className="font-semibold text-lg text-white mb-1">{contactName}</h3>
-              <p className="text-sm text-neutral-400">Cliente</p>
+              <h3 className={`font-semibold text-lg mb-1 ${theme.colors.text.primary}`}>{contactName}</h3>
+              <p className={`text-sm ${theme.colors.text.muted}`}>Cliente</p>
             </div>
 
             {/* Contact Information */}
-            <div className="p-4 space-y-4 border-b border-neutral-800">
+            <div className={`p-4 space-y-4 border-b ${theme.colors.border.primary}`}>
               {contactEmail && (
                 <div>
-                  <p className="text-xs text-neutral-500 mb-1">Email</p>
-                  <p className="text-sm text-white break-all">{contactEmail}</p>
+                  <p className={`text-xs mb-1 ${theme.colors.text.muted}`}>Email</p>
+                  <p className={`text-sm break-all ${theme.colors.text.primary}`}>{contactEmail}</p>
                 </div>
               )}
 
               {contactPhone && (
                 <div>
-                  <p className="text-xs text-neutral-500 mb-1">Telefone</p>
-                  <p className="text-sm text-white">{contactPhone}</p>
+                  <p className={`text-xs mb-1 ${theme.colors.text.muted}`}>Telefone</p>
+                  <p className={`text-sm ${theme.colors.text.primary}`}>{contactPhone}</p>
                 </div>
               )}
 
               {conversation?.meta?.sender?.custom_attributes && (
                 Object.entries(conversation.meta.sender.custom_attributes).map(([key, value]) => (
                   <div key={key}>
-                    <p className="text-xs text-neutral-500 mb-1 capitalize">{key.replace(/_/g, ' ')}</p>
-                    <p className="text-sm text-white">{String(value)}</p>
+                    <p className={`text-xs mb-1 capitalize ${theme.colors.text.muted}`}>{key.replace(/_/g, ' ')}</p>
+                    <p className={`text-sm ${theme.colors.text.primary}`}>{String(value)}</p>
                   </div>
                 ))
               )}
@@ -424,31 +433,31 @@ export default function ConversationDrawer({
 
             {/* Conversation Actions */}
             <div className="p-4">
-              <h4 className="text-sm font-semibold text-white mb-4">Ações da conversa</h4>
+              <h4 className={`text-sm font-semibold mb-4 ${theme.colors.text.primary}`}>Ções da conversa</h4>
               
               {/* Assigned Agent */}
               <div className="mb-4">
                 <div className="flex items-center gap-2 mb-2">
-                  <User className="w-4 h-4 text-neutral-400" />
-                  <p className="text-xs text-neutral-400">Agente atribuído</p>
+                  <User className={`w-4 h-4 ${theme.colors.text.muted}`} />
+                  <p className={`text-xs ${theme.colors.text.muted}`}>Agente atribuído</p>
                 </div>
                 {conversation?.meta?.assignee ? (
-                  <div className="flex items-center gap-2 bg-neutral-800 rounded-lg p-2">
+                  <div className={`flex items-center gap-2 rounded-lg p-2 ${theme.colors.background.secondary}`}>
                     <Avatar className="h-6 w-6">
                       <AvatarImage src={conversation.meta.assignee.avatar_url} alt={conversation.meta.assignee.name} />
                       <AvatarFallback className="bg-green-600 text-white font-semibold text-xs">{conversation.meta.assignee.name[0]}</AvatarFallback>
                     </Avatar>
-                    <span className="text-sm text-white">{conversation.meta.assignee.name}</span>
+                    <span className={`text-sm ${theme.colors.text.primary}`}>{conversation.meta.assignee.name}</span>
                   </div>
                 ) : (
-                  <p className="text-sm text-neutral-500 italic">Nenhum</p>
+                  <p className={`text-sm italic ${theme.colors.text.muted}`}>Nenhum</p>
                 )}
               </div>
 
               {/* Priority */}
               <div className="mb-4">
-                <p className="text-xs text-neutral-400 mb-2">Prioridade</p>
-                <div className="bg-neutral-800 rounded-lg p-2">
+                <p className={`text-xs mb-2 ${theme.colors.text.muted}`}>Prioridade</p>
+                <div className={`rounded-lg p-2 ${theme.colors.background.secondary}`}>
                   <span className={`text-sm font-medium ${
                     conversation?.priority === 'urgent' ? 'text-red-400' :
                     conversation?.priority === 'high' ? 'text-orange-400' :
@@ -468,22 +477,22 @@ export default function ConversationDrawer({
               {/* Labels */}
               <div>
                 <div className="flex items-center gap-2 mb-2">
-                  <Tag className="w-4 h-4 text-neutral-400" />
-                  <p className="text-xs text-neutral-400">Etiquetas da conversa</p>
+                  <Tag className={`w-4 h-4 ${theme.colors.text.muted}`} />
+                  <p className={`text-xs ${theme.colors.text.muted}`}>Etiquetas da conversa</p>
                 </div>
                 {conversation?.labels && conversation.labels.length > 0 ? (
                   <div className="flex flex-wrap gap-2">
                     {conversation.labels.map((label, index) => (
                       <span
                         key={index}
-                        className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-600/20 text-blue-400 border border-blue-600/30"
+                        className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-medium border ${kanban.tag}`}
                       >
                         {label}
                       </span>
                     ))}
                   </div>
                 ) : (
-                  <p className="text-sm text-neutral-500 italic">Nenhuma etiqueta</p>
+                  <p className={`text-sm italic ${theme.colors.text.muted}`}>Nenhuma etiqueta</p>
                 )}
               </div>
             </div>

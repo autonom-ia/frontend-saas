@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useTheme } from '@/contexts/ThemeContext';
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import AccountForm from './components/AccountForm';
@@ -59,7 +60,9 @@ type Account = {
   conversation_funnel_id?: string;
 };
 
-export default function DashboardPage() {
+export default function SettingsPage() {
+  const { theme } = useTheme();
+  const settings = theme.colors.settings;
   const router = useRouter();
   const [userData, setUserData] = useState<UserData | null>(null);
   // Sidebar fixo reduzido
@@ -479,6 +482,8 @@ export default function DashboardPage() {
   // Create product parameter inline row state
   const [isCreatingProductParam, setIsCreatingProductParam] = useState(false);
   const [newProductParamName, setNewProductParamName] = useState('');
+  const [newProductParamShortDescription, setNewProductParamShortDescription] = useState('');
+  const [newProductParamHelpText, setNewProductParamHelpText] = useState('');
   const [newProductParamValue, setNewProductParamValue] = useState('');
   const [savingNewProductParam, setSavingNewProductParam] = useState(false);
 
@@ -493,6 +498,8 @@ export default function DashboardPage() {
   const [accountSaving, setAccountSaving] = useState(false);
   const [isCreatingAccountParam, setIsCreatingAccountParam] = useState(false);
   const [newAccountParamName, setNewAccountParamName] = useState('');
+  const [newAccountParamShortDescription, setNewAccountParamShortDescription] = useState('');
+  const [newAccountParamHelpText, setNewAccountParamHelpText] = useState('');
   const [newAccountParamValue, setNewAccountParamValue] = useState('');
   const [savingNewAccountParam, setSavingNewAccountParam] = useState(false);
   // Debug: parâmetros que afetam a visibilidade dos botões "Incluir nos parâmetros"
@@ -900,12 +907,16 @@ export default function DashboardPage() {
   const startCreateAccountParam = () => {
     setIsCreatingAccountParam(true);
     setNewAccountParamName('');
+    setNewAccountParamShortDescription('');
+    setNewAccountParamHelpText('');
     setNewAccountParamValue('');
   };
 
   const cancelCreateAccountParam = () => {
     setIsCreatingAccountParam(false);
     setNewAccountParamName('');
+    setNewAccountParamShortDescription('');
+    setNewAccountParamHelpText('');
     setNewAccountParamValue('');
   };
 
@@ -914,9 +925,11 @@ export default function DashboardPage() {
     const accountId = accountParamsAccountId || selectedAccountId;
     if (!accountId) return;
     const name = newAccountParamName.trim();
+    const short_description = newAccountParamShortDescription.trim();
+    const help_text = newAccountParamHelpText.trim();
     const value = newAccountParamValue;
     if (!name) {
-      showToast('Informe o nome do parâmetro', 'error');
+      showToast('Informe o código do parâmetro', 'error');
       return;
     }
     try {
@@ -939,6 +952,8 @@ export default function DashboardPage() {
         body: JSON.stringify({
           account_id: accountId,
           name,
+          short_description: short_description || null,
+          help_text: help_text || null,
           value
         })
       });
@@ -1136,21 +1151,27 @@ export default function DashboardPage() {
   const startCreateProductParam = () => {
     setIsCreatingProductParam(true);
     setNewProductParamName('');
+    setNewProductParamShortDescription('');
+    setNewProductParamHelpText('');
     setNewProductParamValue('');
   };
 
   const cancelCreateProductParam = () => {
     setIsCreatingProductParam(false);
     setNewProductParamName('');
+    setNewProductParamShortDescription('');
+    setNewProductParamHelpText('');
     setNewProductParamValue('');
   };
 
   const createProductParameter = async () => {
     if (!selectedProductId) return;
     const name = newProductParamName.trim();
+    const short_description = newProductParamShortDescription.trim();
+    const help_text = newProductParamHelpText.trim();
     const value = newProductParamValue;
     if (!name) {
-      showToast('Informe o nome do parâmetro', 'error');
+      showToast('Informe o código do parâmetro', 'error');
       return;
     }
     try {
@@ -1173,6 +1194,8 @@ export default function DashboardPage() {
         body: JSON.stringify({
           product_id: selectedProductId,
           name,
+          short_description: short_description || null,
+          help_text: help_text || null,
           value
         })
       });
@@ -1712,7 +1735,7 @@ export default function DashboardPage() {
     : '??';
 
   return (
-    <div className="flex h-screen bg-background dark:bg-gray-900">
+    <div className={`flex h-screen ${theme.colors.background.primary}`}>
       {/* Sidebar */}
       <Sidebar show={showMenu} />
       {/* Conteúdo principal (header + main) */}
@@ -1813,6 +1836,8 @@ export default function DashboardPage() {
         items={productParams}
         isCreating={isCreatingProductParam}
         newName={newProductParamName}
+        newShortDescription={newProductParamShortDescription}
+        newHelpText={newProductParamHelpText}
         newValue={newProductParamValue}
         savingNew={savingNewProductParam}
         onClose={() => setIsParamPanelOpen(false)}
@@ -1820,6 +1845,8 @@ export default function DashboardPage() {
         onCancelCreate={cancelCreateProductParam}
         onSaveCreate={createProductParameter}
         onChangeNewName={setNewProductParamName}
+        onChangeNewShortDescription={setNewProductParamShortDescription}
+        onChangeNewHelpText={setNewProductParamHelpText}
         onChangeNewValue={setNewProductParamValue}
         onChangeItemValue={handleProductParameterValueChange}
         unsavedCount={Object.keys(productParamsDirty).length}
@@ -1838,6 +1865,8 @@ export default function DashboardPage() {
         items={accountParams as AccountParameter[]}
         isCreating={isCreatingAccountParam}
         newName={newAccountParamName}
+        newShortDescription={newAccountParamShortDescription}
+        newHelpText={newAccountParamHelpText}
         newValue={newAccountParamValue}
         savingNew={savingNewAccountParam}
         unsavedCount={Object.keys(accountParamsDirty).length}
@@ -1852,6 +1881,8 @@ export default function DashboardPage() {
           setAccountParamsDirty({});
         }}
         onChangeNewName={setNewAccountParamName}
+        onChangeNewShortDescription={setNewAccountParamShortDescription}
+        onChangeNewHelpText={setNewAccountParamHelpText}
         onChangeNewValue={setNewAccountParamValue}
         onChangeItemValue={handleAccountParameterValueChange}
       />
@@ -1904,10 +1935,10 @@ export default function DashboardPage() {
             {!selectedAccountId && (
             <section className={`mt-6 transition-all duration-400 ease-out ${showAccountsGrid ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}>
               <div className="flex items-center justify-between mb-3">
-                <h2 className="text-xl font-semibold dark:text-white">Configuração de Contas</h2>
+                <h2 className={`text-xl font-semibold ${theme.colors.text.primary}`}>Configuração de Contas</h2>
                 {userData.user?.isAdmin && (
                   <Button
-                    className="bg-blue-600 hover:bg-blue-500 text-white"
+                    className={theme.colors.button.primary}
                     size="sm"
                     onClick={openAccountCreateForm}
                     title="Incluir conta"
@@ -1917,32 +1948,32 @@ export default function DashboardPage() {
                 )}
 
               </div>
-              <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded shadow-sm max-h-[50vh] overflow-auto">
+              <div className={`border rounded shadow-sm max-h-[50vh] overflow-auto ${settings.table}`}>
                 <table className="min-w-full text-sm">
-                  <thead className="bg-gray-50 dark:bg-gray-700 sticky top-0">
+                  <thead className={`sticky top-0 ${settings.tableHeader}`}>
                     <tr>
-                      <th className="text-left px-4 py-2 dark:text-gray-100">Nome</th>
-                      <th className="text-left px-4 py-2 dark:text-gray-100">Email</th>
-                      <th className="text-left px-4 py-2 dark:text-gray-100">Telefone</th>
-                      <th className="text-left px-4 py-2 dark:text-gray-100">Domínio</th>
+                      <th className={`text-left px-4 py-2 ${theme.colors.text.primary}`}>Nome</th>
+                      <th className={`text-left px-4 py-2 ${theme.colors.text.primary}`}>Email</th>
+                      <th className={`text-left px-4 py-2 ${theme.colors.text.primary}`}>Telefone</th>
+                      <th className={`text-left px-4 py-2 ${theme.colors.text.primary}`}>Domínio</th>
                     </tr>
                   </thead>
                   <tbody>
                     {accountsLoading ? (
-                      <tr><td className="px-4 py-3 dark:text-gray-200" colSpan={4}>Carregando...</td></tr>
+                      <tr><td className={`px-4 py-3 ${theme.colors.text.primary}`} colSpan={4}>Carregando...</td></tr>
                     ) : accounts.length === 0 ? (
-                      <tr><td className="px-4 py-3 dark:text-gray-200" colSpan={4}>Nenhuma conta encontrada.</td></tr>
+                      <tr><td className={`px-4 py-3 ${theme.colors.text.primary}`} colSpan={4}>Nenhuma conta encontrada.</td></tr>
                     ) : (
                       accounts.slice((accPage-1)*accPageSize, (accPage-1)*accPageSize + accPageSize).map(acc => (
                         <tr
                           key={acc.id}
-                          className={`border-t border-gray-100 dark:border-gray-700 cursor-pointer ${selectedAccountId === acc.id ? 'bg-blue-50 dark:bg-gray-700/50' : ''}`}
+                          className={`border-t cursor-pointer ${settings.tableRow} ${selectedAccountId === acc.id ? settings.tableRowSelected : theme.colors.background.hover}`}
                           onClick={() => setSelectedAccountId(acc.id)}
                         >
-                          <td className="px-4 py-2 dark:text-gray-100">{acc.name}</td>
-                          <td className="px-4 py-2 dark:text-gray-100">{acc.email || '-'}</td>
-                          <td className="px-4 py-2 dark:text-gray-100">{acc.phone || '-'}</td>
-                          <td className="px-4 py-2 dark:text-gray-100">{acc.domain || '-'}</td>
+                          <td className={`px-4 py-2 ${theme.colors.text.primary}`}>{acc.name}</td>
+                          <td className={`px-4 py-2 ${theme.colors.text.primary}`}>{acc.email || '-'}</td>
+                          <td className={`px-4 py-2 ${theme.colors.text.primary}`}>{acc.phone || '-'}</td>
+                          <td className={`px-4 py-2 ${theme.colors.text.primary}`}>{acc.domain || '-'}</td>
                         </tr>
                       ))
                     )}
@@ -1950,19 +1981,19 @@ export default function DashboardPage() {
                 </table>
                 {/* Paginação */}
                 {accounts.length > accPageSize && (
-                  <div className="flex items-center justify-between px-4 py-2 border-t border-gray-200 dark:border-gray-700">
-                    <span className="text-xs dark:text-gray-300">
+                  <div className={`flex items-center justify-between px-4 py-2 border-t ${settings.formBorder}`}>
+                    <span className={`text-xs ${theme.colors.text.secondary}`}>
                       Página {accPage} de {Math.ceil(accounts.length / accPageSize)}
                     </span>
                     <div className="flex gap-2">
                       <Button
                         variant="secondary"
-                        className="bg-gray-700 hover:bg-gray-600 text-white"
+                        className={theme.colors.button.secondary}
                         onClick={() => setAccPage(p => Math.max(1, p-1))}
                         disabled={accPage === 1}
                       >Anterior</Button>
                       <Button
-                        className="bg-blue-600 hover:bg-blue-500 text-white"
+                        className={theme.colors.button.primary}
                         onClick={() => setAccPage(p => Math.min(Math.ceil(accounts.length / accPageSize), p+1))}
                         disabled={accPage >= Math.ceil(accounts.length / accPageSize)}
                       >Próxima</Button>
@@ -1976,17 +2007,17 @@ export default function DashboardPage() {
             {/* Tabs header */}
             {selectedAccountId && (
               <div className="mt-6">
-                <div className="inline-flex items-center gap-6 border-b border-gray-200 dark:border-gray-700">
+                <div className={`inline-flex items-center gap-6 border-b ${theme.colors.border.primary}`}>
                   <button
                     type="button"
-                    className={`px-2 py-2 text-xl font-semibold ${selectedSettingsTab === 'funnel' ? 'text-white border-b-2 border-blue-500' : 'text-gray-400 hover:text-gray-200'}`}
+                    className={`px-2 py-2 text-xl font-semibold ${selectedSettingsTab === 'funnel' ? `${theme.colors.text.primary} border-b-2 border-blue-500` : `${theme.colors.text.muted} hover:${theme.colors.text.secondary}`}`}
                     onClick={() => { console.log('[SETTINGS] Click tab = funnel'); setSelectedSettingsTab('funnel'); }}
                   >
                     Funil Conversacional
                   </button>
                   <button
                     type="button"
-                    className={`px-2 py-2 text-xl font-semibold ${selectedSettingsTab === 'knowledge' ? 'text-white border-b-2 border-blue-500' : 'text-gray-400 hover:text-gray-200'}`}
+                    className={`px-2 py-2 text-xl font-semibold ${selectedSettingsTab === 'knowledge' ? `${theme.colors.text.primary} border-b-2 border-blue-500` : `${theme.colors.text.muted} hover:${theme.colors.text.secondary}`}`}
                     onClick={() => { console.log('[SETTINGS] Click tab = knowledge'); setSelectedSettingsTab('knowledge'); setKnowledgeRefreshKey((k) => k + 1); }}
                   >
                     Base de Conhecimento
@@ -2152,13 +2183,13 @@ export default function DashboardPage() {
       />
       {/* Painel à direita com animação de slide (Funil) */}
       <div
-        className={`fixed right-0 top-0 h-full w-full max-w-md bg-white dark:bg-gray-800 shadow-xl z-50 transform transition-transform duration-300 ease-out ${isFunnelFormOpen ? 'translate-x-0' : 'translate-x-full'}`}
+        className={`fixed right-0 top-0 h-full w-full max-w-md shadow-xl z-50 transform transition-transform duration-300 ease-out ${settings.form} ${isFunnelFormOpen ? 'translate-x-0' : 'translate-x-full'}`}
         aria-hidden={!isFunnelFormOpen}
       >
-        <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-          <h2 className="text-lg font-semibold dark:text-white">{funnelFormMode === 'edit' ? 'Editar Funil' : 'Novo Funil'}</h2>
+        <div className={`p-4 border-b flex items-center justify-between ${settings.formBorder}`}>
+          <h2 className={`text-lg font-semibold ${theme.colors.text.primary}`}>{funnelFormMode === 'edit' ? 'Editar Funil' : 'Novo Funil'}</h2>
           <button
-            className="text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-white"
+            className={`${theme.colors.text.muted} ${theme.colors.background.hover}`}
             onClick={() => { setIsFunnelFormOpen(false); }}
             aria-label="Fechar"
           >
@@ -2167,47 +2198,47 @@ export default function DashboardPage() {
         </div>
         <div className="p-4 space-y-4">
           <div>
-            <label htmlFor="funnel-name" className="block text-sm mb-1 dark:text-gray-200">Nome</label>
+            <label htmlFor="funnel-name" className={`block text-sm mb-1 ${theme.colors.text.primary}`}>Nome</label>
             <input
               id="funnel-name"
               type="text"
-              className="w-full rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className={`w-full rounded border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${settings.input}`}
               value={funnelFormName}
               onChange={(e) => setFunnelFormName(e.target.value)}
             />
           </div>
           <div>
-            <label htmlFor="funnel-desc" className="block text-sm mb-1 dark:text-gray-200">Descrição</label>
+            <label htmlFor="funnel-desc" className={`block text-sm mb-1 ${theme.colors.text.primary}`}>Descrição</label>
             <textarea
               id="funnel-desc"
               rows={5}
-              className="w-full rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className={`w-full rounded border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${settings.input}`}
               value={funnelFormDescription}
               onChange={(e) => setFunnelFormDescription(e.target.value)}
             />
           </div>
           <div>
-            <label htmlFor="funnel-agent-instruction" className="block text-sm mb-1 dark:text-gray-200">Instruções do Agente <span className="text-red-600">*</span></label>
+            <label htmlFor="funnel-agent-instruction" className={`block text-sm mb-1 ${theme.colors.text.primary}`}>Instruções do Agente <span className="text-red-600">*</span></label>
             <textarea
               id="funnel-agent-instruction"
               required
               rows={6}
-              className="w-full rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className={`w-full rounded border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${settings.input}`}
               value={funnelFormAgentInstruction}
               onChange={(e) => setFunnelFormAgentInstruction(e.target.value)}
               placeholder="Descreva as instruções gerais que o agente deve seguir neste funil"
             />
           </div>
         </div>
-        <div className="p-4 border-t border-gray-200 dark:border-gray-700 flex items-center justify-end gap-2">
+        <div className={`p-4 border-t flex items-center justify-end gap-2 ${settings.formBorder}`}>
           <Button
             variant="secondary"
-            className="bg-gray-700 hover:bg-gray-600 text-white"
+            className={theme.colors.button.secondary}
             onClick={() => { setIsFunnelFormOpen(false); }}
             disabled={funnelSaving}
           >Cancelar</Button>
           <Button
-            className="bg-blue-600 hover:bg-blue-500 text-white"
+            className={theme.colors.button.primary}
             onClick={saveFunnelAndLink}
             disabled={funnelSaving || !funnelFormName.trim() || !funnelFormDescription.trim() || !funnelFormAgentInstruction.trim()}
           >{funnelSaving ? 'Salvando...' : 'Salvar'}</Button>
@@ -2217,7 +2248,7 @@ export default function DashboardPage() {
       {/* Toast container (global) */}
       <div className={`fixed bottom-4 right-4 z-[9999] transition-all ${toast ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'}`}>
         {toast && (
-          <div className={`px-4 py-3 rounded shadow-lg text-white ${toast.type === 'success' ? 'bg-green-600' : toast.type === 'error' ? 'bg-red-600' : 'bg-gray-700'}`}>
+          <div className={`px-4 py-3 rounded shadow-lg text-white ${toast.type === 'success' ? settings.toast.success : toast.type === 'error' ? settings.toast.error : settings.toast.info}`}>
             {toast.message}
           </div>
         )}

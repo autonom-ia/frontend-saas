@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Upload, Trash2, ChevronLeft, ChevronRight, Users, Plus } from "lucide-react";
 import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useTheme } from "@/contexts/ThemeContext";
 import Sidebar from "../../components/Sidebar";
 import ProductHeader from "../../components/ProductHeader";
 import {
@@ -47,6 +48,8 @@ type Campaign = {
 
 export default function CampaignsPage() {
   const router = useRouter();
+  const { theme } = useTheme();
+  const campaigns_theme = theme.colors.campaigns;
 
   const [authToken, setAuthToken] = useState<string | undefined>(undefined);
   const [userData, setUserData] = useState<UserData | null>(null);
@@ -518,7 +521,7 @@ export default function CampaignsPage() {
   };
 
   return (
-    <div className="flex h-screen bg-background dark:bg-gray-900 text-neutral-200">
+    <div className={`flex h-screen ${theme.colors.background.primary} ${theme.colors.text.secondary}`}>
       {/* Sidebar */}
       <Sidebar show={showMenu} />
 
@@ -533,6 +536,7 @@ export default function CampaignsPage() {
           userName={userData?.user?.name}
           userPhotoUrl={userData?.user?.photoUrl}
           userInitials={userInitials}
+          showOnboardingButton={false}
           onChangeProduct={handleSelectProduct}
           onCreateProduct={() => {}}
           onEditProduct={() => {}}
@@ -546,10 +550,10 @@ export default function CampaignsPage() {
             <>
               <section className="mt-6">
                 <div className="flex items-center justify-between mb-3">
-                  <h2 className="text-xl font-semibold dark:text-white">Campanhas</h2>
+                  <h2 className={`text-xl font-semibold ${theme.colors.text.primary}`}>Campanhas</h2>
                   {isAdmin && (
                     <Button
-                      className="bg-blue-600 hover:bg-blue-500 text-white"
+                      className={theme.colors.button.primary}
                       size="sm"
                       onClick={openCreateForm}
                       title="Incluir campanha"
@@ -558,48 +562,48 @@ export default function CampaignsPage() {
                     </Button>
                   )}
                 </div>
-                <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded shadow-sm max-h-[50vh] overflow-auto">
+                <div className={`border rounded shadow-sm max-h-[50vh] overflow-auto ${campaigns_theme.table}`}>
                   <table className="min-w-full text-sm">
-                    <thead className="bg-gray-50 dark:bg-gray-700 sticky top-0">
+                    <thead className={`sticky top-0 ${campaigns_theme.tableHeader}`}>
                       <tr>
-                        <th className="text-left px-4 py-2 dark:text-gray-100">Nome</th>
-                        <th className="text-left px-4 py-2 dark:text-gray-100">Descrição</th>
-                        <th className="text-left px-4 py-2 dark:text-gray-100">Conta</th>
-                        <th className="text-left px-4 py-2 dark:text-gray-100">Template</th>
-                        <th className="text-left px-4 py-2 dark:text-gray-100">Contatos</th>
-                        <th className="text-left px-4 py-2 dark:text-gray-100">Criado em</th>
-                        <th className="text-left px-4 py-2 dark:text-gray-100">Ações</th>
+                        <th className={`text-left px-4 py-2 ${theme.colors.text.primary}`}>Nome</th>
+                        <th className={`text-left px-4 py-2 ${theme.colors.text.primary}`}>Descrição</th>
+                        <th className={`text-left px-4 py-2 ${theme.colors.text.primary}`}>Conta</th>
+                        <th className={`text-left px-4 py-2 ${theme.colors.text.primary}`}>Template</th>
+                        <th className={`text-left px-4 py-2 ${theme.colors.text.primary}`}>Contatos</th>
+                        <th className={`text-left px-4 py-2 ${theme.colors.text.primary}`}>Criado em</th>
+                        <th className={`text-left px-4 py-2 ${theme.colors.text.primary}`}>Ações</th>
                       </tr>
                     </thead>
                     <tbody>
                       {campaignsLoading && (
                         <tr>
-                          <td className="px-4 py-3 dark:text-gray-200" colSpan={7}>Carregando...</td>
+                          <td className={`px-4 py-3 ${theme.colors.text.primary}`} colSpan={7}>Carregando...</td>
                         </tr>
                       )}
                       {!campaignsLoading && campaigns.length === 0 && (
                         <tr>
-                          <td className="px-4 py-3 dark:text-gray-200" colSpan={7}>Nenhuma campanha encontrada.</td>
+                          <td className={`px-4 py-3 ${theme.colors.text.primary}`} colSpan={7}>Nenhuma campanha encontrada.</td>
                         </tr>
                       )}
                       {!campaignsLoading && campaigns.slice((campPage-1)*campPageSize, (campPage-1)*campPageSize + campPageSize).map((c) => (
-                        <tr key={c.id} className="border-t border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700">
-                          <td className="px-4 py-2 dark:text-gray-100 font-medium">{c.name}</td>
-                          <td className="px-4 py-2 dark:text-gray-100">{c.description || '-'}</td>
-                          <td className="px-4 py-2 dark:text-gray-100">{c.account_name || c.account_id}</td>
-                          <td className="px-4 py-2 dark:text-gray-100">{c.template_name || '-'}</td>
-                          <td className="px-4 py-2 dark:text-gray-100">
+                        <tr key={c.id} className={`border-t ${campaigns_theme.tableRow} ${campaigns_theme.tableRowHover}`}>
+                          <td className={`px-4 py-2 font-medium ${theme.colors.text.primary}`}>{c.name}</td>
+                          <td className={`px-4 py-2 ${theme.colors.text.primary}`}>{c.description || '-'}</td>
+                          <td className={`px-4 py-2 ${theme.colors.text.primary}`}>{c.account_name || c.account_id}</td>
+                          <td className={`px-4 py-2 ${theme.colors.text.primary}`}>{c.template_name || '-'}</td>
+                          <td className={`px-4 py-2 ${theme.colors.text.primary}`}>
                             <div className="flex items-center space-x-1">
                               <Users className="h-4 w-4 text-gray-400" />
                               <span>-</span>
                             </div>
                           </td>
-                          <td className="px-4 py-2 dark:text-gray-100">{c.created_at ? new Date(c.created_at).toLocaleString() : '-'}</td>
+                          <td className={`px-4 py-2 ${theme.colors.text.primary}`}>{c.created_at ? new Date(c.created_at).toLocaleString() : '-'}</td>
                           <td className="px-4 py-2">
                             <div className="flex items-center gap-2">
                               <button
                                 onClick={() => openImportModal(c)}
-                                className="p-2 rounded-lg bg-gray-700 hover:bg-gray-600 text-white transition-colors"
+                                className={`p-2 rounded-lg transition-colors ${campaigns_theme.importButton}`}
                                 title="Importar contatos CSV"
                                 aria-label="Importar contatos CSV"
                               >
@@ -613,19 +617,19 @@ export default function CampaignsPage() {
                   </table>
                 </div>
                 {(!campaignsLoading && campaigns.length > campPageSize) && (
-                  <div className="flex items-center justify-between px-4 py-2 border-t border-gray-200 dark:border-gray-700">
-                    <span className="text-xs dark:text-gray-300">
+                  <div className={`flex items-center justify-between px-4 py-2 border-t ${campaigns_theme.formBorder}`}>
+                    <span className={`text-xs ${theme.colors.text.secondary}`}>
                       Página {campPage} de {Math.ceil(campaigns.length / campPageSize)}
                     </span>
                     <div className="flex gap-2">
                       <Button
                         variant="secondary"
-                        className="bg-gray-700 hover:bg-gray-600 text-white"
+                        className={theme.colors.button.secondary}
                         onClick={() => setCampPage(p => Math.max(1, p-1))}
                         disabled={campPage === 1}
                       >Anterior</Button>
                       <Button
-                        className="bg-blue-600 hover:bg-blue-500 text-white"
+                        className={theme.colors.button.primary}
                         onClick={() => setCampPage(p => Math.min(Math.ceil(campaigns.length / campPageSize), p+1))}
                         disabled={campPage >= Math.ceil(campaigns.length / campPageSize)}
                       >Próxima</Button>
@@ -646,27 +650,37 @@ export default function CampaignsPage() {
         />
         {/* Panel */}
         <div
-          className={`fixed right-0 top-0 h-full w-full max-w-md bg-white dark:bg-gray-800 shadow-xl z-50 transform transition-transform duration-300 ease-out ${isFormOpen ? 'translate-x-0' : 'translate-x-full'}`}
+          className={`fixed right-0 top-0 h-full w-full max-w-md shadow-xl z-50 transform transition-transform duration-300 ease-out ${campaigns_theme.form} ${isFormOpen ? 'translate-x-0' : 'translate-x-full'}`}
           aria-hidden={!isFormOpen}
         >
-          <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-            <h2 className="text-lg font-semibold dark:text-white">Incluir Campanha</h2>
-            <button className="text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-white" onClick={cancelCreateForm} aria-label="Fechar">✕</button>
+          <div className={`p-4 border-b flex items-center justify-between ${campaigns_theme.formBorder}`}>
+            <h2 className={`text-lg font-semibold ${theme.colors.text.primary}`}>Incluir Campanha</h2>
+            <button className={`${theme.colors.text.muted} ${theme.colors.background.hover}`} onClick={cancelCreateForm} aria-label="Fechar">✕</button>
           </div>
           <div className="p-4 space-y-3">
             <div>
-              <label className="block text-sm mb-1 dark:text-gray-200">Nome</label>
-              <input value={formName} onChange={(e) => setFormName(e.target.value)} className="w-full rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Nome da campanha" />
+              <label className={`block text-sm mb-1 ${theme.colors.text.primary}`}>Nome</label>
+              <input value={formName} onChange={(e) => setFormName(e.target.value)} className={`w-full rounded border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${campaigns_theme.input}`} placeholder="Nome da campanha" />
             </div>
             <div>
-              <label className="block text-sm mb-1 dark:text-gray-200">Descrição</label>
-              <textarea value={formDescription} onChange={(e) => setFormDescription(e.target.value)} className="w-full rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[90px]" placeholder="Descrição (opcional)" />
+              <label className={`block text-sm mb-1 ${theme.colors.text.primary}`}>Descrição</label>
+              <textarea value={formDescription} onChange={(e) => setFormDescription(e.target.value)} className={`w-full rounded border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[90px] ${campaigns_theme.input}`} placeholder="Descrição (opcional)" />
             </div>
             <div>
-              <label htmlFor="acc-select" className="block text-sm mb-1 dark:text-gray-200">Conta</label>
+              <label htmlFor="acc-select" className={`block text-sm mb-1 ${theme.colors.text.primary}`}>Conta</label>
               <select
                 id="acc-select"
-                className="select-clean w-full"
+                className={`w-full rounded-md px-3 py-2 text-sm border ${theme.colors.background.secondary} ${theme.colors.text.primary} ${theme.colors.border.secondary} focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                style={{
+                  WebkitAppearance: 'none',
+                  MozAppearance: 'none',
+                  appearance: 'none',
+                  backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='currentColor'%3E%3Cpath d='M4 6l4 4 4-4'/%3E%3C/svg%3E")`,
+                  backgroundRepeat: 'no-repeat',
+                  backgroundPosition: 'right 0.75rem center',
+                  backgroundSize: '16px 16px',
+                  paddingRight: '2.5rem'
+                }}
                 disabled={accountsLoading}
                 value={formAccountId}
                 onChange={(e) => setFormAccountId(e.target.value)}
@@ -680,11 +694,21 @@ export default function CampaignsPage() {
               </select>
             </div>
             <div>
-              <label htmlFor="template-select" className="block text-sm mb-1 dark:text-gray-200">Template de Mensagem</label>
+              <label htmlFor="template-select" className={`block text-sm mb-1 ${theme.colors.text.primary}`}>Template de Mensagem</label>
               <div className="flex items-center gap-2">
                 <select
                   id="template-select"
-                  className="select-clean w-full"
+                  className={`w-full rounded-md px-3 py-2 text-sm border ${theme.colors.background.secondary} ${theme.colors.text.primary} ${theme.colors.border.secondary} focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                  style={{
+                    WebkitAppearance: 'none',
+                    MozAppearance: 'none',
+                    appearance: 'none',
+                    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='currentColor'%3E%3Cpath d='M4 6l4 4 4-4'/%3E%3C/svg%3E")`,
+                    backgroundRepeat: 'no-repeat',
+                    backgroundPosition: 'right 0.75rem center',
+                    backgroundSize: '16px 16px',
+                    paddingRight: '2.5rem'
+                  }}
                   disabled={templatesLoading || !formAccountId}
                   value={formTemplateId}
                   onChange={(e) => setFormTemplateId(e.target.value)}
@@ -698,7 +722,7 @@ export default function CampaignsPage() {
                 </select>
                 <Button
                   type="button"
-                  className="bg-blue-600 hover:bg-blue-500 text-white"
+                  className={theme.colors.button.primary}
                   size="sm"
                   disabled={!formAccountId}
                   title="Incluir novo template"
@@ -709,9 +733,9 @@ export default function CampaignsPage() {
               </div>
             </div>
           </div>
-          <div className="p-4 border-t border-gray-200 dark:border-gray-700 flex items-center justify-end gap-2">
-            <Button variant="secondary" className="bg-gray-700 hover:bg-gray-600 text-white" onClick={cancelCreateForm} disabled={formSaving}>Cancelar</Button>
-            <Button className="bg-blue-600 hover:bg-blue-500 text-white" onClick={submitCreateCampaign} disabled={formSaving || !formName.trim() || !formAccountId}>Salvar</Button>
+          <div className={`p-4 border-t flex items-center justify-end gap-2 ${campaigns_theme.formBorder}`}>
+            <Button variant="secondary" className={theme.colors.button.secondary} onClick={cancelCreateForm} disabled={formSaving}>Cancelar</Button>
+            <Button className={theme.colors.button.primary} onClick={submitCreateCampaign} disabled={formSaving || !formName.trim() || !formAccountId}>Salvar</Button>
           </div>
         </div>
 
@@ -723,36 +747,36 @@ export default function CampaignsPage() {
         />
         {/* Panel */}
         <div
-          className={`fixed right-0 top-0 h-full w-full max-w-md bg-white dark:bg-gray-800 shadow-xl z-50 transform transition-transform duration-300 ease-out ${isTemplateFormOpen ? 'translate-x-0' : 'translate-x-full'}`}
+          className={`fixed right-0 top-0 h-full w-full max-w-md shadow-xl z-50 transform transition-transform duration-300 ease-out ${campaigns_theme.form} ${isTemplateFormOpen ? 'translate-x-0' : 'translate-x-full'}`}
           aria-hidden={!isTemplateFormOpen}
         >
-          <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-            <h2 className="text-lg font-semibold dark:text-white">Incluir Template</h2>
-            <button className="text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-white" onClick={() => setIsTemplateFormOpen(false)} aria-label="Fechar">✕</button>
+          <div className={`p-4 border-b flex items-center justify-between ${campaigns_theme.formBorder}`}>
+            <h2 className={`text-lg font-semibold ${theme.colors.text.primary}`}>Incluir Template</h2>
+            <button className={`${theme.colors.text.muted} ${theme.colors.background.hover}`} onClick={() => setIsTemplateFormOpen(false)} aria-label="Fechar">✕</button>
           </div>
           <div className="p-4 space-y-3">
             <div>
-              <label className="block text-sm mb-1 dark:text-gray-200">Conta</label>
-              <input className="w-full rounded border border-gray-300 dark:border-gray-700 bg-gray-100 dark:bg-gray-900 px-3 py-2 text-sm text-gray-500 dark:text-gray-300" value={accounts.find(a => a.id === formAccountId)?.name || ''} disabled />
+              <label className={`block text-sm mb-1 ${theme.colors.text.primary}`}>Conta</label>
+              <input className={`w-full rounded border px-3 py-2 text-sm ${campaigns_theme.inputDisabled}`} value={accounts.find(a => a.id === formAccountId)?.name || ''} disabled />
             </div>
             <div>
-              <label className="block text-sm mb-1 dark:text-gray-200">Nome do Template</label>
-              <input value={tmplName} onChange={(e) => setTmplName(e.target.value)} className="w-full rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Ex.: Boas-vindas" />
+              <label className={`block text-sm mb-1 ${theme.colors.text.primary}`}>Nome do Template</label>
+              <input value={tmplName} onChange={(e) => setTmplName(e.target.value)} className={`w-full rounded border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${campaigns_theme.input}`} placeholder="Ex.: Boas-vindas" />
             </div>
             <div>
-              <label className="block text-sm mb-1 dark:text-gray-200">Mensagem</label>
-              <textarea value={tmplText} onChange={(e) => setTmplText(e.target.value)} className="w-full rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[120px]" placeholder="Digite o texto da mensagem" />
+              <label className={`block text-sm mb-1 ${theme.colors.text.primary}`}>Mensagem</label>
+              <textarea value={tmplText} onChange={(e) => setTmplText(e.target.value)} className={`w-full rounded border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[120px] ${campaigns_theme.input}`} placeholder="Digite o texto da mensagem" />
             </div>
           </div>
-          <div className="p-4 border-t border-gray-200 dark:border-gray-700 flex items-center justify-end gap-2">
+          <div className={`p-4 border-t flex items-center justify-end gap-2 ${campaigns_theme.formBorder}`}>
             <Button
               variant="secondary"
-              className="bg-gray-700 hover:bg-gray-600 text-white"
+              className={theme.colors.button.secondary}
               onClick={() => setIsTemplateFormOpen(false)}
               disabled={tmplSaving}
             >Cancelar</Button>
             <Button
-              className="bg-blue-600 hover:bg-blue-500 text-white"
+              className={theme.colors.button.primary}
               disabled={tmplSaving || !tmplName.trim() || !tmplText.trim() || !formAccountId}
               onClick={async () => {
                 try {
@@ -794,15 +818,15 @@ export default function CampaignsPage() {
         />
         {/* Panel */}
         <div
-          className={`fixed right-0 top-0 h-full w-full max-w-lg bg-white dark:bg-gray-800 shadow-xl z-50 transform transition-transform duration-300 ease-out ${isImportModalOpen ? 'translate-x-0' : 'translate-x-full'}`}
+          className={`fixed right-0 top-0 h-full w-full max-w-lg shadow-xl z-50 transform transition-transform duration-300 ease-out ${campaigns_theme.modal} ${isImportModalOpen ? 'translate-x-0' : 'translate-x-full'}`}
           aria-hidden={!isImportModalOpen}
         >
-          <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-            <h2 className="text-lg font-semibold dark:text-white">
+          <div className={`p-4 border-b flex items-center justify-between ${campaigns_theme.modalBorder}`}>
+            <h2 className={`text-lg font-semibold ${theme.colors.text.primary}`}>
               Importar Contatos - {selectedCampaignForImport?.name}
             </h2>
             <button 
-              className="text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-white" 
+              className={`${theme.colors.text.muted} ${theme.colors.background.hover}`}
               onClick={closeImportModal} 
               aria-label="Fechar"
             >
@@ -814,9 +838,9 @@ export default function CampaignsPage() {
             {!importResult && (
               <>
                 <div>
-                  <label className="block text-sm mb-1 dark:text-gray-200">Arquivo CSV/XLSX</label>
+                  <label className={`block text-sm mb-1 ${theme.colors.text.primary}`}>Arquivo CSV/XLSX</label>
                   <div
-                    className="w-full rounded border border-dashed dark:border-gray-600 bg-gray-50 dark:bg-gray-900/60 px-4 py-8 text-center cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-900"
+                    className={`w-full rounded border border-dashed px-4 py-8 text-center cursor-pointer ${campaigns_theme.input} ${theme.colors.background.hover}`}
                     onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
                     onDrop={(e) => {
                       e.preventDefault();
@@ -831,9 +855,9 @@ export default function CampaignsPage() {
                       input?.click();
                     }}
                   >
-                    <div className="text-gray-600 dark:text-gray-300">
+                    <div className={theme.colors.text.secondary}>
                       <span className="text-blue-500">Arraste e solte</span> o arquivo aqui
-                      <div className="text-xs mt-1 text-gray-500 dark:text-gray-400">Tipos permitidos: CSV, XLSX, XLS • Tamanho máximo 25 MB</div>
+                      <div className={`text-xs mt-1 ${theme.colors.text.muted}`}>Tipos permitidos: CSV, XLSX, XLS • Tamanho máximo 25 MB</div>
                     </div>
                   </div>
                   <input 
@@ -844,15 +868,15 @@ export default function CampaignsPage() {
                     onChange={handleFileSelect}
                   />
                   {importFile && (
-                    <div className="mt-2 text-xs dark:text-gray-300">Selecionado: {importFile.name}</div>
+                    <div className={`mt-2 text-xs ${theme.colors.text.primary}`}>Selecionado: {importFile.name}</div>
                   )}
                 </div>
 
-                <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-md">
-                  <h4 className="text-sm font-medium text-blue-800 dark:text-blue-200 mb-2">
+                <div className={`p-3 rounded-md ${theme.colors.accent.primary}`}>
+                  <h4 className="text-sm font-medium mb-2">
                     Formato esperado do arquivo:
                   </h4>
-                  <ul className="text-xs text-blue-700 dark:text-blue-300 space-y-1">
+                  <ul className="text-xs space-y-1">
                     <li>• <strong>Nome:</strong> Nome completo do contato</li>
                     <li>• <strong>Telefone:</strong> Número com DDD (ex: 11999999999)</li>
                     <li>• <strong>CPF:</strong> CPF válido (com ou sem formatação)</li>
@@ -868,7 +892,7 @@ export default function CampaignsPage() {
                     onChange={(e) => setImportSendMessages(e.target.checked)}
                     className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                   />
-                  <label htmlFor="sendMessages" className="text-sm dark:text-gray-200">
+                  <label htmlFor="sendMessages" className={`text-sm ${theme.colors.text.primary}`}>
                     Enviar mensagens automaticamente após importação
                   </label>
                 </div>
@@ -918,10 +942,10 @@ export default function CampaignsPage() {
             )}
           </div>
 
-          <div className="p-4 border-t border-gray-200 dark:border-gray-700 flex items-center justify-end gap-2">
+          <div className={`p-4 border-t flex items-center justify-end gap-2 ${campaigns_theme.modalBorder}`}>
             <Button 
               variant="secondary" 
-              className="bg-gray-700 hover:bg-gray-600 text-white" 
+              className={theme.colors.button.secondary}
               onClick={closeImportModal}
               disabled={importUploading}
             >

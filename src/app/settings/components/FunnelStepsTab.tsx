@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { useTheme } from "@/contexts/ThemeContext";
 import { Button } from "@/components/ui/button";
 import { Pencil, Settings } from "lucide-react";
 
@@ -33,6 +34,8 @@ export type FunnelStepsTabProps = {
 };
 
 export default function FunnelStepsTab(props: FunnelStepsTabProps) {
+  const { theme } = useTheme();
+  const settings = theme.colors.settings;
   const {
     funnelName,
     isAdmin,
@@ -61,7 +64,7 @@ export default function FunnelStepsTab(props: FunnelStepsTabProps) {
       <div className="flex items-center justify-between">
         <div>
           {funnelName && (
-            <p className="text-sm text-gray-600 dark:text-gray-300">{funnelName}</p>
+            <p className={`text-sm ${theme.colors.text.secondary}`}>{funnelName}</p>
           )}
         </div>
         {isAdmin && !isDefaultFunnel && (
@@ -69,14 +72,14 @@ export default function FunnelStepsTab(props: FunnelStepsTabProps) {
             <Button
               variant="secondary"
               size="sm"
-              className="bg-gray-700 hover:bg-gray-600 text-white"
+              className={theme.colors.button.secondary}
               onClick={onClickEditFunnel}
               title="Editar funil"
             >
               <Pencil className="h-4 w-4" />
             </Button>
             <Button
-              className="bg-blue-600 hover:bg-blue-500 text-white"
+              className={theme.colors.button.primary}
               size="sm"
               onClick={onClickIncludeStep}
               title="Incluir etapa"
@@ -87,36 +90,36 @@ export default function FunnelStepsTab(props: FunnelStepsTabProps) {
         )}
       </div>
       <div className="h-3" />
-      <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded shadow-sm max-h-[50vh] overflow-auto">
+      <div className={`border rounded shadow-sm max-h-[50vh] overflow-auto ${settings.table}`}>
         <table className="min-w-full text-sm">
-          <thead className="bg-gray-50 dark:bg-gray-700 sticky top-0">
+          <thead className={`sticky top-0 ${settings.tableHeader}`}>
             <tr>
-              <th className="text-left px-4 py-2 dark:text-gray-100">Ordem</th>
-              <th className="text-left px-4 py-2 dark:text-gray-100">Nome</th>
-              <th className="text-left px-4 py-2 dark:text-gray-100">Descrição</th>
-              <th className="text-right px-4 py-2 dark:text-gray-100">Ações</th>
+              <th className={`text-left px-4 py-2 ${theme.colors.text.primary}`}>Ordem</th>
+              <th className={`text-left px-4 py-2 ${theme.colors.text.primary}`}>Nome</th>
+              <th className={`text-left px-4 py-2 ${theme.colors.text.primary}`}>Descrição</th>
+              <th className={`text-right px-4 py-2 ${theme.colors.text.primary}`}>Ações</th>
             </tr>
           </thead>
           <tbody>
             {stepsLoading ? (
               <tr>
-                <td className="px-4 py-3 dark:text-gray-200" colSpan={4}>Carregando...</td>
+                <td className={`px-4 py-3 ${theme.colors.text.primary}`} colSpan={4}>Carregando...</td>
               </tr>
             ) : steps.length === 0 ? (
               <tr>
-                <td className="px-4 py-3 dark:text-gray-200" colSpan={4}>Nenhuma etapa encontrada.</td>
+                <td className={`px-4 py-3 ${theme.colors.text.primary}`} colSpan={4}>Nenhuma etapa encontrada.</td>
               </tr>
             ) : (
               steps
                 .slice((stepsPage - 1) * stepsPageSize, (stepsPage - 1) * stepsPageSize + stepsPageSize)
                 .map((step) => (
-                  <tr key={step.id} className="border-t border-gray-100 dark:border-gray-700">
-                    <td className="px-4 py-2 dark:text-gray-100">
+                  <tr key={step.id} className={`border-t ${settings.tableRow}`}>
+                    <td className={`px-4 py-2 ${theme.colors.text.primary}`}>
                       <input
                         type="number"
                         min="0"
                         step="1"
-                        className="w-20 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                        className={`w-20 px-2 py-1 border rounded ${settings.input}`}
                         value={editingOrders[step.id] !== undefined ? (editingOrders[step.id] ?? '') : (step.order ?? '')}
                         onChange={(e) => {
                           const newOrder = e.target.value === '' ? null : parseInt(e.target.value, 10);
@@ -137,8 +140,8 @@ export default function FunnelStepsTab(props: FunnelStepsTabProps) {
                         disabled={!isAdmin || isDefaultFunnel}
                       />
                     </td>
-                    <td className="px-4 py-2 dark:text-gray-100">{truncate(step.name || "", 100)}</td>
-                    <td className="px-4 py-2 dark:text-gray-100">{truncate(step.description || "-", 100)}</td>
+                    <td className={`px-4 py-2 ${theme.colors.text.primary}`}>{truncate(step.name || "", 100)}</td>
+                    <td className={`px-4 py-2 ${theme.colors.text.primary}`}>{truncate(step.description || "-", 100)}</td>
                     <td className="px-4 py-2 text-right">
                       {isAdmin && (
                         <div className="flex justify-end gap-2">
@@ -146,7 +149,7 @@ export default function FunnelStepsTab(props: FunnelStepsTabProps) {
                             <Button
                               size="sm"
                               variant="secondary"
-                              className="bg-gray-700 hover:bg-gray-600 text-white"
+                              className={theme.colors.button.secondary}
                               title="Editar etapa"
                               onClick={() => onClickEditStep(step)}
                             >
@@ -156,7 +159,7 @@ export default function FunnelStepsTab(props: FunnelStepsTabProps) {
                           <Button
                             size="sm"
                             variant="secondary"
-                            className="bg-gray-700 hover:bg-gray-600 text-white"
+                            className={theme.colors.button.secondary}
                             title="Configurações da etapa"
                             onClick={() => onOpenStepSettings(step.id)}
                           >
@@ -171,17 +174,17 @@ export default function FunnelStepsTab(props: FunnelStepsTabProps) {
           </tbody>
         </table>
         {steps.length > stepsPageSize && (
-          <div className="flex items-center justify-between px-4 py-2 border-t border-gray-200 dark:border-gray-700">
-            <span className="text-xs dark:text-gray-300">Página {stepsPage} de {Math.ceil(steps.length / stepsPageSize)}</span>
+          <div className={`flex items-center justify-between px-4 py-2 border-t ${settings.tableBorder}`}>
+            <span className={`text-xs ${theme.colors.text.secondary}`}>Página {stepsPage} de {Math.ceil(steps.length / stepsPageSize)}</span>
             <div className="flex gap-2">
               <Button
                 variant="secondary"
-                className="bg-gray-700 hover:bg-gray-600 text-white"
+                className={theme.colors.button.secondary}
                 onClick={onPrevPage}
                 disabled={!canPrev}
               >Anterior</Button>
               <Button
-                className="bg-blue-600 hover:bg-blue-500 text-white"
+                className={theme.colors.button.primary}
                 onClick={onNextPage}
                 disabled={!canNext}
               >Próxima</Button>

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import { useTheme } from "@/contexts/ThemeContext";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -78,6 +79,8 @@ type ParsedTimelineItem = TimelineItem & {
 };
 
 export default function ProjectsPage() {
+  const { theme } = useTheme();
+  const projects_theme = theme.colors.projects;
   const router = useRouter();
   const [userData, setUserData] = useState<UserData | null>(null);
   const [authToken, setAuthToken] = useState<string | undefined>(undefined);
@@ -360,7 +363,7 @@ export default function ProjectsPage() {
     : '??';
 
   return (
-    <div className="flex h-screen bg-background dark:bg-gray-900 text-neutral-200">
+    <div className={`flex h-screen ${theme.colors.background.primary} ${theme.colors.text.primary}`}>
       {/* Sidebar */}
       <Sidebar show={showMenu} />
 
@@ -372,13 +375,13 @@ export default function ProjectsPage() {
         />
         {/* Right panel */}
         <div
-          className={`fixed right-0 top-0 h-full w-full max-w-md bg-white dark:bg-gray-800 shadow-xl z-50 transform transition-transform duration-300 ease-out ${isTimelinePanelOpen ? 'translate-x-0' : 'translate-x-full'}`}
+          className={`fixed right-0 top-0 h-full w-full max-w-md shadow-xl z-50 transform transition-transform duration-300 ease-out ${projects_theme.panel} ${isTimelinePanelOpen ? 'translate-x-0' : 'translate-x-full'}`}
           aria-hidden={!isTimelinePanelOpen}
         >
-          <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-            <h2 className="text-lg font-semibold dark:text-white">Detalhes do Item</h2>
+          <div className={`p-4 border-b flex items-center justify-between ${projects_theme.panelBorder}`}>
+            <h2 className={`text-lg font-semibold ${theme.colors.text.primary}`}>Detalhes do Item</h2>
             <button
-              className="text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-white"
+              className={`${theme.colors.text.muted} ${theme.colors.background.hover}`}
               onClick={() => setIsTimelinePanelOpen(false)}
               aria-label="Fechar"
             >
@@ -390,78 +393,78 @@ export default function ProjectsPage() {
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse">
                   <tbody>
-                    <tr className="border-b border-gray-200 dark:border-gray-700">
-                      <td className="py-2 pr-4 text-neutral-400">Código</td>
-                      <td className="py-2 text-white font-medium">{selectedTimeline.code}</td>
+                    <tr className={`border-b ${projects_theme.panelBorder}`}>
+                      <td className={`py-2 pr-4 ${theme.colors.text.muted}`}>Código</td>
+                      <td className={`py-2 font-medium ${theme.colors.text.primary}`}>{selectedTimeline.code}</td>
                     </tr>
-                    <tr className="border-b border-gray-200 dark:border-gray-700">
-                      <td className="py-2 pr-4 text-neutral-400">Tarefa</td>
-                      <td className="py-2 text-white">{selectedTimeline.task || '—'}</td>
+                    <tr className={`border-b ${projects_theme.panelBorder}`}>
+                      <td className={`py-2 pr-4 ${theme.colors.text.muted}`}>Tarefa</td>
+                      <td className={`py-2 ${theme.colors.text.primary}`}>{selectedTimeline.task || '—'}</td>
                     </tr>
-                    <tr className="border-b border-gray-200 dark:border-gray-700">
-                      <td className="py-2 pr-4 text-neutral-400">Fase</td>
-                      <td className="py-2 text-white">{selectedTimeline.phase || '—'}</td>
+                    <tr className={`border-b ${projects_theme.panelBorder}`}>
+                      <td className={`py-2 pr-4 ${theme.colors.text.muted}`}>Fase</td>
+                      <td className={`py-2 ${theme.colors.text.primary}`}>{selectedTimeline.phase || '—'}</td>
                     </tr>
-                    <tr className="border-b border-gray-200 dark:border-gray-700">
-                      <td className="py-2 pr-4 text-neutral-400">Status</td>
-                      <td className="py-2 text-white">{selectedTimeline.status || '—'}</td>
+                    <tr className={`border-b ${projects_theme.panelBorder}`}>
+                      <td className={`py-2 pr-4 ${theme.colors.text.muted}`}>Status</td>
+                      <td className={`py-2 ${theme.colors.text.primary}`}>{selectedTimeline.status || '—'}</td>
                     </tr>
-                    <tr className="border-b border-gray-200 dark:border-gray-700">
-                      <td className="py-2 pr-4 text-neutral-400">Responsável</td>
-                      <td className="py-2 text-white">{selectedTimeline.responsible || '—'}</td>
+                    <tr className={`border-b ${projects_theme.panelBorder}`}>
+                      <td className={`py-2 pr-4 ${theme.colors.text.muted}`}>Responsável</td>
+                      <td className={`py-2 ${theme.colors.text.primary}`}>{selectedTimeline.responsible || '—'}</td>
                     </tr>
-                    <tr className="border-b border-gray-200 dark:border-gray-700">
-                      <td className="py-2 pr-4 text-neutral-400">Apoiadores</td>
-                      <td className="py-2 text-white">{selectedTimeline.supporters || '—'}</td>
+                    <tr className={`border-b ${projects_theme.panelBorder}`}>
+                      <td className={`py-2 pr-4 ${theme.colors.text.muted}`}>Apoiadores</td>
+                      <td className={`py-2 ${theme.colors.text.primary}`}>{selectedTimeline.supporters || '—'}</td>
                     </tr>
-                    <tr className="border-b border-gray-200 dark:border-gray-700">
-                      <td className="py-2 pr-4 text-neutral-400">Início (Planejado)</td>
-                      <td className="py-2 text-white">{fmt(selectedTimeline.start_date)}</td>
+                    <tr className={`border-b ${projects_theme.panelBorder}`}>
+                      <td className={`py-2 pr-4 ${theme.colors.text.muted}`}>Início (Planejado)</td>
+                      <td className={`py-2 ${theme.colors.text.primary}`}>{fmt(selectedTimeline.start_date)}</td>
                     </tr>
-                    <tr className="border-b border-gray-200 dark:border-gray-700">
-                      <td className="py-2 pr-4 text-neutral-400">Fim (Planejado)</td>
-                      <td className="py-2 text-white">{fmt(selectedTimeline.due_date)}</td>
+                    <tr className={`border-b ${projects_theme.panelBorder}`}>
+                      <td className={`py-2 pr-4 ${theme.colors.text.muted}`}>Fim (Planejado)</td>
+                      <td className={`py-2 ${theme.colors.text.primary}`}>{fmt(selectedTimeline.due_date)}</td>
                     </tr>
-                    <tr className="border-b border-gray-200 dark:border-gray-700">
-                      <td className="py-2 pr-4 text-neutral-400">Início (Execução)</td>
-                      <td className="py-2 text-white">{fmt(selectedTimeline.execution_start_date)}</td>
+                    <tr className={`border-b ${projects_theme.panelBorder}`}>
+                      <td className={`py-2 pr-4 ${theme.colors.text.muted}`}>Início (Execução)</td>
+                      <td className={`py-2 ${theme.colors.text.primary}`}>{fmt(selectedTimeline.execution_start_date)}</td>
                     </tr>
-                    <tr className="border-b border-gray-200 dark:border-gray-700">
-                      <td className="py-2 pr-4 text-neutral-400">Fim (Execução)</td>
-                      <td className="py-2 text-white">{fmt(selectedTimeline.execution_end_date)}</td>
+                    <tr className={`border-b ${projects_theme.panelBorder}`}>
+                      <td className={`py-2 pr-4 ${theme.colors.text.muted}`}>Fim (Execução)</td>
+                      <td className={`py-2 ${theme.colors.text.primary}`}>{fmt(selectedTimeline.execution_end_date)}</td>
                     </tr>
-                    <tr className="border-b border-gray-200 dark:border-gray-700">
-                      <td className="py-2 pr-4 text-neutral-400">Dependências</td>
-                      <td className="py-2 text-white">{selectedTimeline.dependencies || '—'}</td>
+                    <tr className={`border-b ${projects_theme.panelBorder}`}>
+                      <td className={`py-2 pr-4 ${theme.colors.text.muted}`}>Dependências</td>
+                      <td className={`py-2 ${theme.colors.text.primary}`}>{selectedTimeline.dependencies || '—'}</td>
                     </tr>
-                    <tr className="border-b border-gray-200 dark:border-gray-700">
-                      <td className="py-2 pr-4 text-neutral-400">Critério de Aceite</td>
-                      <td className="py-2 text-white">{selectedTimeline.acceptance_criteria || '—'}</td>
+                    <tr className={`border-b ${projects_theme.panelBorder}`}>
+                      <td className={`py-2 pr-4 ${theme.colors.text.muted}`}>Critério de Aceite</td>
+                      <td className={`py-2 ${theme.colors.text.primary}`}>{selectedTimeline.acceptance_criteria || '—'}</td>
                     </tr>
-                    <tr className="border-b border-gray-200 dark:border-gray-700">
-                      <td className="py-2 pr-4 text-neutral-400">Evidência/Link</td>
-                      <td className="py-2 text-white">{selectedTimeline.evidence_link || '—'}</td>
+                    <tr className={`border-b ${projects_theme.panelBorder}`}>
+                      <td className={`py-2 pr-4 ${theme.colors.text.muted}`}>Evidência/Link</td>
+                      <td className={`py-2 ${theme.colors.text.primary}`}>{selectedTimeline.evidence_link || '—'}</td>
                     </tr>
                     <tr>
-                      <td className="py-2 pr-4 text-neutral-400">Marco?</td>
-                      <td className="py-2 text-white">{selectedTimeline.milestone ? 'Sim' : 'Não'}</td>
+                      <td className={`py-2 pr-4 ${theme.colors.text.muted}`}>Marco?</td>
+                      <td className={`py-2 ${theme.colors.text.primary}`}>{selectedTimeline.milestone ? 'Sim' : 'Não'}</td>
                     </tr>
                     {selectedTimeline.notes && (
                       <tr>
-                        <td className="py-2 pr-4 text-neutral-400 align-top">Notas</td>
-                        <td className="py-2 text-white whitespace-pre-wrap">{selectedTimeline.notes}</td>
+                        <td className={`py-2 pr-4 align-top ${theme.colors.text.muted}`}>Notas</td>
+                        <td className={`py-2 whitespace-pre-wrap ${theme.colors.text.primary}`}>{selectedTimeline.notes}</td>
                       </tr>
                     )}
                   </tbody>
                 </table>
               </div>
             ) : (
-              <div className="text-neutral-400">Selecione um item do gráfico para ver os detalhes.</div>
+              <div className={theme.colors.text.muted}>Selecione um item do gráfico para ver os detalhes.</div>
             )}
           </div>
-          <div className="p-4 border-t border-gray-200 dark:border-gray-700 flex justify-end">
+          <div className={`p-4 border-t flex justify-end ${projects_theme.panelBorder}`}>
             <button
-              className="px-4 py-2 rounded-md bg-gray-700 hover:bg-gray-600 text-white"
+              className={`px-4 py-2 rounded-md ${theme.colors.button.secondary}`}
               onClick={() => setIsTimelinePanelOpen(false)}
             >
               Fechar
@@ -479,13 +482,13 @@ export default function ProjectsPage() {
         />
         {/* Right panel */}
         <div
-          className={`fixed right-0 top-0 h-full w-full max-w-md bg-white dark:bg-gray-800 shadow-xl z-50 transform transition-transform duration-300 ease-out ${isFormOpen ? 'translate-x-0' : 'translate-x-full'}`}
+          className={`fixed right-0 top-0 h-full w-full max-w-md shadow-xl z-50 transform transition-transform duration-300 ease-out ${projects_theme.form} ${isFormOpen ? 'translate-x-0' : 'translate-x-full'}`}
           aria-hidden={!isFormOpen}
         >
-          <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-            <h2 className="text-lg font-semibold dark:text-white">{formMode === 'create' ? 'Incluir Projeto' : 'Alterar Projeto'}</h2>
+          <div className={`p-4 border-b flex items-center justify-between ${projects_theme.formBorder}`}>
+            <h2 className={`text-lg font-semibold ${theme.colors.text.primary}`}>{formMode === 'create' ? 'Incluir Projeto' : 'Alterar Projeto'}</h2>
             <button
-              className="text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-white"
+              className={`${theme.colors.text.muted} ${theme.colors.background.hover}`}
               onClick={cancelForm}
               aria-label="Fechar"
             >
@@ -494,28 +497,38 @@ export default function ProjectsPage() {
           </div>
           <div className="p-4 space-y-3">
             <div>
-              <label className="block text-sm mb-1 dark:text-gray-200">Nome</label>
-              <input value={formName} onChange={(e) => setFormName(e.target.value)} className="w-full rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Nome do projeto" />
+              <label className={`block text-sm mb-1 ${theme.colors.text.primary}`}>Nome</label>
+              <input value={formName} onChange={(e) => setFormName(e.target.value)} className={`w-full rounded border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${projects_theme.input}`} placeholder="Nome do projeto" />
             </div>
             <div>
-              <label className="block text-sm mb-1 dark:text-gray-200">Descrição</label>
-              <textarea value={formDescription} onChange={(e) => setFormDescription(e.target.value)} className="w-full rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[100px]" placeholder="Descrição" />
+              <label className={`block text-sm mb-1 ${theme.colors.text.primary}`}>Descrição</label>
+              <textarea value={formDescription} onChange={(e) => setFormDescription(e.target.value)} className={`w-full rounded border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[100px] ${projects_theme.input}`} placeholder="Descrição" />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-sm mb-1 dark:text-gray-200">Início</label>
-                <input type="date" value={formStartDate} onChange={(e) => setFormStartDate(e.target.value)} className="w-full rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                <label className={`block text-sm mb-1 ${theme.colors.text.primary}`}>Início</label>
+                <input type="date" value={formStartDate} onChange={(e) => setFormStartDate(e.target.value)} className={`w-full rounded border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${projects_theme.input}`} />
               </div>
               <div>
-                <label className="block text-sm mb-1 dark:text-gray-200">Fim</label>
-                <input type="date" value={formEndDate} onChange={(e) => setFormEndDate(e.target.value)} className="w-full rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                <label className={`block text-sm mb-1 ${theme.colors.text.primary}`}>Fim</label>
+                <input type="date" value={formEndDate} onChange={(e) => setFormEndDate(e.target.value)} className={`w-full rounded border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${projects_theme.input}`} />
               </div>
             </div>
             <div>
-              <label htmlFor="product-select" className="block text-sm mb-1 dark:text-gray-200">Produto</label>
+              <label htmlFor="product-select" className={`block text-sm mb-1 ${theme.colors.text.primary}`}>Produto</label>
               <select
                 id="product-select"
-                className="select-clean w-full"
+                className={`w-full rounded-md px-3 py-2 text-sm border ${theme.colors.background.secondary} ${theme.colors.text.primary} ${theme.colors.border.secondary} focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                style={{
+                  WebkitAppearance: 'none',
+                  MozAppearance: 'none',
+                  appearance: 'none',
+                  backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='currentColor'%3E%3Cpath d='M4 6l4 4 4-4'/%3E%3C/svg%3E")`,
+                  backgroundRepeat: 'no-repeat',
+                  backgroundPosition: 'right 0.75rem center',
+                  backgroundSize: '16px 16px',
+                  paddingRight: '2.5rem'
+                }}
                 disabled={productsLoading}
                 value={formProductId || ''}
                 onChange={(e) => setFormProductId(e.target.value)}
@@ -529,24 +542,34 @@ export default function ProjectsPage() {
               </select>
             </div>
             <div className="flex items-center justify-end gap-2 pt-2">
-              <Button variant="secondary" className="bg-gray-700 hover:bg-gray-600 text-white" onClick={cancelForm}>Cancelar</Button>
-              <Button className="bg-blue-600 hover:bg-blue-500 text-white" onClick={submitForm} disabled={saving}>Salvar</Button>
+              <Button variant="secondary" className={theme.colors.button.secondary} onClick={cancelForm}>Cancelar</Button>
+              <Button className={theme.colors.button.primary} onClick={submitForm} disabled={saving}>Salvar</Button>
             </div>
           </div>
         </div>
 
         {/* Header (fixed, animated, same as Settings) */}
-        <header className={`fixed top-0 left-0 right-0 z-[60] flex items-center h-16 bg-gray-800 text-white px-4 transition-all duration-400 ease-out ${showHeader ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-5'}`}>
+        <header className={`fixed top-0 left-0 right-0 z-[60] flex items-center h-16 px-4 border-b transition-all duration-400 ease-out ${theme.colors.background.secondary} ${theme.colors.border.primary} ${showHeader ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-5'}`}>
           {/* Logo */}
           <div className="px-2 flex items-center">
-            <Image src="/images/logo.png" alt="Autonom.ia Logo" width={42} height={42} priority fetchPriority="high" sizes="64px" />
+            <Image src={theme.logoSquare} alt="Logo" width={28} height={28} onError={(e) => { e.currentTarget.src = '/images/logo.png'; }} />
           </div>
           {/* Project selector */}
           <div className="flex-1 px-2">
             <div className="max-w-xl flex items-center gap-2">
               <select
                 id="projects-select"
-                className="select-clean w-full"
+                className={`w-full rounded-md px-3 py-2 text-sm border ${theme.colors.background.secondary} ${theme.colors.text.primary} ${theme.colors.border.secondary} focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                style={{
+                  WebkitAppearance: 'none',
+                  MozAppearance: 'none',
+                  appearance: 'none',
+                  backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='currentColor'%3E%3Cpath d='M4 6l4 4 4-4'/%3E%3C/svg%3E")`,
+                  backgroundRepeat: 'no-repeat',
+                  backgroundPosition: 'right 0.75rem center',
+                  backgroundSize: '16px 16px',
+                  paddingRight: '2.5rem'
+                }}
                 disabled={projectsLoading}
                 value={selectedProjectId || ''}
                 onChange={(e) => setSelectedProjectId(e.target.value)}
@@ -562,7 +585,7 @@ export default function ProjectsPage() {
                 <Button
                   type="button"
                   variant="secondary"
-                  className="bg-blue-600 hover:bg-blue-500 text-white"
+                  className={theme.colors.button.primary}
                   onClick={openCreateForm}
                   title="Incluir projeto"
                 >
@@ -573,7 +596,7 @@ export default function ProjectsPage() {
                 <Button
                   type="button"
                   variant="secondary"
-                  className="bg-gray-700 hover:bg-gray-600 text-white"
+                  className={theme.colors.button.secondary}
                   onClick={() => {
                     const p = projects.find(x => x.id === selectedProjectId);
                     if (p) openEditForm(p);
@@ -626,20 +649,20 @@ export default function ProjectsPage() {
           {/* Timeline section (only when a project is selected) */}
           {selectedProjectId && (
             <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pb-10">
-              <div className="rounded-lg border border-neutral-800/60 bg-neutral-900/40 overflow-hidden">
-                <div className="px-4 py-3 border-b border-neutral-800/60 flex items-center justify-between">
-                  <div className="text-sm font-medium">Cronograma do Projeto</div>
+              <div className={`rounded-lg border overflow-hidden ${projects_theme.timeline}`}>
+                <div className={`px-4 py-3 border-b flex items-center justify-between ${projects_theme.timelineHeader}`}>
+                  <div className={`text-sm font-medium ${theme.colors.text.primary}`}>Cronograma do Projeto</div>
                 </div>
                 <div className="p-4">
-                  {timelineLoading && (<div className="text-sm text-neutral-400">Carregando cronograma…</div>)}
+                  {timelineLoading && (<div className={`text-sm ${theme.colors.text.muted}`}>Carregando cronograma…</div>)}
                   {!timelineLoading && !!timeline.length && (
                     <div className="w-full overflow-x-auto">
                       {/* Header scale */}
                       {dateRange && (
                         <div className="min-w-[600px]" style={{ width: Math.max(600, dateRange.days * pxPerDay + 264) }}>
-                          <div className="flex text-xs text-neutral-400 pl-[16.5rem]">
+                          <div className={`flex text-xs pl-[16.5rem] ${theme.colors.text.muted}`}>
                             {Array.from({ length: dateRange.days }).map((_, i) => (
-                              <div key={i} className="border-l border-neutral-800/60 text-center" style={{ width: pxPerDay }}>
+                              <div key={i} className="text-center" style={{ width: pxPerDay }}>
                                 {i % 7 === 0 ? new Date(dateRange.min.getTime() + i * 86400000).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) : ''}
                               </div>
                             ))}
@@ -649,19 +672,17 @@ export default function ProjectsPage() {
                             {parsedTimeline.map((t: ParsedTimelineItem) => (
                               <div
                                 key={t.code}
-                                className="relative cursor-pointer hover:bg-neutral-800/30 rounded"
+                                className={`relative cursor-pointer rounded ${projects_theme.timelineRow}`}
                                 onClick={() => { setSelectedTimeline(t); setIsTimelinePanelOpen(true); }}
                                 role="button"
                                 tabIndex={0}
                                 onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { setSelectedTimeline(t); setIsTimelinePanelOpen(true); } }}
                               >
-                                {/* Full-row horizontal lines spanning description + bars */}
-                                <div className="pointer-events-none absolute inset-y-0 left-0 right-0 border-t border-b border-neutral-800/60" />
                                 <div className="flex items-start gap-3 mb-1 pl-2 pr-2">
                                   <div className="w-[16.5rem] shrink-0">
-                                    <div className="text-xs text-neutral-400">{t.code}</div>
-                                    <div className="text-sm text-white whitespace-normal break-words" title={t.task || t.phase || ''}>{t.task || t.phase || '—'}</div>
-                                    <div className="text-xs text-neutral-300">Status: {t.status || '—'}</div>
+                                    <div className={`text-xs ${theme.colors.text.muted}`}>{t.code}</div>
+                                    <div className={`text-sm whitespace-normal break-words ${theme.colors.text.primary}`} title={t.task || t.phase || ''}>{t.task || t.phase || '—'}</div>
+                                    <div className={`text-xs ${theme.colors.text.secondary}`}>Status: {t.status || '—'}</div>
                                   </div>
                                   <div className="relative min-h-[2.5rem] flex-1">
                                     <button
@@ -686,12 +707,12 @@ export default function ProjectsPage() {
                         </div>
                       )}
                       {!dateRange && (
-                        <div className="text-sm text-neutral-400">Itens sem datas válidas para montar o gráfico.</div>
+                        <div className={`text-sm ${theme.colors.text.muted}`}>Itens sem datas válidas para montar o gráfico.</div>
                       )}
                     </div>
                   )}
                   {!timelineLoading && !timeline.length && (
-                    <div className="text-sm text-neutral-400">Nenhum item de cronograma encontrado.</div>
+                    <div className={`text-sm ${theme.colors.text.muted}`}>Nenhum item de cronograma encontrado.</div>
                   )}
                 </div>
               </div>

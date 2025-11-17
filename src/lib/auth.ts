@@ -1,5 +1,13 @@
 export type StoredUserData = {
-  user?: Record<string, unknown>;
+  user?: {
+    id?: string;
+    email?: string;
+    name?: string;
+    phone?: string;
+    isFirstLogin?: boolean;
+    isAdmin?: boolean;
+    [key: string]: unknown;
+  };
   email?: string;
   AccessToken?: string;
   IdToken?: string;
