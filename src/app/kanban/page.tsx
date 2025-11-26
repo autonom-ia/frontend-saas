@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useTheme } from "@/contexts/ThemeContext";
 import ItemDetailsPanel from "./components/ItemDetailsPanel";
 import ConversationDrawer from "./components/ConversationDrawer";
@@ -40,6 +41,7 @@ type Account = {
 };
 
 export default function KanbanPage() {
+  const router = useRouter();
   const { theme } = useTheme();
   const kanban = theme.colors.kanban;
   
@@ -240,6 +242,14 @@ export default function KanbanPage() {
   const [stepHasMore, setStepHasMore] = useState<Record<string, boolean>>({});
   const [loadingMoreForStep, setLoadingMoreForStep] = useState<string | null>(null);
   const [loadingSteps, setLoadingSteps] = useState<Record<string, boolean>>({});
+
+  const handleLogout = () => {
+    if (typeof window !== 'undefined') {
+      try { localStorage.clear(); } catch {}
+      try { sessionStorage.clear(); } catch {}
+    }
+    router.push('/login');
+  };
   const [draggedItem, setDraggedItem] = useState<{ item: KanbanItem; fromStepId: string } | null>(null);
   const [dragOverStepId, setDragOverStepId] = useState<string | null>(null);
 
@@ -580,6 +590,7 @@ export default function KanbanPage() {
               onCreateProduct={() => { /* could open modal in future */ }}
               onEditProduct={() => { /* noop here */ }}
               onOpenProductSettings={() => { /* noop here */ }}
+              onLogout={handleLogout}
             />
           </div>
           {/* Right user info (optional) */}

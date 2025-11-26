@@ -101,16 +101,6 @@ export default function AccountForm(props: AccountFormProps) {
             />
           </div>
           <div>
-            <label htmlFor="acc-domain" className={`block text-sm mb-1 ${theme.colors.text.primary}`}>Domínio</label>
-            <input
-              id="acc-domain"
-              type="text"
-              className={`w-full rounded border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${settings.input}`}
-              value={domain}
-              onChange={(e) => onChange({ domain: e.target.value })}
-            />
-          </div>
-          <div>
             <label htmlFor="acc-funnel" className={`block text-sm mb-1 ${theme.colors.text.primary}`}>Funil Conversacional</label>
             <div className="flex items-center gap-2">
               <select

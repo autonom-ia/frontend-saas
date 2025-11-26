@@ -7,10 +7,12 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import Image from 'next/image';
+import { useTheme } from '@/contexts/ThemeContext';
 
 function ConfirmEmailComponent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { theme } = useTheme();
   const [code, setCode] = useState('');
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
@@ -102,19 +104,28 @@ function ConfirmEmailComponent() {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-background dark:bg-gray-900">
-        <Card className="w-full max-w-md mx-auto dark:bg-gray-800 dark:border-gray-700">
+    <div className={`flex items-center justify-center min-h-screen ${theme.colors.background.primary}`}>
+        <Card className={`w-full max-w-md mx-auto ${theme.colors.background.card} ${theme.colors.border.primary}`}>
             <form onSubmit={handleConfirm}>
                 <CardHeader className="space-y-1 text-center">
-                    <Image src="/images/logo.png" alt="Autonom.ia Logo" width={150} height={150} className="mx-auto" />
-                    <CardTitle className="text-2xl font-bold dark:text-white">Confirme seu Email</CardTitle>
-                    <CardDescription className="dark:text-gray-400">
-                        Enviamos um código de 6 dígitos para {email}. Por favor, insira-o abaixo.
+                    <Image 
+                      src={theme.logo} 
+                      alt="Logo" 
+                      width={150} 
+                      height={150} 
+                      className="mx-auto"
+                      onError={(e) => {
+                        e.currentTarget.src = '/images/logo.png';
+                      }}
+                    />
+                    <CardTitle className={`text-2xl font-bold ${theme.colors.text.primary}`}>Confirme seu Email</CardTitle>
+                    <CardDescription className={theme.colors.text.muted}>
+                        Estamos quase lá! Enviamos um código de 6 dígitos para {email}. Digite abaixo para confirmar seu email e ativar sua conta.
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="grid gap-4">
                     <div className="grid gap-2">
-                        <Label htmlFor="code" className="block text-sm font-medium text-foreground dark:text-gray-300">Código de Confirmação</Label>
+                        <Label htmlFor="code" className={`block text-sm font-medium ${theme.colors.text.secondary}`}>Código de Confirmação</Label>
                         <Input 
                             id="code" 
                             type="text" 
@@ -123,7 +134,7 @@ function ConfirmEmailComponent() {
                             value={code} 
                             onChange={(e) => setCode(e.target.value)} 
                             disabled={isLoading} 
-                            className="dark:bg-gray-700 dark:text-white dark:border-gray-600 text-center tracking-widest text-lg" 
+                            className={`${theme.colors.background.secondary} ${theme.colors.text.primary} ${theme.colors.border.secondary} text-center tracking-widest text-lg`} 
                             maxLength={6}
                         />
                     </div>
@@ -131,7 +142,7 @@ function ConfirmEmailComponent() {
                     {message && <p className="text-sm font-medium text-green-500 text-center">{message}</p>}
                 </CardContent>
                 <CardFooter className="flex flex-col gap-4 pt-4">
-                    <Button className="w-full dark:bg-blue-600 dark:hover:bg-blue-700 dark:text-white" type="submit" disabled={isLoading}>
+                    <Button className={`w-full ${theme.colors.button.primary}`} type="submit" disabled={isLoading}>
                         {isLoading ? 'Confirmando...' : 'Confirmar'}
                     </Button>
                 </CardFooter>

@@ -23,6 +23,7 @@ export default function LoginPage() {
   const router = useRouter();
   const { theme } = useTheme();
   const hasInitialized = useRef(false);
+  const [tenantName, setTenantName] = useState('Autonomia');
   
   useEffect(() => {
     // Guard contra múltiplas execuções
@@ -32,6 +33,18 @@ export default function LoginPage() {
     
     hasInitialized.current = true;
     
+    // Definir nome do tenant a partir do domínio
+    try {
+      const hostname = window.location.hostname || '';
+      const parts = hostname.split('.');
+      const raw = parts[0] || 'autonomia';
+      const normalized = raw.toLowerCase();
+      const capitalized = normalized.charAt(0).toUpperCase() + normalized.slice(1);
+      setTenantName(capitalized);
+    } catch (e) {
+      console.warn('[Login] error resolving tenant name from hostname', e);
+    }
+
     // Verificar se usuário já está autenticado antes de limpar
     try {
       const raw = localStorage.getItem('userData') || sessionStorage.getItem('userData');
@@ -270,6 +283,13 @@ export default function LoginPage() {
               }}
             />
           </div>
+          <div className="mb-4 text-center">
+            <p className={`text-sm font-medium ${theme.colors.text.primary}`}>
+              {isRegister
+                ? `Bem-vindo(a) ao ${tenantName}. Crie sua conta em poucos segundos para começar a usar a plataforma.`
+                : `Bem-vindo(a) ao ${tenantName}. Se você já tem uma conta, faça login abaixo. Se ainda não tem, é só criar agora mesmo.`}
+            </p>
+          </div>
           <AnimatePresence mode="wait">
             {!isRegister ? (
               <motion.div
@@ -283,7 +303,6 @@ export default function LoginPage() {
                 <form onSubmit={handleLogin}>
                   <CardHeader className="space-y-1 text-center">
                     <CardTitle className={`text-2xl font-bold ${theme.colors.text.primary}`}>Login</CardTitle>
-                    <CardDescription className={theme.colors.text.muted}>Digite seu email e senha para acessar sua conta</CardDescription>
                   </CardHeader>
                   <CardContent className="grid gap-4">
                     <div className="grid gap-2">
@@ -348,41 +367,77 @@ export default function LoginPage() {
               >
                 <form onSubmit={handleRegister}>
                   <CardHeader className="space-y-1 text-center">
-                    <CardTitle className="text-2xl font-bold dark:text-white">Cadastro</CardTitle>
-                    <CardDescription className="dark:text-gray-400">Crie sua conta para começar</CardDescription>
+                    <CardTitle className={`text-2xl font-bold ${theme.colors.text.primary}`}>Cadastro</CardTitle>
+                    <CardDescription className={theme.colors.text.muted}>Crie sua conta para começar</CardDescription>
                   </CardHeader>
                   <CardContent className="grid gap-4 pb-4">
                     <div className="grid gap-2">
-                      <Label htmlFor="name" className="dark:text-gray-300">Nome</Label>
-                      <Input id="name" placeholder="Seu Nome" value={name} onChange={(e) => setName(e.target.value)} disabled={isLoading} className="dark:bg-gray-700 dark:text-white dark:border-gray-600" />
+                      <Label htmlFor="name" className={theme.colors.text.secondary}>Nome</Label>
+                      <Input
+                        id="name"
+                        placeholder="Seu Nome"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        disabled={isLoading}
+                        className={`${theme.colors.background.secondary} ${theme.colors.text.primary} ${theme.colors.border.secondary}`}
+                      />
                       {formSubmitted && !name && (
                         <p className="text-sm font-medium text-red-500 mt-1">Nome é obrigatório</p>
                       )}
                     </div>
                      <div className="grid gap-2">
-                      <Label htmlFor="phone" className="dark:text-gray-300">Telefone</Label>
-                      <Input id="phone" placeholder="(99) 99999-9999" value={phone} onChange={(e) => setPhone(e.target.value)} disabled={isLoading} className="dark:bg-gray-700 dark:text-white dark:border-gray-600" />
+                      <Label htmlFor="phone" className={theme.colors.text.secondary}>Telefone</Label>
+                      <Input
+                        id="phone"
+                        placeholder="(99) 99999-9999"
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                        disabled={isLoading}
+                        className={`${theme.colors.background.secondary} ${theme.colors.text.primary} ${theme.colors.border.secondary}`}
+                      />
                       {formSubmitted && !phone && (
                         <p className="text-sm font-medium text-red-500 mt-1">Telefone é obrigatório</p>
                       )}
                     </div>
                     <div className="grid gap-2">
-                      <Label htmlFor="email" className="dark:text-gray-300">Email</Label>
-                      <Input id="email" type="email" placeholder="m@exemplo.com" value={email} onChange={(e) => setEmail(e.target.value)}  disabled={isLoading} className="dark:bg-gray-700 dark:text-white dark:border-gray-600" />
+                      <Label htmlFor="email" className={theme.colors.text.secondary}>Email</Label>
+                      <Input
+                        id="email"
+                        type="email"
+                        placeholder="m@exemplo.com"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        disabled={isLoading}
+                        className={`${theme.colors.background.secondary} ${theme.colors.text.primary} ${theme.colors.border.secondary}`}
+                      />
                       {formSubmitted && !email && (
                         <p className="text-sm font-medium text-red-500 mt-1">Email é obrigatório</p>
                       )}
                     </div>
                     <div className="grid gap-2">
-                      <Label htmlFor="password" className="dark:text-gray-300">Senha</Label>
-                      <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)}  disabled={isLoading} className="dark:bg-gray-700 dark:text-white dark:border-gray-600" />
+                      <Label htmlFor="password" className={theme.colors.text.secondary}>Senha</Label>
+                      <Input
+                        id="password"
+                        type="password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        disabled={isLoading}
+                        className={`${theme.colors.background.secondary} ${theme.colors.text.primary} ${theme.colors.border.secondary}`}
+                      />
                       {formSubmitted && !password && (
                         <p className="text-sm font-medium text-red-500 mt-1">Senha é obrigatória</p>
                       )}
                     </div>
                     <div className="grid gap-2">
-                      <Label htmlFor="confirm-password" className="dark:text-gray-300">Confirmar Senha</Label>
-                      <Input id="confirm-password" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} disabled={isLoading} className="dark:bg-gray-700 dark:text-white dark:border-gray-600" />
+                      <Label htmlFor="confirm-password" className={theme.colors.text.secondary}>Confirmar Senha</Label>
+                      <Input
+                        id="confirm-password"
+                        type="password"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        disabled={isLoading}
+                        className={`${theme.colors.background.secondary} ${theme.colors.text.primary} ${theme.colors.border.secondary}`}
+                      />
                       {formSubmitted && !confirmPassword && (
                         <p className="text-sm font-medium text-red-500 mt-1">Confirmação de senha é obrigatória</p>
                       )}

@@ -100,27 +100,47 @@ export const hub2youTheme: Theme = {
       avatar: 'bg-gray-200 text-gray-700',
     },
   },
-  // CSS Variables for light theme
+  // CSS Variables for light theme - Hub2You
   cssVariables: {
-    '--background': '0 0% 100%',
-    '--foreground': '222.2 84% 4.9%',
-    '--primary': '221.2 83.2% 53.3%',
-    '--primary-foreground': '210 40% 98%',
-    '--secondary': '210 40% 96.1%',
-    '--secondary-foreground': '222.2 47.4% 11.2%',
-    '--accent': '210 40% 96.1%',
+    // Backgrounds - Light theme
+    '--background': '0 0% 100%',              // Branco puro
+    '--foreground': '222.2 47.4% 11.2%',       // Texto escuro
+    
+    // Primary - Azul Hub2You
+    '--primary': '221.2 83.2% 53.3%',          // Azul principal
+    '--primary-foreground': '0 0% 100%',       // Texto branco no azul
+    
+    // Secondary - Cinza claro
+    '--secondary': '210 40% 96.1%',            // Cinza muito claro
+    '--secondary-foreground': '222.2 47.4% 11.2%', // Texto escuro
+    
+    // Accent
+    '--accent': '210 40% 96.1%',               // Mesmo do secondary
     '--accent-foreground': '222.2 47.4% 11.2%',
+    
+    // Destructive (vermelho)
     '--destructive': '0 84.2% 60.2%',
-    '--destructive-foreground': '210 40% 98%',
-    '--muted': '210 40% 96.1%',
-    '--muted-foreground': '215.4 16.3% 46.9%',
-    '--card': '0 0% 100%',
-    '--card-foreground': '222.2 84% 4.9%',
-    '--popover': '0 0% 100%',
-    '--popover-foreground': '222.2 84% 4.9%',
-    '--border': '214.3 31.8% 91.4%',
-    '--input': '214.3 31.8% 91.4%',
-    '--ring': '221.2 83.2% 53.3%',
+    '--destructive-foreground': '0 0% 100%',
+    
+    // Muted - Cinza médio
+    '--muted': '210 40% 96.1%',                // Fundo cinza claro
+    '--muted-foreground': '215.4 16.3% 46.9%', // Texto cinza médio
+    
+    // Card - Branco
+    '--card': '0 0% 100%',                     // Fundo branco dos cards
+    '--card-foreground': '222.2 47.4% 11.2%',  // Texto escuro nos cards
+    
+    // Popover - Branco
+    '--popover': '0 0% 100%',                  // Fundo branco
+    '--popover-foreground': '222.2 47.4% 11.2%', // Texto escuro
+    
+    // Border e Input - Cinza claro
+    '--border': '214.3 31.8% 91.4%',           // Borda cinza claro
+    '--input': '0 0% 100%',                    // Fundo branco nos inputs
+    
+    // Ring (foco)
+    '--ring': '221.2 83.2% 53.3%',             // Azul para foco
+    
     '--radius': '0.5rem',
   },
 };

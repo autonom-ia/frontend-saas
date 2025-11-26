@@ -226,26 +226,11 @@ export default function MonitoringPage() {
   }, []);
 
   const effectiveDomain = useMemo(() => {
-    if (!userData?.user?.isAdmin) return normalizeDomain(subdomain);
-    return selectedDomain || normalizeDomain(subdomain);
-  }, [selectedDomain, subdomain, userData?.user?.isAdmin]);
+    if (selectedDomain) return selectedDomain;
+    return normalizeDomain(subdomain);
+  }, [selectedDomain, subdomain]);
 
   useEffect(() => {
-    if (!userData?.user?.isAdmin) {
-      setSelectedDomain("");
-      setDomains([]);
-      setDomainError("");
-      setDomainLoading(false);
-      domainsFetchedRef.current = false;
-      return;
-    }
-
-    // Aguardar até que o user.id esteja disponível
-    if (!userData?.user?.id) {
-      console.log('[Monitoring] Aguardando user.id carregar...');
-      return;
-    }
-
     // Evita re-fetch infinito quando userData muda (ex.: após buscar perfil completo)
     if (domainsFetchedRef.current) return;
 
@@ -255,21 +240,10 @@ export default function MonitoringPage() {
       try {
         setDomainLoading(true);
         setDomainError("");
-        console.log('[Monitoring] Iniciando busca de domínios para user.id:', userData?.user?.id);
+        console.log('[Monitoring] Iniciando busca de domínios para usuário autenticado (via JWT)');
         const baseUrl = process.env.NEXT_PUBLIC_CLIENTS_API_URL || "https://api-clients.autonomia.site";
         const token = userData?.IdToken || userData?.token || userData?.AccessToken;
-        const uidStr = (() => {
-          const u: unknown = userData?.user;
-          if (u && typeof u === 'object' && 'id' in (u as Record<string, unknown>)) {
-            const v = (u as Record<string, unknown>).id;
-            if (typeof v === 'string') return v;
-            if (typeof v === 'number') return String(v);
-          }
-          return '';
-        })();
-        if (!uidStr) throw new Error('Usuário inválido para carregar clientes');
-        const qs = new URLSearchParams({ userId: uidStr });
-        const res = await fetch(`${baseUrl}/Autonomia/Clients/Domains?${qs.toString()}`, {
+        const res = await fetch(`${baseUrl}/Autonomia/Clients/Domains`, {
           headers: token ? { Authorization: `Bearer ${token}` } : undefined,
           mode: "cors",
         });
@@ -313,7 +287,7 @@ export default function MonitoringPage() {
     return () => {
       cancelled = true;
     };
-  }, [userData?.user?.isAdmin, userData?.user?.id]);
+  }, [userData?.user?.id]);
 
   // Derive date range based on selection
   const { startDate, endDate } = useMemo(() => {
@@ -671,8 +645,7 @@ export default function MonitoringPage() {
             <div
               className={`max-w-xl flex items-center gap-4 transition-all duration-300 ease-out ${headerReady ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2 pointer-events-none'}`}
             >
-              {userData?.user?.isAdmin && (
-                <div className="flex flex-col gap-1 min-w-[220px]">
+              <div className="flex flex-col gap-1 min-w-[220px]">
                   <div className="flex items-center gap-2">
                     <span className={`text-sm whitespace-nowrap ${theme.colors.text.primary}`}>Cliente</span>
                     <select
@@ -689,7 +662,7 @@ export default function MonitoringPage() {
                       }}
                       value={selectedDomain}
                       onChange={(event) => setSelectedDomain(event.target.value)}
-                      disabled={domainLoading || (!domainLoading && domains.length === 0)}
+                      disabled={domainLoading || domains.length === 0 || domains.length === 1}
                     >
                       {domainLoading && (
                         <option value="" disabled>
@@ -708,9 +681,7 @@ export default function MonitoringPage() {
                       )}
                     </select>
                   </div>
-                  {domainError && <span className="text-xs text-red-300">{domainError}</span>}
                 </div>
-              )}
               {/* Tabs removed from header; rendered in main below */}
               <div className="flex items-center gap-2">
                 <span className={`text-sm whitespace-nowrap ${theme.colors.text.primary}`}>Informe o período</span>
@@ -839,9 +810,6 @@ export default function MonitoringPage() {
 
         {/* Content */}
         <main className="flex-1 overflow-auto p-6 pt-20 ml-20">
-          {/* Status */}
-          {error && <div className="text-red-400">{error}</div>}
-
           {/* Tabs - underline style (match Settings) */}
           <div className="mt-1 mb-4">
             <div className={`inline-flex items-center gap-6 border-b ${theme.colors.border.primary}`}>
@@ -1064,7 +1032,6 @@ export default function MonitoringPage() {
             <section>
               <div className="flex items-center justify-between mb-2">
                 <h2 className={`text-sm ${theme.colors.text.secondary}`}>Usuários logados</h2>
-                {loggedError && <span className="text-xs text-red-400">{loggedError}</span>}
               </div>
               <div className={`flex flex-col h-72 overflow-hidden border rounded-md ${theme.colors.border.primary}`}>
                 <div className="flex-1 overflow-auto">

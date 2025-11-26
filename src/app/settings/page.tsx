@@ -310,6 +310,14 @@ export default function SettingsPage() {
       }
     } catch {}
   }, [selectedAccountId, selectedProductId]);
+
+  const handleLogout = () => {
+    if (typeof window !== 'undefined') {
+      try { localStorage.clear(); } catch {}
+      try { sessionStorage.clear(); } catch {}
+    }
+    router.push('/login');
+  };
   // Helper to truncate long texts with ellipsis
   const truncate = (text: string, max: number = 100): string => {
     if (!text) return '';
@@ -1351,6 +1359,12 @@ export default function SettingsPage() {
         });
         setAccounts(list);
         setAccPage(1);
+        // Se não houver nenhuma conta para o produto selecionado,
+        // garantir que nenhuma conta permaneça selecionada, para que
+        // o grid de contas (com o botão de inclusão) seja exibido.
+        if (!list.length) {
+          setSelectedAccountId('');
+        }
       } catch (e) {
         console.error('[Settings] Erro ao carregar contas:', e);
       } finally {
@@ -1679,18 +1693,32 @@ export default function SettingsPage() {
         return;
       }
 
+      // Determinar domínio atual para criação de produto (mapeando "portal" -> "autonomia")
+      const currentDomain = (() => {
+        if (typeof window === 'undefined') return '';
+        const host = window.location.hostname || '';
+        const parts = host.split('.');
+        if (parts.length >= 3) {
+          return normalizeDomain(parts[0]);
+        }
+        return normalizeDomain(host);
+      })();
+
       const url = formMode === 'create'
         ? `${saasApiUrl}/Autonomia/Saas/Products`
         : `${saasApiUrl}/Autonomia/Saas/Products/${selectedProductId}`;
 
       const method = formMode === 'create' ? 'POST' : 'PUT';
+      const payload = formMode === 'create'
+        ? { name: formName, description: formDescription, product_type_id: formProductTypeId || null, domain: currentDomain }
+        : { name: formName, description: formDescription, product_type_id: formProductTypeId || null };
       const resp = await fetch(url, {
         method,
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${tokenToUse}`
         },
-        body: JSON.stringify({ name: formName, description: formDescription, product_type_id: formProductTypeId || null })
+        body: JSON.stringify(payload)
       });
 
       if (!resp.ok) {
@@ -1919,6 +1947,7 @@ export default function SettingsPage() {
         onCreateProduct={() => { setSelectedProductId(''); openCreateForm(); }}
         onEditProduct={openEditForm}
         onOpenProductSettings={openSettingsPanel}
+        onLogout={handleLogout}
       />
 
       {/* Conteúdo do Dashboard */}
@@ -1947,7 +1976,7 @@ export default function SettingsPage() {
             <section className={`mt-6 transition-all duration-400 ease-out ${showAccountsGrid ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}>
               <div className="flex items-center justify-between mb-3">
                 <h2 className={`text-xl font-semibold ${theme.colors.text.primary}`}>Configuração de Contas</h2>
-                {userData.user?.isAdmin && (
+                {(accounts.length === 0 || userData?.user?.isAdmin) && (
                   <Button
                     className={theme.colors.button.primary}
                     size="sm"
@@ -1966,14 +1995,13 @@ export default function SettingsPage() {
                       <th className={`text-left px-4 py-2 ${theme.colors.text.primary}`}>Nome</th>
                       <th className={`text-left px-4 py-2 ${theme.colors.text.primary}`}>Email</th>
                       <th className={`text-left px-4 py-2 ${theme.colors.text.primary}`}>Telefone</th>
-                      <th className={`text-left px-4 py-2 ${theme.colors.text.primary}`}>Domínio</th>
                     </tr>
                   </thead>
                   <tbody>
                     {accountsLoading ? (
-                      <tr><td className={`px-4 py-3 ${theme.colors.text.primary}`} colSpan={4}>Carregando...</td></tr>
+                      <tr><td className={`px-4 py-3 ${theme.colors.text.primary}`} colSpan={3}>Carregando...</td></tr>
                     ) : accounts.length === 0 ? (
-                      <tr><td className={`px-4 py-3 ${theme.colors.text.primary}`} colSpan={4}>Nenhuma conta encontrada.</td></tr>
+                      <tr><td className={`px-4 py-3 ${theme.colors.text.primary}`} colSpan={3}>Nenhuma conta encontrada.</td></tr>
                     ) : (
                       accounts.slice((accPage-1)*accPageSize, (accPage-1)*accPageSize + accPageSize).map(acc => (
                         <tr
@@ -1984,7 +2012,6 @@ export default function SettingsPage() {
                           <td className={`px-4 py-2 ${theme.colors.text.primary}`}>{acc.name}</td>
                           <td className={`px-4 py-2 ${theme.colors.text.primary}`}>{acc.email || '-'}</td>
                           <td className={`px-4 py-2 ${theme.colors.text.primary}`}>{acc.phone || '-'}</td>
-                          <td className={`px-4 py-2 ${theme.colors.text.primary}`}>{acc.domain || '-'}</td>
                         </tr>
                       ))
                     )}

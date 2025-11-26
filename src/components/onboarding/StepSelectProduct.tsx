@@ -15,6 +15,7 @@ type Product = {
   created_at?: string;
   updated_at?: string;
   product_type_id?: string | null;
+  is_approved?: boolean;
 };
 
 type StepSelectProductProps = {
@@ -37,7 +38,10 @@ export default function StepSelectProduct({ onNext, onCancel }: StepSelectProduc
         setLoading(true);
         setError("");
         const data = await apiService.getProducts();
-        setProducts(data);
+        const approvedOnly = Array.isArray(data)
+          ? data.filter((p: Product & { is_approved?: boolean }) => p.is_approved === true)
+          : [];
+        setProducts(approvedOnly);
       } catch (err) {
         console.error("Erro ao buscar produtos:", err);
         setError("Não foi possível carregar os produtos. Tente novamente.");

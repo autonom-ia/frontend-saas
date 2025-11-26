@@ -23,6 +23,7 @@ type UserData = {
     photoUrl?: string;
     isAdmin?: boolean;
   };
+
   token?: string;
   IdToken?: string;
   AccessToken?: string;
@@ -106,6 +107,14 @@ export default function CampaignsPage() {
     messagesSent?: number;
     validationErrors?: Array<{ lineNumber?: number; errors?: string[]; error?: string }>;
   } | null>(null);
+
+  const handleLogout = () => {
+    if (typeof window !== "undefined") {
+      try { localStorage.clear(); } catch {}
+      try { sessionStorage.clear(); } catch {}
+    }
+    router.push("/login");
+  };
 
   // Helpers
   const getTokenFromLocal = (): string | undefined => {
@@ -456,16 +465,6 @@ export default function CampaignsPage() {
       reader.onerror = reject;
       reader.readAsDataURL(file);
     });
-  };
-
-  const handleLogout = () => {
-    // Limpar todos os dados de autenticação
-    localStorage.removeItem('userData');
-    localStorage.removeItem('authToken');
-    sessionStorage.clear();
-    
-    // Redirecionar para login
-    router.push('/login');
   };
 
   const submitImport = async () => {
