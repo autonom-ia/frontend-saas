@@ -48,19 +48,35 @@ function ConfirmEmailComponent() {
     }
 
     try {
-      // Detect domain from current hostname (e.g., empresta.autonomia.site -> 'empresta')
+      // Detect domain from current hostname for profile/register
+      // Rules:
+      // - If host ends with autonomia.site and has subdomain:
+      //   - portal.autonomia.site -> 'autonomia'
+      //   - empresta.autonomia.site -> 'empresta'
+      // - Otherwise (e.g. hub2you.ai) use the main label before the first dot ("hub2you").
       let detectedDomain = 'autonomia';
       if (typeof window !== 'undefined') {
-        const host = window.location.hostname; // e.g. empresta.autonomia.site
-        // If host ends with autonomia.site and has a subdomain, use it; otherwise fallback to 'autonomia'
-        const parts = host.split('.');
-        if (parts.length >= 3 && host.endsWith('autonomia.site')) {
+        const host = window.location.hostname || '';
+        const parts = host.split('.').filter(Boolean);
+
+        if (host.endsWith('autonomia.site') && parts.length >= 3) {
           const sub = parts[0];
-          if (sub && sub !== 'www' && sub !== 'portal') {
-            detectedDomain = sub;
-          } else if (sub === 'portal') {
-            // Map 'portal' to main domain
+          if (sub === 'portal') {
             detectedDomain = 'autonomia';
+          } else if (sub && sub !== 'www') {
+            detectedDomain = sub;
+          }
+        } else if (parts.length >= 1) {
+          // Generic rule for custom domains:
+          // - hub2you.ai -> 'hub2you'
+          // - portal.hub2you.ai -> 'hub2you'
+          let mainIndex = 0;
+          if (parts.length >= 2 && (parts[0] === 'portal' || parts[0] === 'www')) {
+            mainIndex = 1;
+          }
+          const main = parts[mainIndex];
+          if (main && main !== 'www') {
+            detectedDomain = main;
           }
         }
       }
